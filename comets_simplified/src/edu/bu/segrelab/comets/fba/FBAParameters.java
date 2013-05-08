@@ -301,14 +301,44 @@ public class FBAParameters implements PackageParameters
 		setMediaLogName((String)paramValues.get("medialogname"));
 		setBiomassLogName((String)paramValues.get("biomasslogname"));
 		setTotalBiomassLogName((String)paramValues.get("totalbiomasslogname"));
-		setFluxLogFormat((LogFormat)paramValues.get("fluxlogformat"));
-		setMediaLogFormat((LogFormat)paramValues.get("medialogformat"));
-		setBiomassLogFormat((LogFormat)paramValues.get("biomasslogformat"));
+		//setFluxLogFormat((LogFormat)paramValues.get("fluxlogformat"));
+
+		if(paramValues.get("fluxlogformat") instanceof String)
+			setFluxLogFormat(LogFormat.findByName((String)paramValues.get("fluxlogformat")));
+		else
+		    setFluxLogFormat((LogFormat)paramValues.get("fluxlogformat"));
+
+		//setMediaLogFormat((LogFormat)paramValues.get("medialogformat"));
+		
+		if(paramValues.get("medialogformat") instanceof String)
+			setMediaLogFormat(LogFormat.findByName((String)paramValues.get("medialogformat")));
+		else
+		    setMediaLogFormat((LogFormat)paramValues.get("medialogformat"));
+
+		//setBiomassLogFormat((LogFormat)paramValues.get("biomasslogformat"));
+		
+		if(paramValues.get("biomasslogformat") instanceof String)
+			setBiomassLogFormat(LogFormat.findByName((String)paramValues.get("biomasslogformat")));
+		else
+		    setBiomassLogFormat((LogFormat)paramValues.get("biomasslogformat"));
+		
 		setNumRunThreads(((Integer)paramValues.get("numrunthreads")).intValue());
 		setGrowthDiffRate(((Double)paramValues.get("growthdiffrate")).doubleValue());
 		setFlowDiffRate(((Double)paramValues.get("flowdiffrate")).doubleValue());
-		setExchangeStyle(((ExchangeStyle)paramValues.get("exchangestyle")));
-		setBiomassMotionStyle((BiomassMotionStyle)paramValues.get("biomassmotionstyle"));
+		//setExchangeStyle(((ExchangeStyle)paramValues.get("exchangestyle")));
+
+		if(paramValues.get("exchangestyle") instanceof String)
+			setExchangeStyle((ExchangeStyle.findByName((String)paramValues.get("exchangestyle"))));
+		else 
+		    setExchangeStyle(((ExchangeStyle)paramValues.get("exchangestyle")));
+		
+		//setBiomassMotionStyle((BiomassMotionStyle)paramValues.get("biomassmotionstyle"));
+		
+		if(paramValues.get("biomassmotionstyle") instanceof String)
+			setBiomassMotionStyle(BiomassMotionStyle.findByName((String)paramValues.get("biomassmotionstyle")));
+		else
+		    setBiomassMotionStyle((BiomassMotionStyle)paramValues.get("biomassmotionstyle"));
+		
 		setDefaultVmax(((Double)paramValues.get("defaultvmax")).doubleValue());
 		setDefaultKm(((Double)paramValues.get("defaultkm")).doubleValue());
 		setDefaultHill(((Double)paramValues.get("defaulthill")).doubleValue());
