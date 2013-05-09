@@ -1348,7 +1348,26 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 				double[] channels = new double[3];
 				for (int i=0; i<biomass.length; i++)
 				{
-					channels[i % 3] += biomass[i];
+					//channels[i % 3] += biomass[i];
+					if(biomass.length==1 || biomass.length == 2)
+					{
+						channels[i % 3] += biomass[i];
+					}
+					else
+					{
+					    if(i<(int)(biomass.length/2))
+					    {
+						    channels[2] += 0;
+						    channels[1] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1)+Math.PI/2);
+						    channels[0] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1));
+					    }
+					    else 
+					    {
+						    channels[1] += 0;
+						    channels[2] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1)-Math.PI/2);
+						    channels[0] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1));
+					    }
+					}
 				}
 				col = new Color((int)Math.min((channels[1]*(255/m[1])), 255), (int)Math.min((channels[0]*(255/m[0])), 255),  (int)Math.min((channels[2]*(255/m[2])), 255));
 			}

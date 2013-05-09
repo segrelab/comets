@@ -94,7 +94,7 @@ public class Comets implements CometsConstants,
 	 * by each cell just runs through a diffusion routine.
 	 */
 	public static boolean DIFFUSION_TEST_MODE = false;
-	private String versionString = "1.2.2, 9 May 2013";
+	private String versionString = "1.2.3, 9 May 2013";
 
 	// The setup pane 
 	private CometsSimRunner runner;
@@ -657,7 +657,26 @@ public class Comets implements CometsConstants,
 						double[] channels = new double[3];
 						for (int i=0; i<biomass.length; i++)
 						{
-							channels[i % 3] += biomass[i];
+							//channels[i % 3] += biomass[i];
+							if(biomass.length==1 || biomass.length == 2)
+							{
+								channels[i % 3] += biomass[i];
+							}
+							else
+							{
+							    if(i<biomass.length/2)
+							    {
+								    channels[2] += 0;
+								    channels[1] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1)+Math.PI/2);
+								    channels[0] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1));
+							    }
+							    else 
+							    {
+								    channels[1] += 0;
+								    channels[2] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1)-Math.PI/2);
+								    channels[0] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1));
+							    }
+							}
 						}
 						col = Utility.pColor((int)(channels[1]*(255/m[1])), (int)(channels[0]*(255/m[0])), (int)(channels[2]*(255/m[2])));
 					}
