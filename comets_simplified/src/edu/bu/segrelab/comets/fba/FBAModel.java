@@ -93,7 +93,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		try
 		{
 			System.loadLibrary("glpk_java");
-			//GLPK.init_glpk();
+			GLPK.init_glpk();
 		}
 		catch (UnsatisfiedLinkError e)
 		{
