@@ -1602,7 +1602,7 @@ public class FBAWorld extends World2D
 		}
 
 		// 3. diffuse media and biomass
-		for (int i = 0; i < cParams.getDiffusionsPerStep(); i++)
+		for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
 		{
 			diffuseMediaFick();
 			
