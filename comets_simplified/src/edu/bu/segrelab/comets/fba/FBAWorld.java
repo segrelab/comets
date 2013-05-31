@@ -1828,7 +1828,7 @@ public class FBAWorld extends World2D
 		{
 			NumberFormat nf = NumberFormat.getInstance();
 			nf.setGroupingUsed(false);
-			nf.setMaximumFractionDigits(4);
+			nf.setMaximumFractionDigits(9);
 			
 			for (int k=0; k<numMedia; k++)
 			{
