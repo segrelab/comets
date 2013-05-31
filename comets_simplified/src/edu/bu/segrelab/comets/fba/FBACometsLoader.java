@@ -725,7 +725,12 @@ public class FBACometsLoader implements CometsLoader,
 			models[i] = FBAModel.loadModelFromFile(f.getPath());
 			models[i].setFlowDiffusionConstant(pParams.getFlowDiffRate());
 			models[i].setGrowthDiffusionConstant(pParams.getGrowthDiffRate());
-
+			models[i].setDefaultHill(pParams.getDefaultHill());
+            models[i].setDefaultKm(pParams.getDefaultKm());
+            models[i].setDefaultVmax(pParams.getDefaultVmax());
+            models[i].setDefaultAlpha(pParams.getDefaultAlpha());
+            models[i].setDefaultW(pParams.getDefaultW());
+			
 			System.out.println("Done!\n Testing default parameters...");
 			int result = models[i].run();
 			System.out.print("Done!\nGLPK status code = " + result + " ");
