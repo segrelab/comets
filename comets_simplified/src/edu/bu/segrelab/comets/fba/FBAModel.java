@@ -1425,6 +1425,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		// setup done.
 		
 		int status = -1; //GLPK.glp_simplex(lp, param);
+		simParam.setPresolve(GLPK.GLP_OFF); //Turn presolver off ID 
 		switch(glpkSolverMethod)
 		{
 			case SIMPLEX_METHOD:
