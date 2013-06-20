@@ -266,7 +266,7 @@ public class CometsParameters implements CometsConstants
 		paramValues.put("slideshowext", slideshowExt);
 		paramTypes.put("slideshowext", ParameterType.STRING);
 		
-		paramValues.put("slideshowname", "slideshow");
+		paramValues.put("slideshowname", slideshowName);
 		paramTypes.put("slideshowname", ParameterType.STRING);
 		
 		paramValues.put("colorrelative", new Boolean(colorRelative));
