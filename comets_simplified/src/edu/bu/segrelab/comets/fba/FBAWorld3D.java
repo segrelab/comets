@@ -1984,13 +1984,13 @@ public class FBAWorld3D extends World3D
 					for (int i=0; i<models.length; i++)
 					{
 						String varName = "biomass_" + currentTimePoint + "_" + i;
-						biomassLogWriter.println(varName + " = sparse(" + numRows + ", " + numCols + ");");
+						biomassLogWriter.println(varName + " = sparse(" + numLayers+", "+ numRows + ", " + numCols +");");
 						Iterator<Cell> it = c.getCells().iterator();
 						while (it.hasNext())
 						{
 							FBACell cell = (FBACell)it.next();
 							double[] biomass = cell.getBiomass();
-							biomassLogWriter.println(varName + "(" + (cell.getY()+1) + ", " + (cell.getX()+1) + ") = " + nf.format(biomass[i]) + ";");
+							biomassLogWriter.println(varName + "("+(cell.getZ()+1)+", " + (cell.getY()+1) + ", " + (cell.getX()+1) + ") = " + nf.format(biomass[i]) + ";");
 						}
 					}
 					break;
@@ -2009,7 +2009,7 @@ public class FBAWorld3D extends World3D
 					{
 						FBACell cell = (FBACell)it.next();
 						double[] biomass = cell.getBiomass();
-						biomassLogWriter.print(cell.getX() + " " + cell.getY());
+						biomassLogWriter.print(cell.getX() + " " + cell.getY()+ " " + cell.getZ());
 						for (int i=0; i<biomass.length; i++)
 						{
 							biomassLogWriter.print(" " + nf.format(biomass[i]));
