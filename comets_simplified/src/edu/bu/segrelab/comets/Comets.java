@@ -1541,16 +1541,20 @@ public class Comets implements CometsConstants,
 				world3D.destroy();
 				initWorld3D.destroy();
 			}
-			//add the 2D or 3D display 
-			if(cParams.getNumLayers()==1)
+			
+			if(!cParams.isCommandLineOnly())
 			{
-				setupPane.removeGraphicSetupPanel();
-			    setupPane.addGraphicsSetupPanel(DIMENSIONALITY_2D);
-			}
-			else if(cParams.getNumLayers()>1)
-			{
-				setupPane.removeGraphicSetupPanel();
-				setupPane.addGraphicsSetupPanel(DIMENSIONALITY_3D);
+				//add the 2D or 3D display 
+				if(cParams.getNumLayers()==1)
+				{
+					setupPane.removeGraphicSetupPanel();
+					setupPane.addGraphicsSetupPanel(DIMENSIONALITY_2D);
+				}
+				else if(cParams.getNumLayers()>1)
+				{
+					setupPane.removeGraphicSetupPanel();
+					setupPane.addGraphicsSetupPanel(DIMENSIONALITY_3D);
+				}
 			}
 			// Fetch the relevant data from the layout file
 			
