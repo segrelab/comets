@@ -74,4 +74,6 @@ public interface CometsConstants
 	
 	public static final int MAX_UNDO_DEPTH = 2;
 	
+	public static final int DIMENSIONALITY_2D = 16;
+	public static final int DIMENSIONALITY_3D = 17;
 }

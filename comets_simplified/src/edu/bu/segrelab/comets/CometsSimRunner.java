@@ -61,7 +61,10 @@ public class CometsSimRunner extends Thread
 	{
 		finished = false;
 		c.fireSimulationStateChangeEvent(new SimulationStateChangeEvent(SimulationStateChangeEvent.State.START));
-		c.getWorld().initSimulation();
+		if (c.getParameters().getNumLayers()==1)
+			c.getWorld().initSimulation();
+		else if (c.getParameters().getNumLayers()>1)
+			c.getWorld3D().initSimulation();
 		while (!finished)
 		{
 			if (!c.getParameters().isPaused())
@@ -85,7 +88,11 @@ public class CometsSimRunner extends Thread
 				if (c.getCells().size() == 0 || 
 					(curCycle > c.getParameters().getMaxCycles() && c.getParameters().getMaxCycles() != UNLIMITED_CYCLES))
 				{
-					c.getWorld().endSimulation();
+					if (c.getParameters().getNumLayers()==1)
+						c.getWorld().endSimulation();
+					else if (c.getParameters().getNumLayers()>1)
+						c.getWorld3D().endSimulation();
+					//c.getWorld().endSimulation();
 					finish();
 					System.out.println("End of simulation");
 					System.out.println("Total time = " + (totalTime/1000.0) + "s");
@@ -94,7 +101,11 @@ public class CometsSimRunner extends Thread
 				}
 	
 				// Simulate!
-				c.getWorld().run();
+				if (c.getParameters().getNumLayers()==1)
+					c.getWorld().run();
+				else if (c.getParameters().getNumLayers()>1)
+					c.getWorld3D().run();
+				//c.getWorld().run();
 	
 				// Clean up after a single step.
 				if (c.getParameters().pauseOnStep())

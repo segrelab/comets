@@ -4,6 +4,7 @@ import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.World2D;
+import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.util.Utility;
 
 /**
@@ -23,6 +24,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 {
 	private Model[] fbaModels;
 	private FBAWorld world;
+	private FBAWorld3D world3D;
 	
 	private final int id;
 	private int cellColor;
@@ -110,7 +112,57 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		}
 		*/
 	}
+	/**
+	 * Creates a new 3D <code>FBACell</code> with the given levels of biomass.
+	 * @param x the new cell's column
+	 * @param y the new cell's row
+	 * @param world the <code>FBAWorld</code> where this cell will live
+	 * @param fbaModels the array of <code>Models</code> (FBAModels) that will act in this cell
+	 * @param cParams the parameters from the currently loaded <code>Comets</code>
+	 * @param pParams the currently loaded package parameters
+	 */
+	public FBACell(int x, int y, int z,
+				   double[] biomass,
+				   FBAWorld3D world3D,
+				   Model[] fbaModels,
+				   CometsParameters cParams,
+				   FBAParameters pParams)
+	{
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		id = getNewCellID();
+		deltaBiomass = new double[biomass.length];
+		this.fbaModels = fbaModels;
+		this.world3D = world3D;
+		this.cParams = cParams;
+		this.pParams = pParams;
+		this.biomass = new double[fbaModels.length];
+		setBiomass3D(biomass);
+		if (cParams.showGraphics())
+			cellColor = calculateColor();
+		else
+			cellColor = 0;
+		fluxes = new double[fbaModels.length][];
+		world3D.putCellAt(x, y, z, this);		
+		updateDiffusibility3D();
+		/*
 
+		if (!cParams.allowCellOverlap())
+		{
+			for (int i=0; i<biomass.length; i++)
+			{
+				if (biomass[i] == 0)
+				{
+					world.setDiffuseBiomassOut(x, y, i, false);
+					world.setDiffuseBiomassIn(x, y, i, false);
+				}
+			}
+		}
+		*/
+	}
+	
+	
 	/**
 	 * Changes the biomass in this <code>FBACell</code> by the given delta amount.
 	 * <br>
@@ -147,7 +199,23 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	{
 		return setBiomass(values, false);
 	}
-	
+	/**
+	 * Sets the biomass in this <code>FBACell</code> to be the given amount.
+	 * <br>
+	 * If any particular value sets that species' biomass below zero, it is reset
+	 * to zero.
+	 * <br>
+	 * If the biomass of all species associated with this FBACell is zero, the 
+	 * FBACell is counted as dead, and likely removed on the next world update. 
+	 * @param values the amount of biomass to set for each species - in the same order
+	 * as the Model[] array owned by <code>Comets</code>
+	 * @return <code>Cell.CELL_OK</code> if there remains a positive amount 
+	 * of biomass, or <code>Cell.CELL_DEAD</code> if not.
+	 */
+	public int setBiomass3D(double[] values)
+	{
+		return setBiomass3D(values, false);
+	}	
 	/**
 	 * Either sets the biomass for this Cell to the quantities given in <code>values</code>
 	 * (if delta is false), or adjusts it by those values if delta is true. 
@@ -190,6 +258,48 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		updateDiffusibility();
 		return CELL_OK;
 	}
+	/**
+	 * Either sets the biomass for this Cell to the quantities given in <code>values</code>
+	 * (if delta is false), or adjusts it by those values if delta is true. 
+	 * <br>
+	 * If the biomass of all species associated with this FBACell is zero, the 
+	 * FBACell is counted as dead, and likely removed on the next world update. 
+	 * @param values the amount of biomass to set for each species - in the same order
+	 * as the Model[] array owned by <code>Comets</code>
+	 * @param delta if true, sum the values to the current biomass; if false, replace them
+	 * @return <code>Cell.CELL_OK</code> if there remains a positive amount 
+	 * of biomass, or <code>Cell.CELL_DEAD</code> if not.
+	 */
+	private int setBiomass3D(double[] values, boolean delta)
+	{
+		int numLost = 0;
+		for (int i = 0; i < biomass.length; i++)
+		{
+			if (delta)
+				biomass[i] += values[i];
+			else
+			{
+				if (values[i] < 0)
+					biomass[i] = 0;
+				else
+					biomass[i] = values[i];
+			}
+			if (biomass[i] < cParams.getMinSpaceBiomass())
+			{
+				biomass[i] = 0;
+				numLost++;
+			}
+		}
+		if (numLost == biomass.length)
+			return die();
+		if (cParams.showGraphics())
+		{
+			cellColor = calculateColor();
+			// cellWorld.updateSpace(x, y);
+		}
+		updateDiffusibility3D();
+		return CELL_OK;
+	}
 	
 	/**
 	 * Updates the diffusability of the biomass in this <code>FBACell</code>. This should
@@ -224,6 +334,40 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		if (Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
 			for (int i=0; i<biomass.length; i++)
 				world.setDiffuseBiomassIn(x, y, i, false);
+	}
+	/**
+	 * Updates the diffusability of the biomass in this <code>FBACell</code>. This should
+	 * be called whenever there's a change to the biomass quantities controlled by the cell.
+	 * <p>
+	 * Essentially, this adjusts and enforces the rules of biomass diffusability into and out
+	 * of the space this cell occupies, esspecially in the case where only one species can 
+	 * be in a space at a time. E.g., if the biomass levels were changed so that one species
+	 * replaces another, then more biomass from that species should be allowed to diffuse in, 
+	 * and all other species should be prevented.
+	 * <p>
+	 * Finally, if this FBACell is full (the total biomass exceeds cParams.getMaxSpaceBiomass()),
+	 * block all inward movement.
+	 */
+	private void updateDiffusibility3D()
+	{
+		// first, reset to original cell constraints
+		// e.g. if we don't allow overlap, set in-diffusion to only
+		// the currently assigned biomass
+		// otherwise, everything's welcome in.
+		for (int i=0; i<biomass.length; i++)
+		{
+			world3D.setDiffuseBiomassIn(x, y, z, i, true);
+			if (biomass[i] == 0 && !cParams.allowCellOverlap())
+			{
+				world3D.setDiffuseBiomassIn(x, y, z, i, false);
+				world3D.setDiffuseBiomassOut(x, y, z, i, false);
+			}
+		}
+
+		// next, set diffusability based on how much biomass is present.
+		if (Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
+			for (int i=0; i<biomass.length; i++)
+				world3D.setDiffuseBiomassIn(x, y, z, i, false);
 	}
 
 	/* (non-Javadoc)
@@ -379,8 +523,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			}
 
 			/************************* CALCULATE MAX EXCHANGE FLUXES ******************************/
-
-			double[] media = world.getModelMediaAt(x, y, i);
+			double[] media=null;//=world3D.getModelMediaAt(x, y, z, i);
+			if(cParams.getNumLayers() == 1)
+				media = world.getModelMediaAt(x, y, i);
+			else if (cParams.getNumLayers() > 1)
+				media = world3D.getModelMediaAt(x, y, z, i);
+		
 			double[] lb = ((FBAModel)models[i]).getBaseExchLowerBounds();
 			double[] ub = ((FBAModel)models[i]).getBaseExchUpperBounds();
 //			String[] exchNames = ((FBAModel)models[i]).getExchangeReactionNames();
@@ -388,12 +536,14 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				System.out.println("Exchange reaction bounds:");
 
 			double[] rates = new double[lb.length];
+			
 			switch (pParams.getExchangeStyle())
 			{
 				case MONOD :
 					double[] kmArr = ((FBAModel)models[i]).getExchangeKm(); 
 					double[] vMaxArr = ((FBAModel)models[i]).getExchangeVmax();
 					double[] hillCoeffArr = ((FBAModel)models[i]).getExchangeHillCoefficients();
+
 //					double[] vTilde = new double[hillCoeffArr.length];
 
 					for (int j=0; j<lb.length; j++)
@@ -401,11 +551,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						double km = pParams.getDefaultKm();
 						if (kmArr != null && kmArr.length > j && kmArr[j] > 0)
 							km = kmArr[j];
-
 						double vMax = pParams.getDefaultVmax();
 						if (vMaxArr != null && vMaxArr.length > j && vMaxArr[j] > 0)
 							vMax = vMaxArr[j];
-
 						double hill = pParams.getDefaultHill();
 						if (hillCoeffArr != null && hillCoeffArr.length > j && hillCoeffArr[j] > 0)
 							hill = hillCoeffArr[j];
@@ -528,7 +676,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
 //					System.out.print("\t" + exchFlux[j]);
 				}
-				world.changeModelMedia(x, y, i, mediaDelta);
+				if(cParams.getNumLayers() == 1)
+					world.changeModelMedia(x, y, i, mediaDelta);
+				else if (cParams.getNumLayers() > 1)
+					world3D.changeModelMedia(x, y, z, i, mediaDelta);
 
 				/***************** GET BIOMASS CONCENTRATION CHANGE ****************/
 				// biomass is in grams
@@ -600,7 +751,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		
 		if (numDead == biomass.length)
 			return die();
-		updateDiffusibility();
+		if(cParams.getNumLayers()==1)
+			updateDiffusibility();
+		else if(cParams.getNumLayers()>1)
+			updateDiffusibility3D();
 		
 		return CELL_OK;
 	}
@@ -658,7 +812,18 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		
 		return bak;
 	}
-
+	
+	/**
+	 * Creates a clone of this <code>FBACell</code> linked to the passed backupWorld.
+	 * @return a clone of this <code>FBACell</code> cast as a <code>Cell</code>
+	 */
+	public Cell backup(World3D backupWorld)
+	{
+		FBACell bak = new FBACell(x, y, z, biomass.clone(), (FBAWorld3D)backupWorld, fbaModels, cParams, pParams);
+		
+		return bak;
+	}
+	
 	@Override
 	/**
 	 * Changes the models known by this <code>FBACell</code>. If the newModels array contains

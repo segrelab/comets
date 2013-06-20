@@ -81,6 +81,17 @@ public abstract class Cell implements CometsConstants
 	public abstract Cell backup(World2D backupWorld);
 
 	/**
+	 * Returns a backup of this <code>Cell</code>, corresponding to the <code>World2D</code> 
+	 * being backed up in parallel.
+	 * <p>
+	 * The usage here is to create a new <code>Cell</code> that exists in the backupWorld
+	 * parameter, and not in its current world.
+	 * @param backupWorld 
+	 * @return a copy of the <code>Cell</code>
+	 */
+	public abstract Cell backup(World3D backupWorld);
+	
+	/**
 	 * @return the current x-coordinate of the <code>Cell</code> on the grid.
 	 */
 	public int getX() { return x; }
@@ -115,6 +126,14 @@ public abstract class Cell implements CometsConstants
 	 * @return an integer implying the success or failure of the operation
 	 */
 	public abstract int setBiomass(double[] values);
+	
+	/**
+	 * Changes the biomass of the <code>Cell</code> to a new array of values, where each
+	 * element <i>i</i> corresponds to the <i>i</i>th <code>Model</code> currently loaded. 
+	 * @param values - an array of values to set to the biomass of each <code>Model</code>.
+	 * @return an integer implying the success or failure of the operation
+	 */
+	public abstract int setBiomass3D(double[] values);
 	
 	/**
 	 * 

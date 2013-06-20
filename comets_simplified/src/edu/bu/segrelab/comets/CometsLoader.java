@@ -59,6 +59,11 @@ public interface CometsLoader
 	 * Retrieves the world loaded by this <code>CometsLoader</code> or <code>null</code>
 	 * @return a freshly loaded <code>World2D</code>
 	 */
+	public World3D getWorld3D();	
+	/**
+	 * Retrieves the world loaded by this <code>CometsLoader</code> or <code>null</code>
+	 * @return a freshly loaded <code>World2D</code>
+	 */
 	public World2D getWorld();
 
 	/**

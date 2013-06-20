@@ -94,7 +94,7 @@ public class Comets implements CometsConstants,
 	 * by each cell just runs through a diffusion routine.
 	 */
 	public static boolean DIFFUSION_TEST_MODE = false;
-	private String versionString = "1.2.3, 14 May 2013";
+	private String versionString = "1.3, 26 June 2013";
 
 	// The setup pane 
 	private CometsSimRunner runner;
@@ -104,6 +104,7 @@ public class Comets implements CometsConstants,
 	
 	private Model[] initModels, models;
 	private World2D initWorld, world;
+	private World3D initWorld3D, world3D;
 	private List<Cell> initCellList, cellList;
 
 	private int mode;
@@ -211,6 +212,7 @@ public class Comets implements CometsConstants,
 			System.out.println(e);
 			exitCommandLineError();
 		}
+		
 		
 		// if we have a script file, load and run it, then exit.
 		if (scriptFileName != null)
@@ -888,7 +890,17 @@ public class Comets implements CometsConstants,
 	{
 		return world;
 	}
-
+	/**
+	 * Returns the World3D being used in the program.<br>
+	 * Note that this will likely be a subclass (<code>FBAWorld</code>, etc),
+	 * but the abstract type is used here.
+	 *
+	 * @return a World2D or <code>null</code> if it hasn't been instantiated.
+	 */
+	public World3D getWorld3D()
+	{
+		return world3D;
+	}
 	/**
 	 * Returns the array of loaded Models.<br>
 	 * These will likely be subclasses, but the abstract type is used here.
@@ -938,7 +950,7 @@ public class Comets implements CometsConstants,
 			JOptionPane.showMessageDialog(cFrame, "No cells initialized!");
 			return;
 		}
-		else if (world == null)
+		else if (world == null && world3D == null)
 		{
 			JOptionPane.showMessageDialog(cFrame, "World not initialized!");
 			return;
@@ -984,11 +996,17 @@ public class Comets implements CometsConstants,
 			catch(InterruptedException e) {	}
 		}
 		mode = SETUP_MODE;
-		if (!cParams.isCommandLineOnly())
+		if (!cParams.isCommandLineOnly() && cParams.getNumLayers()==1)
 		{
 			backupState(true);
 			cMenuBar.setMode(mode);
 			cMenuBar.canUndo(worldUndoDeque.size() > 1);
+			setupPane.clear();
+			setupPane.setMode(mode);
+		}
+		else if(!cParams.isCommandLineOnly() && cParams.getNumLayers()>1)
+		{
+			cMenuBar.setMode(mode);
 			setupPane.clear();
 			setupPane.setMode(mode);
 		}
@@ -1518,29 +1536,55 @@ public class Comets implements CometsConstants,
 				world.destroy();
 				initWorld.destroy();
 			}
-			
+			if (world3D != null)
+			{
+				world3D.destroy();
+				initWorld3D.destroy();
+			}
+			//add the 2D or 3D display 
+			if(cParams.getNumLayers()==1)
+			{
+				setupPane.removeGraphicSetupPanel();
+			    setupPane.addGraphicsSetupPanel(DIMENSIONALITY_2D);
+			}
+			else if(cParams.getNumLayers()>1)
+			{
+				setupPane.removeGraphicSetupPanel();
+				setupPane.addGraphicsSetupPanel(DIMENSIONALITY_3D);
+			}
 			// Fetch the relevant data from the layout file
-			world = loader.getWorld();
+			
+			if (cParams.getNumLayers()==1)
+				world = loader.getWorld();
+			else if(cParams.getNumLayers()>1)
+				world3D = loader.getWorld3D();
 			models = loader.getModels();
 			cellList = loader.getCells();
-
-			initWorld = world.backup();
+			if (cParams.getNumLayers()==1)
+				initWorld = world.backup();
+			else if(cParams.getNumLayers()>1)
+				initWorld3D = world3D.backup();
 			initCellList = new ArrayList<Cell>();
 			for (Cell cell : cellList)
 			{
-				initCellList.add(cell.backup(initWorld));
+				if (cParams.getNumLayers()==1)
+					initCellList.add(cell.backup(initWorld));
+				else if(cParams.getNumLayers()>1)
+					initCellList.add(cell.backup(initWorld3D));
 			}
-			
-			worldUndoDeque.clear();
-			worldRedoStack.clear();
-			cellUndoDeque.clear();
-			cellRedoStack.clear();
-			modelUndoDeque.clear();
-			modelRedoStack.clear();
-			if (!cParams.isCommandLineOnly())
-			{	
-				backupState(true);
-				cMenuBar.canUndo(false);
+			if (cParams.getNumLayers()==1)
+			{
+				worldUndoDeque.clear();
+				worldRedoStack.clear();
+				cellUndoDeque.clear();
+				cellRedoStack.clear();
+				modelUndoDeque.clear();
+				modelRedoStack.clear();
+				if (!cParams.isCommandLineOnly())
+				{	
+					backupState(true);
+					cMenuBar.canUndo(false);
+				}
 			}
 		}
 		catch(IOException e)

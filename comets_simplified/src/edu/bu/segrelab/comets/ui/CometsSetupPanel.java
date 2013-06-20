@@ -3,6 +3,10 @@
  */
 package edu.bu.segrelab.comets.ui;
 
+import com.jogamp.opengl.util.gl2.GLUT;
+import javax.media.opengl.*;
+import javax.media.opengl.awt.GLJPanel;
+
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
@@ -95,6 +99,7 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	
 	private Comets c;
 	private GraphicSetupPanel gsp;
+	private GraphicSetupPanel3D gsp3d;
 	private JPanel displayTogglePanel;
 	private JComboBox displayComboBox;
 	private JCheckBox colorStyleBox;
@@ -102,6 +107,7 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	private CometsSimControlPanel simControls;
 	private DataContentPanel biomassPanel,
 				   			 mediaPanel;
+	private GridBagConstraints gbc;
 
 	/**
 	 * Builds a new <code>CometsSetupPanel</code> and links it to the <code>Comets</code>
@@ -117,14 +123,14 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 		//setupMediaPanel();
 		
 		setLayout(new GridBagLayout());
-		GridBagConstraints gbc = new GridBagConstraints();
+		gbc = new GridBagConstraints();
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridx = 0;
 		gbc.gridy = 0;
 		gbc.gridheight = GridBagConstraints.REMAINDER;
 		
-		gsp = new GraphicSetupPanel(c, this);
-		add(gsp, gbc);
+		//gsp = new GraphicSetupPanel(c, this);
+		//add(gsp, gbc);
 		
 		gbc.gridx = 1;
 		gbc.gridheight = 1;
@@ -157,7 +163,10 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 			case(SETUP_MODE) :
 				simControls.setVisible(false);
 				simControls.reset();
-				tbp.setVisible(true);
+				if(gsp != null)
+					tbp.setVisible(true);
+				else if(gsp == null)
+					tbp.setVisible(false);
 				break;
 			default:
 				break;
@@ -169,6 +178,8 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 		super.repaint();
 		if (gsp != null)
 			gsp.repaint();
+		if (gsp3d!=null)
+			gsp3d.repaint();
 	}
 	
 	/**
@@ -196,6 +207,13 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 							JComboBox cb = (JComboBox)e.getSource();
 							c.getParameters().setDisplayLayer(cb.getSelectedIndex());
 							gsp.repaint();
+//							gsp.setDisplayToggle(cb.getSelectedIndex());
+						}
+						else if (c.getWorld3D() != null)
+						{
+							JComboBox cb = (JComboBox)e.getSource();
+							c.getParameters().setDisplayLayer(cb.getSelectedIndex());
+							gsp3d.repaint();
 //							gsp.setDisplayToggle(cb.getSelectedIndex());
 						}
 					}
@@ -246,7 +264,10 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 				new ChangeListener() {
 					public void stateChanged(ChangeEvent e)
 					{
-						gsp.setColorStyle(false, ((Double)colorValSpinner.getValue()).doubleValue());
+						if (c.getWorld() != null)
+							gsp.setColorStyle(false, ((Double)colorValSpinner.getValue()).doubleValue());
+						else if(c.getWorld3D() != null)
+							gsp3d.setColorStyle(false, ((Double)colorValSpinner.getValue()).doubleValue());
 					}
 				});
 		colorValSpinner.setEnabled(false);
@@ -263,7 +284,10 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 					{
 						colorValSpinner.setEnabled(!colorStyleBox.isSelected());
 						colorLabel.setEnabled(!colorStyleBox.isSelected());
-						gsp.setColorStyle(colorStyleBox.isSelected(), ((Double)colorValSpinner.getValue()).doubleValue());
+						if (c.getWorld() != null)
+							gsp.setColorStyle(colorStyleBox.isSelected(), ((Double)colorValSpinner.getValue()).doubleValue());
+						else if(c.getWorld3D() != null)
+							gsp3d.setColorStyle(colorStyleBox.isSelected(), ((Double)colorValSpinner.getValue()).doubleValue());
 					}
 				});
 
@@ -322,6 +346,28 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 
 			gsp.repaint();
 		}
+		else if (c.getWorld3D() != null)
+		{
+			String[] mediaNames = c.getWorld3D().getMediaNames();
+			for (int i=0; i<mediaNames.length; i++)
+			{
+				displayComboBox.addItem(mediaNames[i]);
+			}
+			displayComboBox.addItem("Biomass");
+			
+			// set the currently selected one to be the biomass one.
+			if (layer > displayComboBox.getItemCount())
+			{
+				displayComboBox.setSelectedIndex(mediaNames.length);
+				c.getParameters().setDisplayLayer(mediaNames.length);
+			}
+			else
+				displayComboBox.setSelectedIndex(layer);
+			
+			colorStyleBox.setSelected(c.getParameters().getColorRelative());
+
+			gsp3d.repaint();
+		}
 		else
 		{
 			displayComboBox.addItem("No World Loaded");
@@ -337,7 +383,10 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	{
 		biomassPanel = null;
 		mediaPanel = null;
-		gsp.clear();
+		if(gsp != null)
+		    gsp.clear();
+		//if(gsp3d != null)
+			//gsp3d.clear();
 		tbp.clearContent();
 		resetDisplayPanel();
 	}
@@ -765,7 +814,53 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 			setBarrier(p, barrier);
 		}
 	}
+	
+	/**
+	 * Adds <code>GraphicsSetupPanel</code> to <code>CometsSetupPanel</code>.
+ 	 * @param dimensionality - if <code>DIMENSIONALITY_3D</code> adds a 3D panel,
+	 * if <code>DIMENSIONALITY_2D</code> adds a 2D panel.
+	 */
+	public void addGraphicsSetupPanel(int dimensionality)
+	{
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		gbc.gridheight = GridBagConstraints.REMAINDER;
+		
+		switch(dimensionality)
+		{
+			case(DIMENSIONALITY_2D) :
+				gsp = new GraphicSetupPanel(c, this);
+				add(gsp, gbc);
+				break;
+			case(DIMENSIONALITY_3D) :
+				gsp3d = new GraphicSetupPanel3D(c);
+			    add(gsp3d, gbc);
+				break;
+			default:
+				break;
+		}
+	}
+	
+	/**
+	 * Removes existing <code>GraphicsSetupPanel</code> from <code>CometsSetupPanel</code>.
+	 */
+	public void removeGraphicSetupPanel()
+	{
+		for(int i=0;i<this.getComponents().length;i++)
+		{
+			if(this.getComponents()[i] instanceof GraphicSetupPanel)
+				remove(this.getComponents()[i]);
+		}
+		for(int i=0;i<this.getComponents().length;i++)
+		{
+			if(this.getComponents()[i] instanceof GraphicSetupPanel3D)
+				remove(this.getComponents()[i]);
+		}
+	}
 }
+
+
 
 
 /* An ugly piece of code I'm embarrassed to claim credit for. It copies so much from all 
@@ -1635,3 +1730,362 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 			GraphicSetupPanel.this.csp.getActiveTool().mouseExited(e);
 	}
 }
+
+
+/**
+ * The <code>GraphicSetupPanel3D</code> is the 3D graphical component of the <code>CometsSetupPanel</code>.
+ * This handles showing off the state of the currently loaded 3D world. 
+ * <p> 
+ * This class is set in the <code>CometsSetupPanel</code> file since that's the only class
+ * that should directly interact with it. Any other interaction is done indirectly through 
+ * Java's mouse interface.
+ * @author Ilija Dukovski
+ *
+ */
+@SuppressWarnings("serial")
+class GraphicSetupPanel3D extends GLJPanel implements 
+      CometsConstants,
+      GLEventListener,
+      MouseMotionListener,
+      MouseListener
+{
+	private final int CANVAS_SIZE = 500;
+	private Comets c;
+	//private CometsSetupPanel csp;
+	//private Shape selectionShape;
+	private CometsParameters cParams;
+
+	private double[] colorScale = {10.0, 10.0, 10.0};
+	//private JPopupMenu popupMenu;
+	//private Point //mouseDown,
+	//			  clickPoint;
+	//private List<Point> selectedSpaces;
+	//private JRadioButton overButton,
+	//					 modButton;
+	//private ButtonGroup bgroup;
+	
+	//private JCheckBox barrierBox;
+	//private JCheckBox[] biomassInBoxes,
+	//					biomassOutBoxes,
+	//					mediaInBoxes,
+	//					mediaOutBoxes;
+
+	    private boolean resetViewport = false;
+	    private double dX = 0;
+	    private double dY = 0;
+	    private double startX, startY;
+        private double[] horAxis={1.0,0.0,0.0};
+        private double[] vertAxis={0.0,1.0,0.0};
+	    
+	    public GraphicSetupPanel3D(Comets c) {
+	    	super();
+	    	this.c = c;
+	    	this.cParams = c.getParameters();
+	    	
+	        GLProfile glp = GLProfile.getDefault();
+	        GLCapabilities caps = new GLCapabilities(glp);
+	        GLJPanel canvas = new GLJPanel(caps);
+
+	        canvas.setPreferredSize(new Dimension(CANVAS_SIZE,CANVAS_SIZE));
+	        this.add(canvas);
+	        this.setVisible(true);
+	       
+/*
+	        frame.addWindowListener(new WindowAdapter() {
+	            public void windowClosing(WindowEvent e) {
+	                System.exit(0);
+	            }
+	        });
+*/
+	        canvas.addGLEventListener(this);
+	        canvas.addMouseMotionListener(this);
+	        canvas.addMouseListener(this);
+	        
+	    }
+
+	    @Override
+	    public void display(GLAutoDrawable drawable) {
+	        render(drawable);
+	    }
+
+	    @Override
+	    public void dispose(GLAutoDrawable drawable) {
+	    }
+
+	    @Override
+	    public void init(GLAutoDrawable drawable) {
+	    }
+	    
+	    @Override
+	    public void reshape(GLAutoDrawable drawable, int x, int y, int w, int h) {
+	    }
+
+	    private void render(GLAutoDrawable drawable) {
+	    	
+	    	double maxDimension, cubeSize;
+	    	
+	        GL2 gl = drawable.getGL().getGL2();
+	        //GLU glu = new GLU();
+	        GLUT glut = new GLUT();
+	        
+	        maxDimension = Math.max((double)cParams.getNumCols(), (double)cParams.getNumRows());
+	        maxDimension = Math.max(maxDimension, (double)cParams.getNumLayers());
+	        cubeSize = (double) (1.0/(maxDimension-1.0));
+	        
+            gl.glMatrixMode(GL2.GL_MODELVIEW);
+            gl.glClear(GL2.GL_COLOR_BUFFER_BIT);
+            
+            gl.glEnable(GL2.GL_DEPTH_TEST);
+            gl.glClear(GL2.GL_DEPTH_BUFFER_BIT);
+            gl.glClearDepth(0.0);
+            gl.glDepthFunc(GL2.GL_GREATER);
+            
+            //gl.glEnable(GL2.GL_LIGHTING);
+            float[] specular={1.0f,1.0f,1.0f,1.0f};
+            float[] diffuse={1.0f,1.0f,1.0f,1.0f};
+            float[] whiteLight={0.5f,0.5f,0.5f,1.0f};
+            float[] ambient={1.0f,1.0f,1.0f,1.0f};
+            float[] position={1f,1f,1f,1.0f};
+            //gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_DIFFUSE,diffuse,0);
+            //gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_SPECULAR,specular,0);
+            //gl.glLightfv(GL2.GL_LIGHT0,GL2.GL_AMBIENT,whiteLight,0);
+            //gl.glLightfv(GL2.GL_LIGHT0, GL2.GL_POSITION, position, 0);
+            //gl.glEnable(GL2.GL_LIGHT0);
+            //gl.glEnable(GL2.GL_LIGHT1);
+            
+            //gl.glEnable(GL2.GL_COLOR_MATERIAL);
+            //gl.glColorMaterial(GL2.GL_FRONT,GL2.GL_DIFFUSE);
+            //gl.glColorMaterial(GL2.GL_FRONT,GL2.GL_SPECULAR);
+            //gl.glColorMaterial(GL2.GL_FRONT,GL2.GL_AMBIENT);
+            //gl.glMateriali(GL2.GL_FRONT, GL2.GL_SPECULAR, 128);
+            //gl.glMateriali(GL2.GL_FRONT, GL2.GL_AMBIENT, 128);
+            //gl.glMateriali(GL2.GL_FRONT, GL2.GL_DIFFUSE, 128);
+            
+            
+            //gl.glEnable(GL2.GL_BLEND);
+            //gl.glBlendFunc(GL2.GL_SRC_ALPHA,GL2.GL_ONE_MINUS_SRC_ALPHA);
+            
+	        if(resetViewport)
+	        {
+	        	gl.glLoadIdentity();
+	            resetViewport=false;
+	        }
+	        else
+	        {
+	        	gl.glRotated(-dY, horAxis[0], horAxis[1], horAxis[2]);
+	        	gl.glRotated( dX, vertAxis[0], vertAxis[1], vertAxis[2]);
+	        }
+	        
+			if (c.getWorld3D() != null)
+			{
+				//double[] m = new double[3];
+				double[] m={0.0,0.0,0.0};
+				if (cParams.getColorRelative())
+				{
+					if (cParams.getDisplayLayer() == c.getWorld3D().getNumMedia())
+					{
+						for (int i=0; i<cParams.getNumCols(); i++)
+						{
+							for (int j=0; j<cParams.getNumRows(); j++)
+							{
+								for (int l=0; l<cParams.getNumLayers(); l++)
+								{
+									Cell cell = c.getWorld3D().getCellAt(i, j, l);
+									if (cell != null)
+									{
+										double[] biomass = cell.getBiomass();
+										//double[] sum = new double[3];
+										double[] sum = {0.0,0.0,0.0};
+										for (int k=0; k<biomass.length; k++)
+										{
+											sum[k%3] += biomass[k];
+										}
+										for (int k=0; k<3; k++)
+										{
+											if (sum[k] > m[k])
+												m[k] = sum[k];
+										}
+									}
+								}
+							}
+						}
+					}
+					else
+						m[0] = Utility.max(c.getWorld().getAllMedia(), cParams.getDisplayLayer());
+				}
+				else
+					m = colorScale;
+				
+				for (int i=0; i<cParams.getNumCols(); i++)
+				{
+					for (int j=0; j<cParams.getNumRows(); j++)
+					{
+						for (int l=0; l<cParams.getNumLayers(); l++)
+						{
+
+							Color color = currentWorld3DColor(i, j, l, m);
+							if (color != null)
+							{   
+								double x = -0.5+((double)i)/(cParams.getNumCols()-1.0);
+								double y = -0.5+((double)j)/(cParams.getNumRows()-1.0);
+								double z = -0.5+((double)l)/(cParams.getNumLayers()-1.0);
+								
+			   					double red   = ((double)color.getRed())/255.0;
+			   					double green = ((double)color.getGreen())/255.0;
+			   					double blue  = ((double)color.getBlue())/255.0;
+			   					//double alpha = (red+green+blue);
+			   					double norm = Math.sqrt(red*red+green*green+blue*blue);
+			   					
+			   					if(color.getRed()!=0 || color.getGreen()!=0 || color.getBlue()!=0)
+			   					{
+			   							red   /=norm;
+			   							green /=norm;
+			   							blue  /=norm;
+			   							gl.glColor3d(red, green, blue);
+			   							gl.glPushMatrix();
+			   							gl.glTranslated(x,y,z);
+			   							glut.glutSolidCube((float) cubeSize);
+			   							gl.glColor3d(0.0, 0.0, 0.0);
+			   							glut.glutWireCube((float) cubeSize);
+			   							gl.glPopMatrix();
+			   					}
+							}
+						}
+					}
+
+				}
+
+			}
+			gl.glDisable(GL2.GL_DEPTH_TEST);
+	    }
+
+		@Override
+		public void mouseDragged(MouseEvent arg0) {
+			// TODO Auto-generated method stub
+			dX = -(startX-arg0.getX())/10.0;
+			dY = (startY-arg0.getY())/10.0;
+			display();
+			startX=arg0.getX();
+			startY=arg0.getY();
+		}
+
+		@Override
+		public void mouseMoved(MouseEvent arg0) {
+			// TODO Auto-generated method stub			
+		}
+
+		@Override
+		public void mouseClicked(MouseEvent arg0) {
+			// TODO Auto-generated method stub
+			if(arg0.getClickCount()==2)
+			{   
+				resetViewport = true;
+				display();
+			}
+		}
+
+		@Override
+		public void mouseEntered(MouseEvent arg0) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void mouseExited(MouseEvent arg0) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public void mousePressed(MouseEvent arg0) {
+			startX=arg0.getX();
+			startY=arg0.getY();
+			
+		}
+
+		@Override
+		public void mouseReleased(MouseEvent arg0) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		/**
+		 * Gets the current color of the world at space (x, y), relative to the maximum
+		 * values given in the m array.
+		 * @param x - x-coordinate of the world
+		 * @param y - y-coordinate of the world
+		 * @param m - a 3-element array of double values, used as a coloring threshold.
+		 * @return the scaled color of the world as a packed 32-bit integer - like what Processing
+		 * uses for colors.
+		 */
+		public Color currentWorld3DColor(int x, int y, int z, double[] m)
+		{
+			if (c.getWorld3D().isBarrier(x, y, z))
+				return new Color(cParams.getBarrierColor());
+
+			Color col = null;
+			if (cParams.getDisplayLayer() == c.getWorld3D().getNumMedia()) // if it's numMedia, then display cell concs.
+			{
+				Cell cell = c.getWorld3D().getCellAt(x, y, z);
+				if (cell != null)
+				{
+					double[] biomass = cell.getBiomass();
+					double[] channels = {0.0,0.0,0.0};
+					double biomassSum=0.0;
+					for (int i=0; i<biomass.length; i++)
+					{ 
+						//channels[i % 3] += biomass[i];
+						biomassSum+=biomass[i];
+						if(biomass.length==1 || biomass.length == 2)
+						{
+							channels[i % 3] += biomass[i];
+						}
+						else
+						{
+						    if(i<(int)(biomass.length/2))
+						    {
+							    channels[2] += 0;
+							    channels[1] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1)+Math.PI/2.0);
+							    channels[0] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1));
+						    }
+						    else 
+						    {
+							    channels[1] += 0;
+							    channels[2] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1)-Math.PI/2.0);
+							    channels[0] += biomass[i]*Math.sin(Math.PI*i/(biomass.length-1));
+						    }
+						}
+					}
+					col = new Color((int)Math.min((channels[1]*(255/biomassSum)), 255), (int)Math.min((channels[0]*(255/biomassSum)), 255),  (int)Math.min((channels[2]*(255/biomassSum)), 255));
+					//col = new Color((int)Math.min((channels[1]*(255/m[1])), 255), (int)Math.min((channels[0]*(255/m[0])), 255),  (int)Math.min((channels[2]*(255/m[2])), 255));
+				}
+			}
+			else
+			{
+				//	      double m = util.max(media, displayToggle);
+				double[] media = c.getWorld3D().getMediaAt(x, y, z);
+				col = new Color((int)Math.min(255, media[cParams.getDisplayLayer()]*(255/m[0])), 0, 0);
+			}
+			return col;
+		}
+		
+		/**
+		 * Sets the color style to be shown. If <code>isRelative</code> is true, then the
+		 * relative color style is used (e.g. color saturation is all spaces is relative to the
+		 * space with the highest concentration), and if false then the absolute color style is 
+		 * used (in this case, all colors are a function of the passed <code>colorValue</code>
+		 * variable and not the most dense space). 
+		 * @param isRelative
+		 * @param colorValue
+		 */
+		public void setColorStyle(boolean isRelative, double colorValue)
+		{
+			cParams.setColorRelative(isRelative);
+//			colorRelative = isRelative;
+			colorScale = new double[]{ colorValue, colorValue, colorValue };
+			repaint();
+		}
+
+}
+
+

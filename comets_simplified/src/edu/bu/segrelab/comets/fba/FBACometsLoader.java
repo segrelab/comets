@@ -41,6 +41,7 @@ import edu.bu.segrelab.comets.ParametersFileHandler;
 import edu.bu.segrelab.comets.RefreshPoint;
 import edu.bu.segrelab.comets.StaticPoint;
 import edu.bu.segrelab.comets.World2D;
+import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.exception.LayoutFileException;
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.exception.ParameterFileException;
@@ -59,6 +60,7 @@ public class FBACometsLoader implements CometsLoader,
 	}
 	
 	private FBAWorld world;
+	private FBAWorld3D world3D;
 	private FBAModel[] models;
 	private List<Cell> cellList;
 	private String mediaFileName;
@@ -93,6 +95,13 @@ public class FBACometsLoader implements CometsLoader,
 		return world; 
 	}
 	
+	/**
+	 * Returns the recently loaded World3D.
+	 */
+	public World3D getWorld3D() 
+	{ 
+		return world3D; 
+	}
 	/**
 	 * Returns the recently loaded array of <code>Models</code>
 	 */
@@ -324,14 +333,18 @@ public class FBACometsLoader implements CometsLoader,
 							// needs to be a total of 3 elements in the array
 							// the last 2 need to be integers.
 							// that's - numCols, numRows (x, y) or (width, height)
-							if (worldParsed.length != 3)
+							if (worldParsed.length > 4)
 							{
-								throw new IOException("the 'grid_size' tag must be followed by two positive integers: width and height values");
+								throw new IOException("the 'grid_size' tag must be followed by two or three positive integers: width, height and layers values");
 							}
 							c.getParameters().setNumCols(Integer.valueOf(worldParsed[1]));
 							c.getParameters().setNumRows(Integer.valueOf(worldParsed[2]));
+							if (worldParsed.length == 4)
+							    c.getParameters().setNumLayers(Integer.valueOf(worldParsed[3]));
+							else if(worldParsed.length == 3)
+								c.getParameters().setNumLayers(Integer.valueOf(1));
 						}
-						
+					
 						/****************** BARRIER *************************/
 						
 						else if (worldParsed[0].equalsIgnoreCase(BARRIER))
@@ -471,146 +484,297 @@ public class FBACometsLoader implements CometsLoader,
 						mediaNames[(int)val.getY()] = str;
 						mediaConc[(int)val.getY()] = val.getX();
 					}
-					world = new FBAWorld(c, mediaNames, mediaConc, models);
-					//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
-					if (mediaRefresh != null)
+					//Choose 2D or 3D world given the dimensionality
+					//System.out.println("OK"+c.getParameters().getNumLayers());
+					if(c.getParameters().getNumLayers()==1)
 					{
-						world.setMediaRefreshAmount(mediaRefresh);
-						for (RefreshPoint rp : refreshPoints)
+						world = new FBAWorld(c, mediaNames, mediaConc, models);
+						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
+						if (mediaRefresh != null)
 						{
-							world.addMediaRefreshSpace(rp);
+							world.setMediaRefreshAmount(mediaRefresh);
+							for (RefreshPoint rp : refreshPoints)
+							{
+								world.addMediaRefreshSpace(rp);
+							}
 						}
-					}
+						
+						if (staticMedia != null && globalStatic != null)
+						{
+							for (StaticPoint sp : staticPoints)
+							{
+								world.addStaticMediaSpace(sp);
+							}
+							world.setGlobalStaticMedia(staticMedia, globalStatic);
+						}
+						
+						// set barrier spaces.
+						for (Point p : barrier)
+						{
+							world.setBarrier((int)p.getX(), (int)p.getY(), true);
+						}
+						
+						// set specifically determined media in given spaces
+						for (Point p : specMedia.keySet())
+						{
+							world.setMedia((int)p.getX(), (int)p.getY(), specMedia.get(p));
+						}
+						
+						// set spaces where biomass isn't allowed to diffuse out
+						Iterator<int[]> itNoBioOut = noBiomassOut.iterator();
+						while (itNoBioOut.hasNext())
+						{
+							int[] arr = itNoBioOut.next();
+							if (arr.length > 2)
+							{
+								for (int i=2; i<arr.length; i++)
+								{
+									world.setDiffuseBiomassOut(arr[0], arr[1], arr[i], false);
+								}
+							}
+							else
+							{
+								for (int i=0; i<models.length; i++)
+								{
+									world.setDiffuseBiomassOut(arr[0], arr[1], i, false);
+								}
+							}
+						}
+
+						// set spaces where biomass isn't allowed to diffuse in
+						Iterator<int[]> itNoBioIn = noBiomassIn.iterator();
+						while (itNoBioIn.hasNext())
+						{
+							int[] arr = itNoBioIn.next();
+							if (arr.length > 2)
+							{
+								for (int i=2; i<arr.length; i++)
+								{
+									world.setDiffuseBiomassIn(arr[0], arr[1], arr[i], false);
+								}
+							}
+							else
+							{
+								for (int i=0; i<models.length; i++)
+								{
+									world.setDiffuseBiomassIn(arr[0], arr[1], i, false);
+								}
+							}
+						}
+
+						// set spaces where media isn't allowed to diffuse out
+						Iterator<int[]> itNoMediaOut = noMediaOut.iterator();
+						while (itNoMediaOut.hasNext())
+						{
+							int[] arr = itNoMediaOut.next();
+							if (arr.length > 2)
+							{
+								for (int i=2; i<arr.length; i++)
+								{
+									world.setDiffuseMediaOut(arr[0], arr[1], arr[i], false);
+								}
+							}
+							else
+							{
+								for (int i=0; i<numMedia; i++)
+								{
+									world.setDiffuseMediaOut(arr[0], arr[1], i, false);
+								}
+							}
+						}
+
+						// set spaces where media isn't allowed to diffuse in
+						Iterator<int[]> itNoMediaIn = noMediaIn.iterator();
+						while (itNoMediaIn.hasNext())
+						{
+							int[] arr = itNoMediaIn.next();
+							if (arr.length > 2)
+							{
+								for (int i=2; i<arr.length; i++)
+								{
+									world.setDiffuseMediaIn(arr[0], arr[1], arr[i], false);
+								}
+							}
+							else
+							{
+								for (int i=0; i<numMedia; i++)
+								{
+									world.setDiffuseMediaIn(arr[0], arr[1], i, false);
+								}
+							}
+						}
 					
-					if (staticMedia != null && globalStatic != null)
-					{
-						for (StaticPoint sp : staticPoints)
-						{
-							world.addStaticMediaSpace(sp);
-						}
-						world.setGlobalStaticMedia(staticMedia, globalStatic);
-					}
-
-					// set barrier spaces.
-					for (Point p : barrier)
-					{
-						world.setBarrier((int)p.getX(), (int)p.getY(), true);
-					}
-
-					// set specifically determined media in given spaces
-					for (Point p : specMedia.keySet())
-					{
-						world.setMedia((int)p.getX(), (int)p.getY(), specMedia.get(p));
-					}
-
-					// set spaces where biomass isn't allowed to diffuse out
-					Iterator<int[]> itNoBioOut = noBiomassOut.iterator();
-					while (itNoBioOut.hasNext())
-					{
-						int[] arr = itNoBioOut.next();
-						if (arr.length > 2)
-						{
-							for (int i=2; i<arr.length; i++)
-							{
-								world.setDiffuseBiomassOut(arr[0], arr[1], arr[i], false);
-							}
-						}
-						else
-						{
-							for (int i=0; i<models.length; i++)
-							{
-								world.setDiffuseBiomassOut(arr[0], arr[1], i, false);
-							}
-						}
-					}
-
-					// set spaces where biomass isn't allowed to diffuse in
-					Iterator<int[]> itNoBioIn = noBiomassIn.iterator();
-					while (itNoBioIn.hasNext())
-					{
-						int[] arr = itNoBioIn.next();
-						if (arr.length > 2)
-						{
-							for (int i=2; i<arr.length; i++)
-							{
-								world.setDiffuseBiomassIn(arr[0], arr[1], arr[i], false);
-							}
-						}
-						else
-						{
-							for (int i=0; i<models.length; i++)
-							{
-								world.setDiffuseBiomassIn(arr[0], arr[1], i, false);
-							}
-						}
-					}
-
-					// set spaces where media isn't allowed to diffuse out
-					Iterator<int[]> itNoMediaOut = noMediaOut.iterator();
-					while (itNoMediaOut.hasNext())
-					{
-						int[] arr = itNoMediaOut.next();
-						if (arr.length > 2)
-						{
-							for (int i=2; i<arr.length; i++)
-							{
-								world.setDiffuseMediaOut(arr[0], arr[1], arr[i], false);
-							}
-						}
-						else
-						{
-							for (int i=0; i<numMedia; i++)
-							{
-								world.setDiffuseMediaOut(arr[0], arr[1], i, false);
-							}
-						}
-					}
-
-					// set spaces where media isn't allowed to diffuse in
-					Iterator<int[]> itNoMediaIn = noMediaIn.iterator();
-					while (itNoMediaIn.hasNext())
-					{
-						int[] arr = itNoMediaIn.next();
-						if (arr.length > 2)
-						{
-							for (int i=2; i<arr.length; i++)
-							{
-								world.setDiffuseMediaIn(arr[0], arr[1], arr[i], false);
-							}
-						}
-						else
-						{
-							for (int i=0; i<numMedia; i++)
-							{
-								world.setDiffuseMediaIn(arr[0], arr[1], i, false);
-							}
-						}
-					}
+						/* Set diffusion constants */
+						double[] diffusionConsts = new double[numMedia];
+						double defaultDiffConst = pParams.getDefaultDiffusionConstant();
+						for (int i=0; i<numMedia; i++)
+							diffusionConsts[i] = defaultDiffConst;
 					
-					/* Set diffusion constants */
-					double[] diffusionConsts = new double[numMedia];
-					double defaultDiffConst = pParams.getDefaultDiffusionConstant();
-					for (int i=0; i<numMedia; i++)
-						diffusionConsts[i] = defaultDiffConst;
-					
-					for (int index : diffConsts.keySet())
-					{
-						if (index >= 0 && index < numMedia)
+						for (int index : diffConsts.keySet())
 						{
-							diffusionConsts[index] = diffConsts.get(index);
+							if (index >= 0 && index < numMedia)
+							{
+								diffusionConsts[index] = diffConsts.get(index);
+							}
 						}
+						world.setDiffusionConstants(diffusionConsts);
+						System.out.println("Done!");
 					}
-					world.setDiffusionConstants(diffusionConsts);
-					System.out.println("Done!");
+					else if(c.getParameters().getNumLayers()>1)
+					{
+						
+						world3D = new FBAWorld3D(c, mediaNames, mediaConc, models);
+						
+						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
+						if (mediaRefresh != null)
+						{
+							world3D.setMediaRefreshAmount(mediaRefresh);
+							for (RefreshPoint rp : refreshPoints)
+							{
+								world3D.addMediaRefreshSpace(rp);
+							}
+						}
+						
+						if (staticMedia != null && globalStatic != null)
+						{
+							for (StaticPoint sp : staticPoints)
+							{
+								world3D.addStaticMediaSpace(sp);
+							}
+							world3D.setGlobalStaticMedia(staticMedia, globalStatic);
+						}
+
+						// set barrier spaces.
+						for (Point p : barrier)
+						{
+//							world3D.setBarrier((int)p.getX(), (int)p.getY(),  true);
+						}
+					
+						// set specifically determined media in given spaces
+						for (Point p : specMedia.keySet())
+						{
+//							world3D.setMedia((int)p.getX(), (int)p.getY(), specMedia.get(p));
+						}
+						
+						// set spaces where biomass isn't allowed to diffuse out
+						Iterator<int[]> itNoBioOut = noBiomassOut.iterator();
+						while (itNoBioOut.hasNext())
+						{
+							int[] arr = itNoBioOut.next();
+							if (arr.length > 3)
+							{
+								for (int i=3; i<arr.length; i++)
+								{
+									world3D.setDiffuseBiomassOut(arr[0], arr[1], arr[2], arr[i], false);
+								}
+							}
+							else
+							{
+								for (int i=0; i<models.length; i++)
+								{
+									world3D.setDiffuseBiomassOut(arr[0], arr[1], arr[2], i, false);
+								}
+							}
+						}
+						
+						// set spaces where biomass isn't allowed to diffuse in
+						Iterator<int[]> itNoBioIn = noBiomassIn.iterator();
+						while (itNoBioIn.hasNext())
+						{
+							int[] arr = itNoBioIn.next();
+							if (arr.length > 3)
+							{
+								for (int i=3; i<arr.length; i++)
+								{
+									world3D.setDiffuseBiomassIn(arr[0], arr[1], arr[2], arr[i], false);
+								}
+							}
+							else
+							{
+								for (int i=0; i<models.length; i++)
+								{
+									world3D.setDiffuseBiomassIn(arr[0], arr[1], arr[2], i, false);
+								}
+							}
+						}
+						
+						// set spaces where media isn't allowed to diffuse out
+						Iterator<int[]> itNoMediaOut = noMediaOut.iterator();
+						while (itNoMediaOut.hasNext())
+						{
+							int[] arr = itNoMediaOut.next();
+							if (arr.length > 3)
+							{
+								for (int i=3; i<arr.length; i++)
+								{
+									world3D.setDiffuseMediaOut(arr[0], arr[1], arr[2], arr[i], false);
+								}
+							}
+							else
+							{
+								for (int i=0; i<numMedia; i++)
+								{
+									world3D.setDiffuseMediaOut(arr[0], arr[1], arr[2], i, false);
+								}
+							}
+						}
+
+						// set spaces where media isn't allowed to diffuse in
+						Iterator<int[]> itNoMediaIn = noMediaIn.iterator();
+						while (itNoMediaIn.hasNext())
+						{
+							int[] arr = itNoMediaIn.next();
+							if (arr.length > 3)
+							{
+								for (int i=3; i<arr.length; i++)
+								{
+									world3D.setDiffuseMediaIn(arr[0], arr[1], arr[2], arr[i], false);
+								}
+							}
+							else
+							{
+								for (int i=0; i<numMedia; i++)
+								{
+									world3D.setDiffuseMediaIn(arr[0], arr[1], arr[2], i, false);
+								}
+							}
+						}
+						
+						// Set diffusion constants 
+						double[] diffusionConsts = new double[numMedia];
+						double defaultDiffConst = pParams.getDefaultDiffusionConstant();
+						for (int i=0; i<numMedia; i++)
+							diffusionConsts[i] = defaultDiffConst;
+						
+						for (int index : diffConsts.keySet())
+						{
+							if (index >= 0 && index < numMedia)
+							{
+								diffusionConsts[index] = diffConsts.get(index);
+							}
+						}
+						world3D.setDiffusionConstants(diffusionConsts);
+						System.out.println("Done!");
+					}
 				}
 				
 				/**************** INITIAL CELL POPULATION ***************/
 				else if (parsed[0].equalsIgnoreCase(INITIAL_POP))
 				{
 					cellList = new ArrayList<Cell>();
-					if (world == null || models == null)
+					if(c.getParameters().getNumLayers()==1)
 					{
-						throw new IOException("Gotta load FBA models and define the grid first! The 'initial_pop' tag\n     should be at the end of the file!");
+						if (world == null || models == null)
+						{
+							throw new IOException("Gotta load FBA models and define the grid first! The 'initial_pop' tag\n     should be at the end of the file!");
+						}
+					}
+					else if(c.getParameters().getNumLayers()>1)
+					{
+						if (world3D == null || models == null)
+						{
+							throw new IOException("Gotta load FBA models and define the grid first! The 'initial_pop' tag\n     should be at the end of the file!");
+						}
 					}
 
 					List<String> lines = collectLayoutFileBlock(reader);
@@ -654,7 +818,10 @@ public class FBACometsLoader implements CometsLoader,
 			throw new IOException("Layout file error: " + e.getMessage() + " in layout file: " + filename);
 		}
 		// at the very end, set the display layer to biomass, since now we know how many layers there are.
-		c.getParameters().setDisplayLayer(world.getNumMedia());
+		if(c.getParameters().getNumLayers()==1)
+			c.getParameters().setDisplayLayer(world.getNumMedia());
+		else if(c.getParameters().getNumLayers()>1)
+			c.getParameters().setDisplayLayer(world3D.getNumMedia());
 		return PARAMS_OK;
 	}
 
@@ -987,17 +1154,32 @@ public class FBACometsLoader implements CometsLoader,
 					continue;
 
 				String[] popInfo = line.split("\\s+");
-				if (popInfo.length != 2 + models.length)
+				if (popInfo.length < 3 || popInfo.length > 3 + models.length)
 					throw new LayoutFileException("Each population line starts with an x and y coordinate, and is followed by the concentration of each model at that point", lineCount);
 				// the first two are expected to be integers - x and y coords
-				int x = Integer.valueOf(popInfo[0]);
-				int y = Integer.valueOf(popInfo[1]);
-				double[] startingBiomass = new double[models.length];
-				for (int i=0; i<startingBiomass.length; i++)
+				if(c.getParameters().getNumLayers()==1)
 				{
-					startingBiomass[i] = Double.valueOf(popInfo[i+2]);
+					int x = Integer.valueOf(popInfo[0]);
+					int y = Integer.valueOf(popInfo[1]);
+					double[] startingBiomass = new double[models.length];
+					for (int i=0; i<startingBiomass.length; i++)
+					{
+						startingBiomass[i] = Double.valueOf(popInfo[i+2]);
+					}
+					cellList.add(new FBACell(x, y, startingBiomass, world, models, c.getParameters(), pParams));
 				}
-				cellList.add(new FBACell(x, y, startingBiomass, world, models, c.getParameters(), pParams));
+				else if(c.getParameters().getNumLayers()>1)
+				{
+					int x = Integer.valueOf(popInfo[0]);
+					int y = Integer.valueOf(popInfo[1]);
+					int z = Integer.valueOf(popInfo[2]);
+					double[] startingBiomass = new double[models.length];
+					for (int i=0; i<startingBiomass.length; i++)
+					{
+						startingBiomass[i] = Double.valueOf(popInfo[i+3]);
+					}
+					cellList.add(new FBACell(x, y, z, startingBiomass, world3D, models, c.getParameters(), pParams));
+				}
 			}
 		}
 		return LoaderState.OK;
