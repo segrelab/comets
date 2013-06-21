@@ -1944,7 +1944,7 @@ public class FBAWorld3D extends World3D
 			
 			for (int k=0; k<numMedia; k++)
 			{
-				mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + "));");
+				mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + ", " + numLayers + "));");
 				for (int i=0; i<numCols; i++)
 				{
 					for (int j=0; j<numRows; j++)
@@ -1952,7 +1952,7 @@ public class FBAWorld3D extends World3D
 						for (int l = 0; l < numLayers; l++)
 						{
 							if (media[i][j][l][k] != 0)
-								mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "}(" + (i+1) + ", " + (j+1) + ") = " + nf.format(media[i][j][k]) + ";");
+								mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "}(" + (i+1) + ", " + (j+1) + ", " + (l+1)+") = " + nf.format(media[i][j][l][k]) + ";");
 						}
 					}
 				}
