@@ -48,6 +48,7 @@ import edu.bu.segrelab.comets.exception.ParameterFileException;
 import edu.bu.segrelab.comets.fba.ui.LayoutSavePanel;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
+import edu.bu.segrelab.comets.util.Point3d;
 
 public class FBACometsLoader implements CometsLoader, 
 							 			CometsConstants
@@ -201,6 +202,7 @@ public class FBACometsLoader implements CometsLoader,
 			boolean[] globalStatic = null;
 
 			Set<Point> barrier = new HashSet<Point>();
+			Set<Point3d> barrier3D = new HashSet<Point3d>();
 			Map<Point, double[]> specMedia = new HashMap<Point, double[]>();
 			Map<Integer, Double> diffConsts = new HashMap<Integer, Double>();
 			List<int[]> noBiomassOut = new ArrayList<int[]>();
@@ -350,7 +352,14 @@ public class FBACometsLoader implements CometsLoader,
 						else if (worldParsed[0].equalsIgnoreCase(BARRIER))
 						{
 							List<String> lines = collectLayoutFileBlock(reader);
-							state = parseBarrierBlock(lines, barrier);
+							if(c.getParameters().getNumLayers()==1)
+							{
+								state = parseBarrierBlock(lines, barrier);
+							}
+							else if(c.getParameters().getNumLayers()>1)
+							{
+								state = parseBarrierBlock3D(lines, barrier3D);
+							}
 						}
 						
 						/****************** DIFFUSION CONSTANTS ********************/
@@ -645,11 +654,11 @@ public class FBACometsLoader implements CometsLoader,
 						}
 
 						// set barrier spaces.
-						for (Point p : barrier)
+						for (Point3d p : barrier3D)
 						{
-//							world3D.setBarrier((int)p.getX(), (int)p.getY(),  true);
+							world3D.setBarrier((int)p.getX(), (int)p.getY(), (int)p.getZ(), true);
 						}
-					
+						
 						// set specifically determined media in given spaces
 						for (Point p : specMedia.keySet())
 						{
@@ -1290,6 +1299,25 @@ public class FBACometsLoader implements CometsLoader,
 				throw(new LayoutFileException("each line after 'barrier' must be two integers >= 0", lineCount));
 			}
 			barrier.add(new Point(Integer.valueOf(barrierParsed[0]), Integer.valueOf(barrierParsed[1])));
+		}
+		return LoaderState.OK;
+	}
+	
+	private LoaderState parseBarrierBlock3D(List<String> lines, Set<Point3d> barrier3D) throws LayoutFileException, NumberFormatException
+	{
+		for (String line : lines)
+		{
+			lineCount++;
+			// ignore empty lines.
+			if (line.length() == 0)
+				continue;
+			
+			String[] barrierParsed = line.split("\\s+");
+			if (barrierParsed.length != 3)
+			{
+				throw(new LayoutFileException("each line after 'barrier' must be three integers >= 0", lineCount));
+			}
+			barrier3D.add(new Point3d(Integer.valueOf(barrierParsed[0]), Integer.valueOf(barrierParsed[1]),Integer.valueOf(barrierParsed[2])));
 		}
 		return LoaderState.OK;
 	}
