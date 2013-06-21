@@ -1911,7 +1911,7 @@ class GraphicSetupPanel3D extends GLJPanel implements
 						}
 					}
 					else
-						m[0] = Utility.max(c.getWorld().getAllMedia(), cParams.getDisplayLayer());
+						m[0] = Utility.max(c.getWorld3D().getAllMedia(), cParams.getDisplayLayer());
 				}
 				else
 					m = colorScale;

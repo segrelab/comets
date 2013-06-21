@@ -220,7 +220,32 @@ public class Utility implements CometsConstants
 		}
 		return val;
 	}
-
+	
+	/**
+	 * Finds the maximum double value (i.e. value closest to positive infinity)
+	 * from the 2D array specified by arr[][][][layer].
+	 * 
+	 * @param arr
+	 * @param layer
+	 * @return
+	 */
+	public static double max(double[][][][] arr, int layer)
+	{
+		double val = -100000;
+		for (int i = 0; i < arr.length; i++)
+		{
+			for (int j = 0; j < arr[0].length; j++)
+			{
+				for (int l = 0; l < arr[0][0].length; l++)
+				{
+					if (arr[i][j][l][layer] > val)
+						val = arr[i][j][l][layer];
+				}
+			}
+		}
+		return val;
+	}
+	
 	/**
 	 * Generates a Processing-style 32 bit int version of a color by
 	 * bit-shifting the rgb values together. If any channel color is out of the
