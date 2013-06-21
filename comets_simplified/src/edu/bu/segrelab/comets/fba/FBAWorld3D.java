@@ -1882,7 +1882,7 @@ public class FBAWorld3D extends World3D
 							{
 								if (fluxes[i] != null)
 								{
-									fluxLogWriter.write("fluxes{" + (currentTimePoint) + "}{" + (cell.getX()+1) + "}{" + (cell.getY()+1) + "}{" + (i+1) + "} = [");
+									fluxLogWriter.write("fluxes{" + (currentTimePoint) + "}{" + (cell.getX()+1) + "}{" + (cell.getY()+1) + "}{"+ (cell.getZ()+1) + "}{" + (i+1) + "} = [");
 									for (int j=0; j<fluxes[i].length; j++)
 									{
 										fluxLogWriter.write(nf.format(fluxes[i][j]) + " ");
@@ -1913,7 +1913,7 @@ public class FBAWorld3D extends World3D
 							continue;
 						else
 						{
-							fluxLogWriter.print(cell.getX() + " " + cell.getY());
+							fluxLogWriter.print(cell.getX() + " " + cell.getY()+" " + cell.getZ());
 							for (int i=0; i<fluxes.length; i++)
 							{
 								for (int j=0; j<fluxes[i].length; j++)
