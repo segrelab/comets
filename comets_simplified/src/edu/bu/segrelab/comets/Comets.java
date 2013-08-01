@@ -1101,7 +1101,7 @@ public class Comets implements CometsConstants,
 	 */
 	public void editModelParametersDialog()
 	{
-		if (world == null)
+		if (world == null && world3D == null)
 		{
 			JOptionPane.showMessageDialog(cFrame, "No World loaded!");
 			return;
@@ -1124,7 +1124,14 @@ public class Comets implements CometsConstants,
 		{
 			for (int i=0; i<models.length; i++)
 				models[i].applyParameters();
-			world.updateWorld();
+			if (world != null)
+			{
+				world.updateWorld();
+			}
+			if (world3D != null)
+			{
+				world3D.updateWorld();
+			}
 		}
 	}
 	
