@@ -1938,9 +1938,10 @@ public class FBAWorld3D extends World3D
 		System.out.println("WRITING MEDIA LOG");
 		if (mediaLogWriter != null && (currentTimePoint == 1 || currentTimePoint % pParams.getMediaLogRate() == 0))
 		{
-			NumberFormat nf = NumberFormat.getInstance();
-			nf.setGroupingUsed(false);
-			nf.setMaximumFractionDigits(9);
+			//NumberFormat nf = NumberFormat.getInstance();
+			//nf.setGroupingUsed(false);
+			//nf.setMaximumFractionDigits(9);
+			NumberFormat nf = new DecimalFormat("0.##########E0");
 			
 			for (int k=0; k<numMedia; k++)
 			{
