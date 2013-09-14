@@ -558,8 +558,15 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						if (hillCoeffArr != null && hillCoeffArr.length > j && hillCoeffArr[j] > 0)
 							hill = hillCoeffArr[j];
 
-						rates[j] = Math.min(Math.abs(lb[j]),
+						// Start of modified code corrected lb 9/19/13 Ilija D.
+						if(media[j]/(cParams.getTimeStep()*biomass[i])<calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill))
+						{
+							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(media[j]/(cParams.getTimeStep()*biomass[i])));
+						}
+						else
+							rates[j] = Math.min(Math.abs(lb[j]),
 											Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
+						// End of modified code
 
 //						vTilde[j] = (vMax * Math.pow(media[j]/cParams.getSpaceVolume(), hill))/(km + Math.pow(media[j]/cParams.getSpaceVolume(), hill));
 //
