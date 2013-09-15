@@ -1745,9 +1745,10 @@ public class FBAWorld extends World2D
 	{
 		if (fluxLogWriter != null && (currentTimePoint == 1 || currentTimePoint % pParams.getFluxLogRate() == 0)) // log writer is initialized
 		{			
-			NumberFormat nf = NumberFormat.getInstance();
-			nf.setGroupingUsed(false);
-			nf.setMaximumFractionDigits(4);
+			//NumberFormat nf = NumberFormat.getInstance();
+			//nf.setGroupingUsed(false);
+			//nf.setMaximumFractionDigits(4);
+			NumberFormat nf = new DecimalFormat("0.##########E0");
 
 			switch(pParams.getFluxLogFormat())
 			{
@@ -1855,9 +1856,11 @@ public class FBAWorld extends World2D
 	{
 		if (biomassLogWriter != null)// && (currentTimePoint == 1 || currentTimePoint % pParams.getBiomassLogRate() == 0))
 		{
-			NumberFormat nf = NumberFormat.getInstance();
-			nf.setGroupingUsed(false);
-			nf.setMaximumFractionDigits(100);
+			//NumberFormat nf = NumberFormat.getInstance();
+			//nf.setGroupingUsed(false);
+			//nf.setMaximumFractionDigits(100);
+			NumberFormat nf = new DecimalFormat("0.##########E0");
+			
 			switch(pParams.getBiomassLogFormat())
 			{
 				/* Matlab .m file format:
@@ -1916,15 +1919,17 @@ public class FBAWorld extends World2D
 	{
 		if (totalBiomassLogWriter != null)
 		{
-			NumberFormat nf = NumberFormat.getInstance();
-			nf.setGroupingUsed(false);
-			nf.setMaximumFractionDigits(100);
+			//NumberFormat nf = NumberFormat.getInstance();
+			//nf.setGroupingUsed(false);
+			//nf.setMaximumFractionDigits(100);
+			NumberFormat nf = new DecimalFormat("0.##########E0");
+			
 			double[] curBiomass = calculateTotalBiomass();
 			
 			totalBiomassLogWriter.print(currentTimePoint);
 			for (int i=0; i<curBiomass.length; i++)
 			{
-				totalBiomassLogWriter.print("\t" + curBiomass[i]);
+				totalBiomassLogWriter.print("\t" + nf.format(curBiomass[i]));
 			}
 			totalBiomassLogWriter.println();
 			
