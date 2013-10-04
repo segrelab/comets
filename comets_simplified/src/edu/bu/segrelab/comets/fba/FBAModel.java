@@ -275,7 +275,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					final double[] exchAlpha,
 					final double[] exchW,
 					final String[] metabNames, 
-					final String[] rxnNames)
+					final String[] rxnNames,
+					final int objStyle)
 	{
 		this(m, l, u, r);
 		
@@ -291,6 +292,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		this.exchHillCoeff = exchHillCoeff;
 		this.exchAlpha = exchAlpha;
 		this.exchW = exchW;
+		this.objStyle = objStyle;
 
 		this.metabNames = metabNames;
 		this.rxnNames = rxnNames;
@@ -1634,6 +1636,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			double[] lb = null;
 			double[] ub = null;
 			int obj = 0;
+			int objSt = MAXIMIZE_OBJECTIVE_FLUX;
 			String[] metNames = null;
 			String[] rxnNames = null;
 			int[] exchRxns = null;
@@ -1851,6 +1854,53 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						}
 						
 						obj = rxn;
+					}
+					lineNum++;
+					blockOpen = false;
+				}
+				
+				/**************************************************************
+				 **************** LOAD OBJECTIVE REACTION STYLE****************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("OBJECTIVE_STYLE"))
+				{
+					
+					String objStyleLine = null;
+					blockOpen = true;
+
+					while (!(objStyleLine = reader.readLine().trim()).equalsIgnoreCase("//"))
+					{
+						lineNum++;
+						if (objStyleLine.length() == 0)
+							continue;
+
+						String[] parsed = objStyleLine.split("\\s+");
+						if (parsed.length != 1) {
+							reader.close();
+							throw new ModelFileException("There should be just 1 element for the objective style line - the name of the objective style.");
+						}
+						
+						if(parsed[0].equalsIgnoreCase("MAXIMIZE_OBJECTIVE_FLUX"))
+							objSt= MAXIMIZE_OBJECTIVE_FLUX;
+						else if(parsed[0].equalsIgnoreCase("MINIMIZE_OBJECTIVE_FLUX"))
+							objSt= MINIMIZE_OBJECTIVE_FLUX;
+						else if(parsed[0].equalsIgnoreCase("MAXIMIZE_TOTAL_FLUX"))
+							objSt= MAXIMIZE_TOTAL_FLUX;
+						else if(parsed[0].equalsIgnoreCase("MINIMIZE_TOTAL_FLUX"))
+							objSt= MINIMIZE_TOTAL_FLUX;
+						else if(parsed[0].equalsIgnoreCase("MAX_OBJECTIVE_MIN_TOTAL"))
+							objSt= MAX_OBJECTIVE_MIN_TOTAL;
+						else if(parsed[0].equalsIgnoreCase("MAX_OBJECTIVE_MAX_TOTAL"))
+							objSt= MAX_OBJECTIVE_MAX_TOTAL;
+						else if(parsed[0].equalsIgnoreCase("MIN_OBJECTIVE_MIN_TOTAL"))
+						    objSt= MIN_OBJECTIVE_MIN_TOTAL;
+						else if(parsed[0].equalsIgnoreCase("MIN_OBJECTIVE_MAX_TOTAL"))
+							objSt= MIN_OBJECTIVE_MAX_TOTAL; 
+						else
+						{
+							reader.close();
+							throw new ModelFileException("Wrong OBJECTIVE_STYLE input value in model file."); 
+						}
 					}
 					lineNum++;
 					blockOpen = false;
@@ -2459,7 +2509,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					exchW[i] = defaultW;
 			}
 			
-			FBAModel model = new FBAModel(S, lb, ub, obj, exchRxns, diffConsts, exchKm, exchVmax, exchHillCoeff, exchAlpha, exchW, metNames, rxnNames);
+			FBAModel model = new FBAModel(S, lb, ub, obj, exchRxns, diffConsts, exchKm, exchVmax, exchHillCoeff, exchAlpha, exchW, metNames, rxnNames, objSt);
 			model.setDefaultAlpha(defaultAlpha);
 			model.setDefaultW(defaultW);
 			model.setDefaultHill(defaultHill);
