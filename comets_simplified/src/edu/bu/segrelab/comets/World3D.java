@@ -600,7 +600,7 @@ public abstract class World3D implements CometsConstants
 	public int addStaticMediaSpace(StaticPoint sp)
 	{
 		if (staticPoints[(int)sp.getX()][(int)sp.getY()][(int)sp.getZ()] != null)
-			return addStaticMediaSpace((int)sp.getX(), (int)sp.getY(), (int)sp.getX(), sp.getMedia(), sp.getStaticSet());
+			return addStaticMediaSpace((int)sp.getX(), (int)sp.getY(), (int)sp.getZ(), sp.getMedia(), sp.getStaticSet());
 		else if (sp.getMedia().length != numMedia || sp.getStaticSet().length != numMedia)
 			return PARAMS_ERROR;
 		else if (isOnGrid(sp.getX(), sp.getY(), sp.getZ()))
