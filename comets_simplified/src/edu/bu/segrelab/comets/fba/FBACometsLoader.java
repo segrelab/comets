@@ -324,7 +324,10 @@ public class FBACometsLoader implements CometsLoader,
 							List<String> lines = collectLayoutFileBlock(reader);
 							staticMedia = new double[numMedia];
 							globalStatic = new boolean[numMedia];
-							state = parseStaticMediaBlock(worldParsed, lines, staticMedia, globalStatic, staticPoints);
+							if(c.getParameters().getNumLayers()==1)
+								state = parseStaticMediaBlock(worldParsed, lines, staticMedia, globalStatic, staticPoints);
+							else if(c.getParameters().getNumLayers()>1)
+								state = parseStaticMediaBlock3D(worldParsed, lines, staticMedia, globalStatic, staticPoints);
 							
 						}
 						
@@ -1282,6 +1285,52 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return LoaderState.OK;
 	}
+	
+	private LoaderState parseStaticMediaBlock3D(String[] header, List<String> lines, double[] staticMedia, boolean[] globalStatic, Set<StaticPoint> staticPoints) throws LayoutFileException,
+																																										NumberFormatException
+    {
+		/* this block is like this:
+		 * static_media		<stat1> <conc1>	<stat2>	<conc2> ...
+		 * 		<x>	<y>	<z> <stat1> <conc1> <stat2> <conc2>	...
+		 * //
+		 *
+		 * Where the first line (list of nutrient concs) 
+		 * represents the amount of nutrient to remain static over
+		 * the whole grid.
+		 * 
+		 * Each internal line is the nutrients to be refreshed at
+		 * each (x, y) coordinate.
+		 */
+		for (int i=1; i<header.length; i+=2)
+		{
+			globalStatic[i/2] = Integer.valueOf(header[i]) == 1;
+			staticMedia[i/2] = Double.valueOf(header[i+1]);
+		}
+
+		for (String line : lines)
+		{
+			lineCount++;
+			// ignore empty lines.
+			if (line.length() == 0)
+				continue;
+
+			String[] staticParsed = line.split("\\s+");
+			if (staticParsed.length != 3 + (staticMedia.length*2))
+			{
+				throw(new LayoutFileException("each line after 'static_media' must be three integer coordinates followed by a pair of numbers for each of \n     the " + (staticMedia.length) + " medium components. The first should be a 1 if that component is set to be\n     static, or a 0 if not, followed by the concentration to remain static.", lineCount));
+			}
+			double[] staticConc = new double[staticMedia.length];
+			boolean[] isStatic = new boolean[staticMedia.length];
+			for (int i=0; i<staticConc.length*2; i+=2)
+			{
+				isStatic[i/2] = (Integer.valueOf(staticParsed[i+3]) == 1);
+				staticConc[i/2] = Double.valueOf(staticParsed[i+4]);
+			}
+			staticPoints.add(new StaticPoint(Integer.valueOf(staticParsed[0]), Integer.valueOf(staticParsed[1]), Integer.valueOf(staticParsed[2]),staticConc, isStatic));
+		}
+		return LoaderState.OK;
+    }
+
 	
 	private LoaderState parseBarrierBlock(List<String> lines, Set<Point> barrier) throws LayoutFileException, 
 																			      NumberFormatException
