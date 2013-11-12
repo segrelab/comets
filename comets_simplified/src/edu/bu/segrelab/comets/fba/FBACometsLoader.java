@@ -308,8 +308,10 @@ public class FBACometsLoader implements CometsLoader,
 							}
 							List<String> lines = collectLayoutFileBlock(reader);
 							mediaRefresh = new double[numMedia];
-							state = parseRefreshMediaBlock(worldParsed, lines, mediaRefresh, refreshPoints);
-							
+							if(c.getParameters().getNumLayers()==1)
+								state = parseRefreshMediaBlock(worldParsed, lines, mediaRefresh, refreshPoints);
+							else if(c.getParameters().getNumLayers()>1)
+								state = parseRefreshMediaBlock3D(worldParsed, lines, mediaRefresh, refreshPoints);
 						}
 
 						/****************** STATIC MEDIA **********************/
@@ -1240,6 +1242,49 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return LoaderState.OK;
 	}
+	
+	private LoaderState parseRefreshMediaBlock3D(String[] header, List<String> lines, double[] mediaRefresh, Set<RefreshPoint> refreshPoints) throws LayoutFileException,
+																																					NumberFormatException
+    {
+		/* this block is like this:
+		 * media_refresh	<nutrient1>	<nutrient2>	<nutrient3> ...
+		 * 		<x>	<y>	<z> <nut1>	<nut2>	...
+		 * //
+		 *
+		 * Where the first line (list of nutrient concs) 
+		 * represents the amount of nutrient to be refreshed over
+		 * the whole grid.
+		 * 
+		 * Each internal line is the nutrients to be refreshed at
+		 * each (x, y) coordinate.
+		 */
+
+		for (int i=0; i<mediaRefresh.length; i++)
+		{
+			mediaRefresh[i] = Double.valueOf(header[i+1]);
+		}
+
+		for (String line : lines)
+		{
+			lineCount++;
+			// ignore empty lines.
+			if (line.length() == 0)
+				continue;
+
+			String[] refreshParsed = line.split("\\s+");
+			if (refreshParsed.length != 3 + mediaRefresh.length)
+			{
+				throw(new LayoutFileException("each line after 'media_refresh' must be three integer coordinates followed by how\n     much of each media component is restored at those coordinates", lineCount));
+			}
+			double[] refresh = new double[mediaRefresh.length];
+			for (int i=0; i<refresh.length; i++)
+			{
+				refresh[i] = Double.valueOf(refreshParsed[i+3]);
+			}
+			refreshPoints.add(new RefreshPoint(Integer.valueOf(refreshParsed[0]), Integer.valueOf(refreshParsed[1]), Integer.valueOf(refreshParsed[2]), refresh));
+		}
+		return LoaderState.OK;
+    }	
 	
 	private LoaderState parseStaticMediaBlock(String[] header, List<String> lines, double[] staticMedia, boolean[] globalStatic, Set<StaticPoint> staticPoints) throws LayoutFileException,
 																																							  NumberFormatException
