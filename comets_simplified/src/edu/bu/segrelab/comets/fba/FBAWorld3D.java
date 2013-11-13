@@ -1363,19 +1363,27 @@ public class FBAWorld3D extends World3D
 			{
 				if (((FBAModel)models[k]).getGrowthDiffusionConstant() > 0)
 				{
-					if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_CN)
-						biomassGrowthState[k] = Utility.diffuse3D(biomassGrowthState[k], barrier, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
+					//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_CN)
+					//	biomassGrowthState[k] = Utility.diffuse3D(biomassGrowthState[k], barrier, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
 						//biomassGrowthState[k] = Utility.diffuseFick3D(biomassGrowthState[k], barrier, dirichlet, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX, pParams.getNumDiffusionsPerStep());
-					if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_EP)
-						;//biomassGrowthState[k] = Utility.diffuseEightPoint(biomassGrowthState[k], dX, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), barrier);
+					//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_EP)
+					//	;//biomassGrowthState[k] = Utility.diffuseEightPoint(biomassGrowthState[k], dX, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), barrier);
+					if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_3D)
+						biomassGrowthState[k] = Utility.diffuse3D(biomassGrowthState[k], barrier, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
+					if (style != FBAParameters.BiomassMotionStyle.DIFFUSION_3D)
+						System.out.println("No biomass diffusion! The diffusion parameter must be set to 'Diffusion 3D'. ");	
 				}
 				if (((FBAModel)models[k]).getFlowDiffusionConstant() > 0)
 				{
-					if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_CN)
-						biomassFlowState[k] = Utility.diffuse3D(biomassFlowState[k], barrier, ((FBAModel)models[k]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
+					//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_CN)
+					//	biomassFlowState[k] = Utility.diffuse3D(biomassFlowState[k], barrier, ((FBAModel)models[k]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
 						//biomassFlowState[k] = Utility.diffuseFick3D(biomassFlowState[k], barrier, dirichlet, ((FBAModel)models[k]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX, pParams.getNumDiffusionsPerStep());
-					if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_EP)
-						;//biomassFlowState[k] = Utility.diffuseEightPoint(biomassFlowState[k], dX, ((FBAModel)models[k]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), barrier);
+					//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_EP)
+					//	;//biomassFlowState[k] = Utility.diffuseEightPoint(biomassFlowState[k], dX, ((FBAModel)models[k]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), barrier);
+					if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_3D)
+						biomassFlowState[k] = Utility.diffuse3D(biomassFlowState[k], barrier, ((FBAModel)models[k]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
+					if (style != FBAParameters.BiomassMotionStyle.DIFFUSION_3D)
+						System.out.println("No biomass diffusion! The diffusion parameter must be set to 'Diffusion 3D'. ");
 				}
 			}
 		}
@@ -1415,16 +1423,26 @@ public class FBAWorld3D extends World3D
 						}
 					}
 				}
-				if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_CN)
+				//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_CN)
+				//{
+				//	biomassGrowthState[curModel] = Utility.diffuse3D(biomassGrowthState[curModel], barrierState, ((FBAModel)models[curModel]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
+				//	biomassFlowState[curModel] = Utility.diffuse3D(biomassFlowState[curModel], barrierState, ((FBAModel)models[curModel]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
+				//}
+				//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_EP)
+				//{
+				//	;//biomassGrowthState[curModel] = Utility.diffuseEightPoint(biomassGrowthState[curModel], dX, ((FBAModel)models[curModel]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), barrierState);
+				//	//biomassFlowState[curModel] = Utility.diffuseEightPoint(biomassFlowState[curModel], dX, ((FBAModel)models[curModel]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), barrierState);				
+				//}
+				if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_3D)
 				{
 					biomassGrowthState[curModel] = Utility.diffuse3D(biomassGrowthState[curModel], barrierState, ((FBAModel)models[curModel]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
 					biomassFlowState[curModel] = Utility.diffuse3D(biomassFlowState[curModel], barrierState, ((FBAModel)models[curModel]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
 				}
+				if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_CN)
+					System.out.println("No biomass diffusion! The diffusion parameter must be set to 'Diffusion 3D'. ");	
 				if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_EP)
-				{
-					;//biomassGrowthState[curModel] = Utility.diffuseEightPoint(biomassGrowthState[curModel], dX, ((FBAModel)models[curModel]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), barrierState);
-					//biomassFlowState[curModel] = Utility.diffuseEightPoint(biomassFlowState[curModel], dX, ((FBAModel)models[curModel]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), barrierState);				
-				}
+					System.out.println("No biomass diffusion! The diffusion parameter must be set to 'Diffusion 3D'. ");
+				
 				
 				/* There's a numerical problem inherent to doing diffusion:
 				 * Even having a small concentration in a single space can diffuse out to 
@@ -1703,17 +1721,18 @@ public class FBAWorld3D extends World3D
             for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
 		    {          	      	
 			    diffuseMediaFick();
-			    switch (pParams.getBiomassMotionStyle())
-			    {
-				    case DIFFUSION_CN :
-					    diffuseBiomass(pParams.getBiomassMotionStyle());
-					    break;
-				    case DIFFUSION_EP :
-					    diffuseBiomass(pParams.getBiomassMotionStyle());
-					    break;
-				    default :
-					    break;
-			    }
+			    diffuseBiomass(pParams.getBiomassMotionStyle());
+//			    switch (pParams.getBiomassMotionStyle())
+//			    {
+//				    case DIFFUSION_CN :
+//					    diffuseBiomass(pParams.getBiomassMotionStyle());
+//					    break;
+//				    case DIFFUSION_EP :
+//					    diffuseBiomass(pParams.getBiomassMotionStyle());
+//					    break;
+//				    default :
+//					    break;
+//			    }
 
 		    }
 //out1.println((System.currentTimeMillis() - t));
