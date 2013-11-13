@@ -63,6 +63,7 @@ public class CometsParameters implements CometsConstants
 	
 	private double timeStep = 1,				// hours
 				   deathRate = 0.1,				// percent per time point
+				   activateRate = 0.001,          // 1/hours
 				   maxSpaceBiomass = 10,		// grams
 				   minSpaceBiomass = 1e-10,		// grams
 				   spaceWidth = 0.1,			// cm
@@ -80,7 +81,8 @@ public class CometsParameters implements CometsConstants
 					saveSlideshow = false,
 					showText = true,
 					colorRelative = true,
-					slideshowColorRelative = true;
+					slideshowColorRelative = true,
+					simulateActivation = false;
 	
 	private int displayLayer = 0,
 				pixelScale = 4,
@@ -154,6 +156,7 @@ public class CometsParameters implements CometsConstants
 		setMinSpaceBiomass(((Double)paramValues.get("minspacebiomass")).doubleValue());
 		setSpaceWidth(((Double)paramValues.get("spacewidth")).doubleValue());
 		setSpaceVolume(Math.pow(((Double)paramValues.get("spacewidth")), 3));
+		setActivateRate(((Double)paramValues.get("activaterate")).doubleValue());
 
 		setCommandLineOnly(((Boolean)paramValues.get("iscommandline")).booleanValue());
 		showGraphics(((Boolean)paramValues.get("showgraphics")).booleanValue());
@@ -166,6 +169,7 @@ public class CometsParameters implements CometsConstants
 		saveSlideshow(((Boolean)paramValues.get("saveslideshow")).booleanValue());
 		showText(((Boolean)paramValues.get("showtext")).booleanValue());
 		setColorRelative(((Boolean)paramValues.get("colorrelative")).booleanValue());
+		setSimulateActivation(((Boolean)paramValues.get("simulateactivation")).booleanValue());
 		
 		setPixelScale(((Integer)paramValues.get("pixelscale")).intValue());
 		setNumRows(((Integer)paramValues.get("gridrows")).intValue());
@@ -286,6 +290,12 @@ public class CometsParameters implements CometsConstants
 		
 		paramValues.put("lastdirectory", new String(lastDirectory));
 		paramTypes.put("lastdirectory", ParameterType.STRING);
+		
+		paramValues.put("activaterate", new Double(activateRate));
+		paramTypes.put("activaterate", ParameterType.DOUBLE);
+		
+		paramValues.put("simulateactivation", new Boolean(simulateActivation));
+		paramTypes.put("simulateactivation", ParameterType.BOOLEAN);
 	}
 	
 	public ParameterState setParameter(String p, String v)
@@ -1182,5 +1192,41 @@ public class CometsParameters implements CometsConstants
 	public ParameterType getType(String name)
 	{
 		return paramTypes.get(name);
+	}
+	
+	/** Returns the value of simulateAction parameter. 
+	 *   
+	 *  
+	*/
+	public boolean getSimulateActivation()
+	{
+		return simulateActivation;
+	}
+	
+	/** Sets the value of the simulateActivation parameter
+	 * 
+	 * @param b The boolean value for the parameter.
+	 */
+	public void setSimulateActivation(boolean b)
+	{
+		simulateActivation = b;
+	}
+	
+	/** Returns the value of the activateRate parameter
+	 * 
+	 * @return activateRate value
+	 */
+	public double getActivateRate()
+	{
+		return activateRate;
+	}
+	
+	/** Sets the value of the activateRate parameter
+	 * 
+	 * @param r The double value for the parameter.
+	 */
+	public void setActivateRate(double r)
+	{
+		activateRate = r;
 	}
 }

@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.Random;
 
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -166,7 +167,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   defaultMetabDiffConst = 0;
 //	private boolean allReactions = false;
 	
-	
+	private boolean active;     // true is model is active growing, if false the model is asleep 
+		
 	private static int[] GLPIntParam = new int[] { 0, 
 			1, 0, 1, 0,
 			Integer.MAX_VALUE, Integer.MAX_VALUE, 200, 1, 2, 0, 1, 0, 0, 3, 2,
@@ -3286,6 +3288,36 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		}
 	}
 
+	/** Set the active parameter to true (activate the model) with 
+	 * an exponential probability with given activation probability rate.
+	 * @param activationRate is the activation probability rate. 
+	 */
+	
+	public boolean activate(double activationRate)
+	{
+		if(active!=true)
+		{
+			Random random = new Random();
+		    double r = random.nextDouble();
+		    if(r<activationRate)
+		    {
+		    	active=true;
+		    }
+		}
+		
+		return active;
+		
+	}
+	
+	/** Get the value of active.
+	 * 
+	 */
+ 
+	public boolean getActive()
+	{
+		return active;
+	}
+		
 	/**
 	 * Some testing and trial code for this thing.
 	 * @param args

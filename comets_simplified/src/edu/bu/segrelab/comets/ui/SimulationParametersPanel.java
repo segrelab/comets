@@ -31,14 +31,17 @@ public class SimulationParametersPanel extends JPanel
 				   				UNLIMITED_CYCLES_LBL	=	"Unlimited cycles:",
 				   				MIN_BIOMASS_LBL			=	"Lower biomass threshold (g):",
 				   				MAX_BIOMASS_LBL			=	"Maximum biomass (g):",
-				   				NAME					=	"Simulation";
+				   				NAME					=	"Simulation",
+								SIMULATE_ACTIVATION_LBL =   "Simulate activation",
+								ACTIVATION_RATE_LBL     =   "Activation rate:";
 	
 	private JLabel 		maxCyclesLbl,
 				   		timeStepLbl,
 				   		deathRateLbl,
 				   		spaceWidthLbl,
 				   		minBiomassLbl,
-				   		maxBiomassLbl;
+				   		maxBiomassLbl,
+				   		activationRateLbl;
 
 	private IntField 	maxCyclesField;
 	
@@ -46,11 +49,13 @@ public class SimulationParametersPanel extends JPanel
 						deathRateField,
 						spaceWidthField,
 						minBiomassField,
-						maxBiomassField;
+						maxBiomassField,
+						activationRateField;
 
 	private JCheckBox	allowOverlapBox,
 						torusWorldBox,
-						unlimitedCyclesBox;
+						unlimitedCyclesBox,
+						simulateActivationBox;
 	
 	public SimulationParametersPanel(CometsParameters cParams)
 	{
@@ -134,6 +139,22 @@ public class SimulationParametersPanel extends JPanel
 		gbc.anchor = GridBagConstraints.WEST;
 		this.add(maxCyclesField, gbc);
 		
+		gbc.gridx = 0;
+		gbc.gridy++;
+		this.add(simulateActivationBox, gbc);
+		
+		gbc.gridx = 1;
+		gbc.gridwidth = 2;
+		gbc.anchor = GridBagConstraints.EAST;
+		this.add(activationRateLbl, gbc);
+		
+		gbc.gridx = 3;
+		gbc.gridwidth = 1;
+		gbc.anchor = GridBagConstraints.WEST;
+		this.add(activationRateField, gbc);
+		
+		
+		
 	}
 
 	private void bindEvents()
@@ -158,6 +179,27 @@ public class SimulationParametersPanel extends JPanel
 			maxCyclesLbl.setEnabled(false);
 		}
 		
+		
+		//When clicking this box on, the user should be able to enter the activation rate.
+		//When off, the choice is disabled
+		simulateActivationBox.addItemListener(
+			new ItemListener() {
+				public void itemStateChanged(ItemEvent e)
+				{
+					activationRateField.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+					activationRateLbl.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+				}
+			}
+		);
+		
+		if (cParams.getSimulateActivation())
+			activationRateField.setText(String.valueOf(cParams.getActivateRate()));
+		else
+		{
+			activationRateField.setEnabled(false);
+			activationRateLbl.setEnabled(false);
+		}
+		
 	}
 
 	private void initPanelWidgets()
@@ -168,6 +210,7 @@ public class SimulationParametersPanel extends JPanel
 		spaceWidthLbl		= new JLabel(SPACE_WIDTH_LBL, JLabel.LEFT);
 		minBiomassLbl		= new JLabel(MIN_BIOMASS_LBL, JLabel.LEFT);
 		maxBiomassLbl		= new JLabel(MAX_BIOMASS_LBL, JLabel.LEFT);
+		activationRateLbl   = new JLabel(ACTIVATION_RATE_LBL, JLabel.LEFT);
 
 		maxCyclesField 		= new IntField(false);
 
@@ -176,12 +219,14 @@ public class SimulationParametersPanel extends JPanel
 		spaceWidthField 	= new DoubleField(cParams.getSpaceWidth(), 6, false);
 		minBiomassField 	= new DoubleField(cParams.getMinSpaceBiomass(), 6, false);
 		maxBiomassField 	= new DoubleField(cParams.getMaxSpaceBiomass(), 6, false);
+		activationRateField = new DoubleField(cParams.getActivateRate(), 6, false);
 
 		allowOverlapBox 	= new JCheckBox(ALLOW_OVERLAP_LBL, cParams.allowCellOverlap());
 		torusWorldBox 		= new JCheckBox(TORUS_WORLD_LBL, cParams.isToroidalGrid());
 		torusWorldBox.setEnabled(false);
 		
 		unlimitedCyclesBox 	= new JCheckBox(UNLIMITED_CYCLES_LBL, cParams.getMaxCycles() == UNLIMITED_CYCLES);
+		simulateActivationBox = new JCheckBox(SIMULATE_ACTIVATION_LBL, cParams.getSimulateActivation());
 	}
 
 	@Override
@@ -211,12 +256,25 @@ public class SimulationParametersPanel extends JPanel
 				max = 1;
 			cParams.setMaxCycles(max);
 		}
+		
+		if (simulateActivationBox.isSelected())
+		{
+			cParams.setSimulateActivation(true);
+			double rate = activationRateField.getDoubleValue();
+			cParams.setActivateRate(rate);
+		}
+		else
+		{
+			cParams.setSimulateActivation(false);
+		}
+		
 	}
 
 	@Override
 	public void resetChanges()
 	{
 		maxCyclesField.setValue(cParams.getMaxCycles());
+		activationRateField.setValue(cParams.getActivateRate());
 		
 		timeStepField.setValue(cParams.getTimeStep());
 		deathRateField.setValue(cParams.getDeathRate());
@@ -224,9 +282,9 @@ public class SimulationParametersPanel extends JPanel
 		minBiomassField.setValue(cParams.getMinSpaceBiomass());
 		maxBiomassField.setValue(cParams.getMaxSpaceBiomass());
 
-
 		allowOverlapBox.setSelected(cParams.allowCellOverlap());
 		unlimitedCyclesBox.setSelected(cParams.getMaxCycles() == UNLIMITED_CYCLES);
+		simulateActivationBox.setSelected(cParams.getSimulateActivation());
 		
 	}
 

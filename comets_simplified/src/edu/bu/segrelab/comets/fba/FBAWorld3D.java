@@ -1361,6 +1361,10 @@ public class FBAWorld3D extends World3D
 		{
 			for (int k=0; k<numModels; k++)
 			{
+				if(cParams.getSimulateActivation() && !((FBAModel)models[k]).getActive())
+				{
+					continue;
+				}
 				if (((FBAModel)models[k]).getGrowthDiffusionConstant() > 0)
 				{
 					//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_CN)
@@ -1405,6 +1409,10 @@ public class FBAWorld3D extends World3D
 				// figure out where species k can't go.
 				// then diffuse it across that area
 				// this just went from being O(n) --> O(n^2). :(
+				if(cParams.getSimulateActivation() && !((FBAModel)models[k]).getActive())
+				{
+					continue;
+				}
 				boolean[][][] barrierState = new boolean[numCols][numRows][numLayers];
 				if (DEBUG) System.out.println("setting barrier state");
 				for (int i=0; i<numCols; i++)

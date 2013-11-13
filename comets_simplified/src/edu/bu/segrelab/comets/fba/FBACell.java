@@ -522,6 +522,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				continue;
 			}
 
+			//try to activate, if not active skip to next.
+		    if(cParams.getSimulateActivation() && !((FBAModel)models[i]).activate(cParams.getActivateRate()))
+		    {
+		    	continue;
+		    }			
+			
 			/************************* CALCULATE MAX EXCHANGE FLUXES ******************************/
 			double[] media=null;//=world3D.getModelMediaAt(x, y, z, i);
 			if(cParams.getNumLayers() == 1)
