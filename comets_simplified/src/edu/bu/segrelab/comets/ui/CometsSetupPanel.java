@@ -1926,9 +1926,13 @@ class GraphicSetupPanel3D extends GLJPanel implements
 							Color color = currentWorld3DColor(i, j, l, m);
 							if (color != null)
 							{   
-								double x = -0.5+((double)i)/(cParams.getNumCols()-1.0);
-								double y = -0.5+((double)j)/(cParams.getNumRows()-1.0);
-								double z = -0.5+((double)l)/(cParams.getNumLayers()-1.0);
+								//double x = -0.5+((double)i)/(cParams.getNumCols()-1.0);
+								//double y = -0.5+((double)j)/(cParams.getNumRows()-1.0);
+								//double z = -0.5+((double)l)/(cParams.getNumLayers()-1.0);
+								double x = -0.5*cubeSize*(cParams.getNumCols()-1.0)+((double)i)*cubeSize;
+								double y = -0.5*cubeSize*(cParams.getNumRows()-1.0)+((double)j)*cubeSize;
+								double z = -0.5*cubeSize*(cParams.getNumLayers()-1.0)+((double)l)*cubeSize;
+								
 								
 			   					double red   = ((double)color.getRed())/255.0;
 			   					double green = ((double)color.getGreen())/255.0;
