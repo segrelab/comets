@@ -201,6 +201,17 @@ public class FBAWorld3D extends World3D
 			{
 				fluxLogWriter = new PrintWriter(new FileWriter(new File(name)));
 				writeFluxLog();
+				//Write the file name in the manifest file.
+				try
+				{
+					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+					manifestWriter.write("FluxFileName: "+name+System.getProperty("line.separator"));
+					manifestWriter.close();
+				}
+				catch (IOException e)
+				{
+					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+				}		
 			}
 			catch (IOException e)
 			{
@@ -225,6 +236,17 @@ public class FBAWorld3D extends World3D
 				}
 				mediaLogWriter.println("};");
 				writeMediaLog();
+				//Write the file name in the manifest file.
+				try
+				{
+					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+					manifestWriter.write("MediaFileName: "+name+System.getProperty("line.separator"));
+					manifestWriter.close();
+				}
+				catch (IOException e)
+				{
+					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+				}
 			}
 			catch (IOException e)
 			{
@@ -241,6 +263,17 @@ public class FBAWorld3D extends World3D
 			{
 				biomassLogWriter = new PrintWriter(new FileWriter(new File(name)));
 				writeBiomassLog();
+				//Write the file name in the manifest file.
+				try
+				{
+					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+					manifestWriter.write("BiomassFileName: "+name+System.getProperty("line.separator"));
+					manifestWriter.close();
+				}
+				catch (IOException e)
+				{
+					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+				}
 			}
 			catch (IOException e)
 			{
@@ -257,6 +290,17 @@ public class FBAWorld3D extends World3D
 			{
 				totalBiomassLogWriter = new PrintWriter(new FileWriter(new File(name)));
 				writeTotalBiomassLog();
+				//Write the file name in the manifest file.
+				try
+				{
+					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+					manifestWriter.write("TotalBiomassFileName: "+name+System.getProperty("line.separator"));
+					manifestWriter.close();
+				}
+				catch (IOException e)
+				{
+					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+				}
 			}
 			catch (IOException e)
 			{
