@@ -185,6 +185,19 @@ public class FBACometsLoader implements CometsLoader,
 
 		File f = new File(filename);
 		String path = f.getParent();
+		
+		//Write the file name in the manifest file.
+		try
+		{
+			FileWriter manifestWriter=new FileWriter(new File(path+File.separatorChar+pParams.getManifestFileName()),false);
+			manifestWriter.write("LayoutFileName: "+filename+System.getProperty("line.separator"));
+			manifestWriter.close();
+			pParams.setManifestFileName(path+File.separatorChar+pParams.getManifestFileName());
+		}
+		catch (IOException e)
+		{
+			System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+		}		
 
 		/*
 		 * makes and stores internally: an FBAWorld, an array of FBAModels, an
@@ -873,6 +886,18 @@ public class FBACometsLoader implements CometsLoader,
 				f = new File(modelFileName);
 			}
 
+			//Write the file name in the manifest file.
+			try
+			{
+				FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+				manifestWriter.write("ModelFileName: "+modelFileName+System.getProperty("line.separator"));
+				manifestWriter.close();
+			}
+			catch (IOException e)
+			{
+				System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+			}		
+			
 			// if STILL not found, prompt the user
 			while (!f.isFile())
 			{
