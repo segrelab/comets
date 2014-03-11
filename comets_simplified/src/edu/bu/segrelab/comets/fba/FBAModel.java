@@ -20,17 +20,9 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 
-import org.gnu.glpk.GLPK;
-import org.gnu.glpk.GLPKConstants;
-import org.gnu.glpk.SWIGTYPE_p_double;
-import org.gnu.glpk.SWIGTYPE_p_int;
-import org.gnu.glpk.glp_iptcp;
-import org.gnu.glpk.glp_prob;
-import org.gnu.glpk.glp_smcp;
-
-
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.ui.DoubleField;
+
 
 /**
  * This class defines the functions necessary to load, process, and execute a flux balance
@@ -54,8 +46,8 @@ import edu.bu.segrelab.comets.ui.DoubleField;
  * to the classpath and, if on a POSIX-based system (Mac or Linux), add the path to the 
  * installed glpk and jni libraries in -Djava.library.path
  * 
- * @author Bill Riehl briehl@bu.edu
- * created 3 Mar 2010
+ * @author Bill Riehl briehl@bu.edu; Ilija Dukovski ilija.dukovski@gmail.com
+ * created 3 Mar 2010, modified 11 Mar 2014
  */
 public class FBAModel extends edu.bu.segrelab.comets.Model 
 					  implements edu.bu.segrelab.comets.CometsConstants
@@ -89,47 +81,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * 
 	 * //TODO include this as some kind of program argument, NOT just hard coded.
 	 */
-	static
-	{
-		try
-		{
-			System.loadLibrary("glpk_java");
-			GLPK.init_glpk();
-		}
-		catch (UnsatisfiedLinkError e)
-		{
-			try {
-				System.out.println(e);
-				System.loadLibrary("glpk_4_47");
-				System.loadLibrary("glpk_4_47_java");				
-			} catch (UnsatisfiedLinkError e2) {
-				System.out.println(e2);
-				System.loadLibrary("glpk_4_44");
-				System.loadLibrary("glpk_4_44_java");
-			}
-		}
-	}
 	
-	public static final int SIMPLEX_METHOD = 0;
-	public static final int INTERIOR_POINT_METHOD = 1;
-
-	private int glpkSolverMethod = SIMPLEX_METHOD; // initialize as simplex
-	private glp_prob lp;	// standard fba lp model
-	private glp_prob lpMSA; // fba lp model that also minimizes the sum of absolute values 
-							// of fluxes, while maximizing the objective flux
-	private glp_smcp simParam;     // simplex parameter structure
-	private glp_iptcp intParam;    // interior-point parameter structure
 	private int numRxns;
 	private int numMetabs;
 	private int numExch;
 	private boolean runSuccess;
-
-	// because these are short, store them in the class, so they don't have to be
-	// initialized every single time...
-	SWIGTYPE_p_int forceIdx;
-	SWIGTYPE_p_double forceVal;
-	SWIGTYPE_p_int lpRow;
-	SWIGTYPE_p_int msaRow;
 	
 	private int[] exch; // indices of exchange fluxes.
 	// As in the GLPK model idiom,
@@ -139,8 +95,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private String[] exchMetabNames;
 	private String[] rxnNames;
 	private String[] metabNames;
-	private double[] baseLB; // the base lower bounds that were originally
-							 // loaded.
+	private double[] baseLB; // the base lower bounds that were originally loaded.
 	private double[] baseUB; // base upper bounds (as a backup of sorts).
 	private double[] baseExchLB;
 	private double[] baseExchUB;
@@ -165,39 +120,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   defaultAlpha = 0,
 				   defaultW = 0,
 				   defaultMetabDiffConst = 0;
-//	private boolean allReactions = false;
 	
 	private boolean active;     // true is model is active growing, if false the model is asleep 
-		
-	private static int[] GLPIntParam = new int[] { 0, 
-			1, 0, 1, 0,
-			Integer.MAX_VALUE, Integer.MAX_VALUE, 200, 1, 2, 0, 1, 0, 0, 3, 2,
-			1, 0, 2, 0, 1 };
-
-//	private static int[] INT_PARAM = new int[] { GLPKConstants.LPX_K_MSGLEV,
-//			GLPKConstants.LPX_K_SCALE, GLPKConstants.LPX_K_DUAL,
-//			GLPKConstants.LPX_K_PRICE, GLPKConstants.LPX_K_ROUND,
-//			GLPKConstants.LPX_K_ITLIM, GLPKConstants.LPX_K_ITCNT,
-//			GLPKConstants.LPX_K_OUTFRQ, GLPKConstants.LPX_K_MPSINFO,
-//			GLPKConstants.LPX_K_MPSOBJ, GLPKConstants.LPX_K_MPSORIG,
-//			GLPKConstants.LPX_K_MPSWIDE, GLPKConstants.LPX_K_MPSFREE,
-//			GLPKConstants.LPX_K_MPSSKIP, GLPKConstants.LPX_K_BRANCH,
-//			GLPKConstants.LPX_K_BTRACK, GLPKConstants.LPX_K_PRESOL,
-//			GLPKConstants.LPX_K_USECUTS, GLPKConstants.LPX_K_BINARIZE };
-
-	private static double[] GLPRealParam = new double[] { 0.07, 
-			1e-7, 1e-7,
-			1e-10, -Double.MAX_VALUE, 
-			Double.MAX_VALUE, Integer.MAX_VALUE, 
-			0.0, 1e-5, 
-			1e-7, 0.0 };
-
-//	private static int[] REAL_PARAM = new int[] { GLPKConstants.LPX_K_RELAX,
-//			GLPKConstants.LPX_K_TOLBND, GLPKConstants.LPX_K_TOLDJ,
-//			GLPKConstants.LPX_K_TOLPIV, GLPKConstants.LPX_K_OBJLL,
-//			GLPKConstants.LPX_K_OBJUL, GLPKConstants.LPX_K_TMLIM,
-//			GLPKConstants.LPX_K_OUTDLY, GLPKConstants.LPX_K_TOLINT,
-//			GLPKConstants.LPX_K_TOLOBJ, GLPKConstants.LPX_K_MIPGAP };
 
 	public static final int MAXIMIZE_OBJECTIVE_FLUX = 0;
 	public static final int MINIMIZE_OBJECTIVE_FLUX = 1;
@@ -208,6 +132,13 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	public static final int MIN_OBJECTIVE_MIN_TOTAL = 6;
 	public static final int MIN_OBJECTIVE_MAX_TOTAL = 7;
 	
+	private FBAOptimizer fbaOptimizer;
+	//private int optimizer;
+	
+	public static final int GUROBI =0;
+	public static final int GLPK   =1;
+	
+	
 	private ModelParametersPanel paramsPanel;
 
 	/**
@@ -216,37 +147,37 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private FBAModel()
 	{
 		runSuccess = false;
-		lp = GLPK.glp_create_prob();
-		lpMSA = GLPK.glp_create_prob();
-
-		forceIdx = GLPK.new_intArray(2);
-		forceVal = GLPK.new_doubleArray(2);
-		lpRow = GLPK.new_intArray(1);
-		msaRow = GLPK.new_intArray(1);
-
-		GLPK.glp_term_hook(null, null);
-		GLPK.glp_set_obj_dir(lp, GLPK.GLP_MAX); // this is vanilla FBA,
-		GLPK.glp_set_obj_dir(lpMSA, GLPK.GLP_MAX); // this minimizes the sum of |flux|
 		objStyle = MAXIMIZE_OBJECTIVE_FLUX;		 // so maximize by default
-		
-		setParameters();
+		//optimizer = GUROBI;
 	}
+
 
 	/**
 	 * Create a new FBAModel with stoichiometric matrix m, lower bounds l, upper bounds u,
-	 * and objective reaction r. Note that, as we're using GLPK, r is from 1->N, not
+	 * and objective reaction r and optimizer optim. Note that, as we're using GLPK, r is from 1->N, not
 	 * 0->N-1.
 	 * @param m
 	 * @param l
 	 * @param u
 	 * @param r
+	 * @param optim
 	 */
-	public FBAModel(double[][] m, double[] l, double[] u, int r)
+	public FBAModel(double[][] m, double[] l, double[] u, int r, int optim)
 	{
-		this();
-
-		setStoichiometricMatrix(m);
-		setBounds(l, u);
+		runSuccess = false;
+		objStyle = MAX_OBJECTIVE_MIN_TOTAL;
+	
+		switch(optim){
+		case GUROBI:
+			fbaOptimizer=new FBAOptimizerGurobi( m, l, u, r);
+			break;
+		case GLPK:
+			fbaOptimizer=new FBAOptimizerGLPK(m,l,u,r);
+		default:
+			break;
+		}
+		numMetabs = m.length;
+		numRxns = m[0].length;
 		setBaseBounds(l, u);
 		setObjectiveReaction(r);
 	}
@@ -264,6 +195,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * @param exchHillCoeff Hill coefficient for each exchange reaction (Monod style)
 	 * @param metabNames array of metabolite names
 	 * @param rxnNames array of reaction names
+	 * @optim optimizer
 	 */
 	public FBAModel(final double[][] m, 
 					final double[] l, 
@@ -278,9 +210,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					final double[] exchW,
 					final String[] metabNames, 
 					final String[] rxnNames,
-					final int objStyle)
+					final int objStyle,
+					final int optim)
 	{
-		this(m, l, u, r);
+		this(m, l, u, r, optim);
 		
 		if (exch == null)
 			throw new IllegalArgumentException("There must be an array of exchange reactions.");
@@ -295,6 +228,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		this.exchAlpha = exchAlpha;
 		this.exchW = exchW;
 		this.objStyle = objStyle;
+		//this.optimizer = optim;
 
 		this.metabNames = metabNames;
 		this.rxnNames = rxnNames;
@@ -331,28 +265,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		}
 	}
 
-	/**
-	 * Returns the current solver method being used.
-	 * @return either SIMPLEX_METHOD or INTERIOR_POINT_METHOD
-	 */
-	public int getSolverMethod()
-	{
-		return glpkSolverMethod;
-	}
-	
-	/**
-	 * Sets the numerical method to be used by GLPK.
-	 * @param method must be either SIMPLEX_METHOD or INTERIOR_POINT_METHOD, or will be
-	 * ignored
-	 */
-	public void setSolverMethod(int method)
-	{
-		if (method != SIMPLEX_METHOD && 
-			method != INTERIOR_POINT_METHOD)
-			return;
-		glpkSolverMethod = method;
-	}
-	
+
 	public double getDefaultLB()
 	{
 		return defaultLB;
@@ -543,22 +456,16 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			this.exchDiffConsts = metabDiffConsts;
 	}
 	
-	/**
-	 * Sets the model name.
-	 * @param name
-	 */
-	public void setModelName(String name)
-	{
-		GLPK.glp_set_prob_name(lp, name);
-		GLPK.glp_set_prob_name(lpMSA, name + "_MSA");
-	}
 
 	/**
 	 * @return the model's name
+	 * Legacy from old glpk code
 	 */
+
 	public String getModelName()
 	{
-		return GLPK.glp_get_prob_name(lp);
+		//return GLPK.glp_get_prob_name(lp);
+		return null;
 	}
 	
 	/**
@@ -656,7 +563,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		return baseUB.clone();
 	}
 
-	public double[] getBaseExchLowerBounds()
+	public synchronized double[] getBaseExchLowerBounds()
 	{
 		return baseExchLB.clone();
 	}
@@ -688,255 +595,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			this.metabNames = metabNames;
 	}
 
-	/**
-	 * Sets the stoichiometric matrix for this FBAModel.
-	 * @param m the matrix
-	 */
-	private void setStoichiometricMatrix(double[][] m)
-	{
-		/* We're gonna do this twice.
-		 * Once for the "standard" FBA (Sv == 0)
-		 *    this is the 'lp' variable
-		 * Once for the optimal sum of absolute values of fluxes (max/min sum(|vi|))
-		 *    this is the 'lpMSA' variable
-		 * 
-		 * The lp variable is simple, just the MxN S matrix.
-		 * 
-		 * The lpMSA matrix has a different structure:
-		 * 
-		 *      flux-variables    dummy vars for |flux|
-		 * [     [ S(M x N) ]       [ zero(M x N) ]    ] Standard FBA ( Sv == 0 )
-		 * [     [  eye(N)  ]       [  -1*eye(N)  ]    ] v - dummy <= 0 
-		 * [     [ -1*eye(N)]       [  -1*eye(N)  ]    ] -v - dummy <= 0
-		 *
-		 * The total number of rows = M + N + N
-		 * Total number of columns = N + N
-		 */
-		
-		numMetabs = m.length;
-		numRxns = m[0].length;
-		
-		/***** INITIALIZE lp VARIABLE - STANDARD FBA *****/
-		GLPK.glp_add_cols(lp, numRxns); // number of columns in S-matrix
-		GLPK.glp_add_cols(lpMSA, numRxns*2);
-
-		// all columns (flux variables) are continuous
-		for (int i = 0; i < numRxns; i++)
-		{
-			GLPK.glp_set_col_name(lp, i + 1, ("r" + (i + 1)));
-			GLPK.glp_set_col_kind(lp, i + 1, GLPK.GLP_CV);
-			
-			GLPK.glp_set_col_name(lpMSA, i+1, ("r" + (i+1)));
-			GLPK.glp_set_col_kind(lpMSA, i+1, GLPK.GLP_CV); 
-			
-			GLPK.glp_set_col_name(lpMSA, i+numRxns+1, ("d" + (i+1)));
-			GLPK.glp_set_col_kind(lpMSA, i+numRxns+1, GLPK.GLP_CV);
-		}
-		GLPK.glp_add_rows(lp, numMetabs); // number of rows in S-matrix
-		GLPK.glp_add_rows(lpMSA, numMetabs + numRxns + numRxns);
-
-		// set the row types (constraints) to be fixed at 0
-		// (e.g. all dX/dt == 0) for all metabolites X
-		for (int i = 0; i < numMetabs; i++)
-		{
-			GLPK.glp_set_row_bnds(lp, i + 1, GLPK.GLP_FX, 0, 0);
-			GLPK.glp_set_row_bnds(lpMSA, i + 1, GLPK.GLP_FX, 0, 0);
-		}
-
-		// Set the dummy variables for the minimizing sum of abs. values. to
-		// be upper bounded by 0. E.g. v(i) - dummy(i) <= 0 and -v(i) - dummy(i) <= 0
-		for (int i = numMetabs; i < numMetabs+ 2*numRxns; i++)
-		{
-			GLPK.glp_set_row_bnds(lpMSA, i + 1, GLPK.GLP_UP, 0, 0);
-		}
-
-		/*
-		 * gotta linearize m for this to work, and provide (i,j) coords in ia
-		 * and ja.
-		 * 
-		 * example: m = [10 20 50] [90 15 30]
-		 * 
-		 * ia = [1] ja = [1] mLin = [10] |1| |2| |20| |1| |3| |50| |2| |1| |90|
-		 * |2| |2| |15| [3] [3] [30]
-		 * 
-		 * This'll likely get ridiculous for, say the human FBA model, but we'll
-		 * see how it goes.
-		 */
-		SWIGTYPE_p_int ia = GLPK.new_intArray(numMetabs * numRxns + 1);
-		SWIGTYPE_p_int ja = GLPK.new_intArray(numMetabs * numRxns + 1);
-		SWIGTYPE_p_double mLin = GLPK.new_doubleArray(numMetabs * numRxns + 1);
-
-		int ne = 0;
-		for (int i = 0; i < numMetabs; i++)
-		{
-			for (int j = 0; j < numRxns; j++)
-			{
-				if (m[i][j] != 0)
-				{
-					ne++;
-					GLPK.intArray_setitem(ia, ne, i + 1);
-					GLPK.intArray_setitem(ja, ne, j + 1);
-					GLPK.doubleArray_setitem(mLin, ne, m[i][j]);
-					// ia[ne] = i+1;
-					// ja[ne] = j+1;
-					// mLin[ne] = m[i][j];
-				}
-			}
-		}
-		GLPK.glp_load_matrix(lp, ne, ia, ja, mLin);
-
-		// Repeat for the min sum abs vals version. This is a little more complex, as it
-		// only calculates the indices for nonzero values (outside of the S-matrix)
-		SWIGTYPE_p_int iaMSA = GLPK.new_intArray((numMetabs * numRxns) + (4*numRxns) + 1);
-		SWIGTYPE_p_int jaMSA = GLPK.new_intArray((numMetabs * numRxns) + (4*numRxns) + 1);
-		SWIGTYPE_p_double mLinMSA = GLPK.new_doubleArray((numMetabs * numRxns) + (4*numRxns) + 1);
-	
-		ne = 0;
-		for (int i=0; i<numMetabs + 2*numRxns; i++)
-		{
-			for (int j=0; j<2*numRxns; j++)
-			{
-				// case 1: i < numMetabs, j < numRxns == m[i][j]
-				if (i < numMetabs && j < numRxns && m[i][j] != 0)
-				{
-					ne++;
-					GLPK.intArray_setitem(iaMSA, ne, i+1);
-					GLPK.intArray_setitem(jaMSA, ne, j+1);
-					GLPK.doubleArray_setitem(mLinMSA, ne, m[i][j]);
-				}
-				
-				// case 2: i < numMetabs, j >= numRxns == 0
-				// we can skip this one -- we only pass nonzero elements
-				// to the lp matrix
-				else if (i < numMetabs && j >= numRxns)
-				{
-					continue;
-				}
-				
-				// case 3: numMetabs <= i < numMetabs + numRxns &&
-				//         j < numRxns
-				// this section is a diagonal of ones. only add one
-				// if i-numMetabs == j
-				else if ((i >= numMetabs && i < numMetabs + numRxns) &&
-						 j < numRxns && 
-						 i - numMetabs == j)
-				{
-					ne++;
-					GLPK.intArray_setitem(iaMSA, ne, i+1);
-					GLPK.intArray_setitem(jaMSA, ne, j+1);
-					GLPK.doubleArray_setitem(mLinMSA, ne, 1.0);
-				}
-				
-				// case 4: numMetabs <= i < numMetabs + numRxns &&
-				//         j >= numRxns
-				// a diagonal of -1, only set the value if i-numMetabs == j-numRxns
-				else if ((i >= numMetabs && i < numMetabs + numRxns) &&
-						 j >= numRxns && i - numMetabs == j - numRxns)
-				{
-					ne++;
-					GLPK.intArray_setitem(iaMSA, ne, i+1);
-					GLPK.intArray_setitem(jaMSA, ne, j+1);
-					GLPK.doubleArray_setitem(mLinMSA, ne, -1.0);
-				}
-				
-				// case 5/6: i >= numMetabs + numRxns, j is irrelevant
-				// both of these blocks are negative identity matrices.
-				// set the value to be -1 if i-numRxns-numMetabs == j or j-numRxns
-				else if (i >= numMetabs + numRxns &&
-						 ((i-numMetabs-numRxns == j) ||
-						  (i-numMetabs-numRxns == j-numRxns)))
-				{
-					ne++;
-					GLPK.intArray_setitem(iaMSA, ne, i+1);
-					GLPK.intArray_setitem(jaMSA, ne, j+1);
-					GLPK.doubleArray_setitem(mLinMSA, ne, -1.0);
-				}
-			}
-		}
-		GLPK.glp_load_matrix(lpMSA, ne, iaMSA, jaMSA, mLinMSA);
-
-		/* additional stuff to init for lpMSA -
-		 * 1. bounds.
-		 *    the bounds for the dummy variables (columns numRxns -- 2*numRxns)
-		 *	  should range from 0 -- infinity. for some value of infinity.
-		 * 2. objective (Cvector)
-		 *    this should be the sum of the dummy variables, eg., put a 1 in
-		 *    all of the vector positions from N+1..2N
-		 * These only get done once, so might as well do them here.
-		 */
-		for (int i = 1; i <= numRxns*2; i++)
-		{
-			GLPK.glp_set_obj_coef(lpMSA, i, 0);
-		}
-		for (int i=numRxns+1; i<=numRxns*2; i++)
-		{
-			GLPK.glp_set_col_bnds(lpMSA, i, GLPK.GLP_DB, 0, Double.MAX_VALUE);
-			// reaction r is the objective, so set only r to be 1.
-			GLPK.glp_set_obj_coef(lpMSA, i, 1);
-		}
-		GLPK.glp_set_obj_name(lpMSA, "sum_values");
-	}
-
-	/**
-	 * Sets the upper and lower bounds for all fluxes (variables) in the model
-	 * @param lb the set of lower bounds
-	 * @param ub the set of upper bounds
-	 * @return PARAMS_OK if all lower bounds are less than or equal to the upper bounds,
-	 * and both arrays are of the appropriate length; PARAMS_ERROR if they're incorrect;
-	 * and MODEL_NOT_INITIALIZED if there's no matrix loaded
-	 */
-	public int setBounds(double[] lb, double[] ub)
-	{
-		if (lb.length != ub.length)
-		{
-			return PARAMS_ERROR;
-		}
-		if (numMetabs == 0 || numRxns == 0)
-		{
-			return MODEL_NOT_INITIALIZED;
-		}
-		for (int i = 0; i < lb.length; i++)
-		{
-			if (lb[i] > ub[i])
-				return PARAMS_ERROR;
-		}
-		for (int i = 0; i < lb.length; i++)
-		{
-			int type = GLPKConstants.GLP_DB;
-			if (lb[i] == ub[i])
-				type = GLPKConstants.GLP_FX;
-			GLPK.glp_set_col_bnds(lp, i + 1, type, lb[i], ub[i]);
-			GLPK.glp_set_col_bnds(lpMSA, i + 1, type, lb[i], ub[i]);
-		}
-		return PARAMS_OK;
-	}
-
-	/**
-	 * Sets the current lower bounds for the FBA problem
-	 * @param lb lower bounds array
-	 * @return PARAMS_OK if the lb array is of the appropriate length; 
-	 * PARAMS_ERROR if not,
-	 * and MODEL_NOT_INITIALIZED if there's no matrix loaded
-	 */
-	public int setLowerBounds(double[] lb)
-	{
-		if (numMetabs == 0 || numRxns == 0)
-			return MODEL_NOT_INITIALIZED;
-		if (lb.length != numRxns)
-			return PARAMS_ERROR;
-		for (int i = 0; i < numRxns; i++)
-		{
-			double u = GLPK.glp_get_col_ub(lp, i + 1);
-			int type = GLPKConstants.GLP_DB;
-			if (lb[i] == u)
-				type = GLPKConstants.GLP_FX;
-			
-			GLPK.glp_set_col_bnds(lp, i + 1, type, lb[i], u);
-			GLPK.glp_set_col_bnds(lpMSA, i + 1, type, lb[i], u);
-			
-		}
-		return PARAMS_OK;
-	}
 
 	/**
 	 * Sets the current lower bounds (e.g. -uptake rates) for the exchange reactions
@@ -946,21 +604,16 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * PARAMS_ERROR if not,
 	 * and MODEL_NOT_INITIALIZED if there's no matrix loaded
 	 */
+	
 	public int setExchLowerBounds(double[] lb)
 	{
 		if (numMetabs == 0 || numRxns == 0)
 			return MODEL_NOT_INITIALIZED;
 		if (lb.length != numExch)
 			return PARAMS_ERROR;
-		for (int i=0; i<numExch; i++)
-		{
-			double u = GLPK.glp_get_col_ub(lp, exch[i]);
-			int type = GLPKConstants.GLP_DB;
-			if (lb[i] == u)
-				type = GLPKConstants.GLP_FX;
-			GLPK.glp_set_col_bnds(lp, exch[i], type, lb[i], u);
-			GLPK.glp_set_col_bnds(lpMSA, exch[i], type, lb[i], u);
-		}
+		
+		fbaOptimizer.setExchLowerBounds(exch, lb);	
+		
 		return PARAMS_OK;
 	}
 
@@ -972,34 +625,29 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * PARAMS_ERROR if not,
 	 * and MODEL_NOT_INITIALIZED if there's no matrix loaded
 	 */
+	
 	public int setExchUpperBounds(double[] ub)
 	{
 		if (numMetabs == 0 || numRxns == 0)
 			return MODEL_NOT_INITIALIZED;
 		if (ub.length != numExch)
 			return PARAMS_ERROR;
-		for (int i=0; i<numExch; i++)
-		{
-			double l = GLPK.glp_get_col_ub(lp, exch[i]);
-			int type = GLPKConstants.GLP_DB;
-			if (ub[i] == l)
-				type = GLPKConstants.GLP_FX;
-			GLPK.glp_set_col_bnds(lp, exch[i], type, l, ub[i]);
-			GLPK.glp_set_col_bnds(lpMSA, exch[i], type, l, ub[i]);
-		}
+		
+		fbaOptimizer.setExchUpperBounds(exch, ub);
+
 		return PARAMS_OK;
 	}
 
 	/**
 	 * @return the array of lower bounds for all fluxes.
 	 */
+	
 	public double[] getLowerBounds()
-	{
+	{   
+
 		double[] l = new double[numRxns];
-		for (int i = 0; i < numRxns; i++)
-		{
-			l[i] = GLPK.glp_get_col_lb(lp, i + 1);
-		}
+		l=fbaOptimizer.getLowerBounds(numRxns);
+
 		return l;
 	}
 
@@ -1010,34 +658,27 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * PARAMS_ERROR if not,
 	 * and MODEL_NOT_INITIALIZED if there's no matrix loaded
 	 */
+
 	public int setUpperBounds(double[] ub)
 	{
 		if (numMetabs == 0 || numRxns == 0)
 		{
 			return MODEL_NOT_INITIALIZED;
 		}
-		for (int i = 0; i < numRxns; i++)
-		{
-			double l = GLPK.glp_get_col_lb(lp, i + 1);
-			int type = GLPKConstants.GLP_DB;
-			if (l == ub[i])
-				type = GLPKConstants.GLP_FX;
-			GLPK.glp_set_col_bnds(lp, i + 1, type, l, ub[i]);
-			GLPK.glp_set_col_bnds(lpMSA, i + 1, type, l, ub[i]);
-		}
+		fbaOptimizer.setUpperBounds(numRxns, ub);
+
 		return PARAMS_OK;
 	}
 
 	/**
 	 * @return the current upper bounds for all fluxes
 	 */
+
 	public double[] getUpperBounds()
 	{
 		double[] u = new double[numRxns];
-		for (int i = 0; i < numRxns; i++)
-		{
-			u[i] = GLPK.glp_get_col_ub(lp, i + 1);
-		}
+		u=fbaOptimizer.getUpperBounds(numRxns);
+		
 		return u;
 	}
 
@@ -1079,10 +720,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		// (not abs vals), then we need to reset the 
 		// Cvector. Otherwise, that's done as part of the
 		// optimization.
-		if (objStyle != MAXIMIZE_TOTAL_FLUX &&
+/*		if (objStyle != MAXIMIZE_TOTAL_FLUX &&
 			objStyle != MINIMIZE_TOTAL_FLUX)
 			setObjectiveReaction(objReaction);
-
+*/
 		return PARAMS_OK;
 	}
 	
@@ -1095,6 +736,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	{
 		return objReaction;
 	}
+
 	
 	/**
 	 * Sets the objective reaction for this FBAModel. Maximizing growth is probably
@@ -1113,156 +755,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		{
 			return MODEL_NOT_INITIALIZED;
 		}
-		
-//		allReactions = false;
-		// reaction r is the objective, so set only r to be 1.
-		for (int i = 1; i <= numRxns; i++)
-		{
-			GLPK.glp_set_obj_coef(lp, i, 0);
-		}
-		GLPK.glp_set_obj_coef(lp, r, 1);
-		GLPK.glp_set_obj_name(lp, "obj");
+		fbaOptimizer.setObjectiveReaction(numRxns, r);
 		objReaction = r;
+		
 		return PARAMS_OK;
-	}
-
-	/**
-	 * Deletes the model from memory. Necessary to clear up the memory used by the GLPK library.
-	 */
-	public void delete()
-	{
-		GLPK.glp_delete_prob(lp);
-		GLPK.glp_delete_prob(lpMSA);
-	}
-
-	/**
-	 * Internally initializes and resets the parameters used by GLPK. If you want to 
-	 * set specific GLPK parameters, you'll need to call a specialized function.
-	 * //TODO make this possible...
-	 */
-	public void setParameters()
-	{
-		simParam = new glp_smcp();
-		GLPK.glp_init_smcp(simParam);
-		intParam = new glp_iptcp();
-		GLPK.glp_init_iptcp(intParam);
-		
-		GLPK.glp_init_smcp(simParam);
-		GLPK.glp_init_iptcp(intParam);
-		
-		// assume lpsolver == 1, and the rest = default, for now.
-
-		// remap of control parameters for simplex method
-		simParam.setMsg_lev(GLPKConstants.GLP_MSG_OFF);
-		intParam.setMsg_lev(GLPKConstants.GLP_MSG_OFF);
-		
-		// simplex method: primal/dual
-		switch (GLPIntParam[2])
-		{
-			case 0:
-				simParam.setMeth(GLPKConstants.GLP_PRIMAL);
-				break;
-			case 1:
-				simParam.setMeth(GLPKConstants.GLP_DUAL);
-				break;
-			case 2:
-				simParam.setMeth(GLPKConstants.GLP_DUALP);
-				break;
-			default:
-				break;
-		}
-		// pricing technique
-		if (GLPIntParam[3] == 0)
-			simParam.setPricing(GLPKConstants.GLP_PT_STD);
-		else
-			simParam.setPricing(GLPKConstants.GLP_PT_PSE);
-		// ratio test
-
-		if (GLPIntParam[20] == 0)
-			simParam.setR_test(GLPKConstants.GLP_RT_STD);
-		else
-			simParam.setR_test(GLPKConstants.GLP_RT_HAR);
-
-		// tolerances
-		simParam.setTol_bnd(GLPRealParam[1]); // primal feasible tolerance
-		simParam.setTol_dj(GLPRealParam[2]); // dual feasible tolerance
-		simParam.setTol_piv(GLPRealParam[3]); // pivot tolerance
-		simParam.setObj_ll(GLPRealParam[4]); // lower limit
-		simParam.setObj_ul(GLPRealParam[5]); // upper limit
-
-		// iteration limit
-		if (GLPIntParam[5] == -1)
-			simParam.setIt_lim(Integer.MAX_VALUE);
-		else
-			simParam.setIt_lim(GLPIntParam[5]);
-
-		// time limit
-		if (GLPRealParam[6] == -1)
-			simParam.setTm_lim(Integer.MAX_VALUE);
-		else
-			simParam.setTm_lim((int) GLPRealParam[6]);
-		simParam.setOut_frq(GLPIntParam[7]); // output frequency
-		simParam.setOut_dly((int) GLPRealParam[7]); // output delay
-
-		// presolver
-		if (GLPIntParam[16] != 0)
-			simParam.setPresolve(GLPK.GLP_ON);
-		else
-			simParam.setPresolve(GLPK.GLP_OFF);
-	}
-
-	/**
-	 * Runs with the addtional constraint that:
-	 * v1 >= alpha*v2
-	 * (or, more precisely v1 - alpha*v2 >= 0)
-	 * <p>
-	 * This is useful, when, for example, executing an FBA model that excretes at least
-	 * some amount of some metabolite.
-	 * <p>
-	 * The method works by adding a row to the model with the given constraint, 
-	 * running the model (and storing all data, as usual), then disposing of the additional
-	 * row.
-	 * <p>
-	 * v1 and v2 are expected to be indices (from 1-->N, not 0-->N-1) of reactions.
-	 * @param v1 the reaction to be forced to have flux, as above
-	 * @param v2 the reaction to be tied to v1, as above
-	 * @param alpha the proportion of v2 that v1 must match
-	 * @return the GLPK status of the solution (see the GLPK documentation...)
-	 */
-	public synchronized int runForceFlux(int x1, int x2, double alpha)
-	{
-		// Add a row to both lp and MSA
-		int newLpRow = GLPK.glp_add_rows(lp, 1);
-		int newLpMSARow = GLPK.glp_add_rows(lpMSA, 1);
-		
-		// Have to create the specialized SWIG style numerical types to pass to
-		// the models. Fortunately, we can use them twice, since the positions 
-		// being modified are the same.
-
-		GLPK.intArray_setitem(forceIdx, 1, x1);
-		GLPK.intArray_setitem(forceIdx, 2, x2);
-		GLPK.doubleArray_setitem(forceVal, 1, 1);
-		GLPK.doubleArray_setitem(forceVal, 2, -alpha);
-		
-		// Pass the new row values to the models.
-		GLPK.glp_set_mat_row(lp, newLpRow, 2, forceIdx, forceVal);
-//		GLPK.glp_set_mat_row(lpMSA, newLpMSARow, 2, forceIdx, forceVal);
-
-		// Set the bounds on the row (x1 - alpha x2 >= 0, so lower bound of 0.
-		GLPK.glp_set_row_bnds(lp, newLpRow, GLPKConstants.GLP_LO, 0, 0);
-		GLPK.glp_set_row_bnds(lpMSA,  newLpMSARow, GLPKConstants.GLP_LO, 0, 0);
-		
-		// FINALLY we can run the FBA problem
-		int ret = run();
-		
-		// Remove the rows we mucked with
-		GLPK.intArray_setitem(lpRow, 1, newLpRow);
-		GLPK.intArray_setitem(msaRow, 1, newLpMSARow);
-		
-		GLPK.glp_del_rows(lp, 1, lpRow);
-		GLPK.glp_del_rows(lpMSA, 1, msaRow);
-		
-		return ret;
 	}
 	
 	/**
@@ -1283,224 +779,67 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 		// an internal status checker. If this = 0 after a run, everything is peachy.
 		int ret = -1;
+		ret=fbaOptimizer.run(objStyle);
 
-		switch(objStyle)
-		{
-			// the usual, just max the objective
-			case MAXIMIZE_OBJECTIVE_FLUX:
-				GLPK.glp_set_obj_dir(lp, GLPK.GLP_MAX); // this is "vanilla" FBA,
-				switch(glpkSolverMethod)
-				{
-					case SIMPLEX_METHOD:
-						ret = GLPK.glp_simplex(lp, simParam);
-						break;
-					default:
-						ret = GLPK.glp_interior(lp, intParam);
-						break;
-				}
-				break;
-				
-			// tell GLPK to minimize the objective
-			case MINIMIZE_OBJECTIVE_FLUX:
-				GLPK.glp_set_obj_dir(lp, GLPK.GLP_MIN);
-				switch(glpkSolverMethod)
-				{
-					case SIMPLEX_METHOD:
-						ret = GLPK.glp_simplex(lp, simParam);
-						break;
-					default:
-						ret = GLPK.glp_interior(lp, intParam);
-						break;
-				}
-				break;
-
-			// do something special here...
-			case MAXIMIZE_TOTAL_FLUX:
-				ret = runOptimizeSumFluxes();
-				break;
-			case MINIMIZE_TOTAL_FLUX:
-				ret = runOptimizeSumFluxes();
-				break;
-			
-			default:
-				// do double cases!
-				ret = runOptimizeSumAbsoluteValuesFluxes();
-				break;
-		}
-		
-		if (ret == 0)
-		{
+		if (ret == 5)
+		{   
+			//rxnFluxes=model.getVars();
 			runSuccess = true;
 		}
 		
-		if (objStyle == MAXIMIZE_OBJECTIVE_FLUX ||
-			objStyle == MINIMIZE_OBJECTIVE_FLUX ||
-			objStyle == MAXIMIZE_TOTAL_FLUX ||
-			objStyle == MINIMIZE_TOTAL_FLUX)
-			return GLPK.glp_get_status(lp);
-		else
-			return GLPK.glp_get_status(lpMSA);
+        return ret;
 	}
 
-	/**
-	 * Optimizes the objective value, while either maximizing or minizing the sum of fluxes.
-	 * Note that this is the raw sum, NOT the absolute values of fluxes.
-	 * @return the return status from GLPK
-	 */
-	private synchronized int runOptimizeSumFluxes()
-	{
-		// First run - deal with objective.
-		// So, FIRST, make sure that we're only optimizing the 
-		// objective reaction. Cheater function below.
-		setObjectiveReaction(objReaction);
-		GLPK.glp_set_obj_dir(lp, GLPK.GLP_MAX);
-		int ret = -1;
-		switch (glpkSolverMethod)
-		{
-			case SIMPLEX_METHOD:
-				ret = GLPK.glp_simplex(lp, simParam);
-				break;
-			default:
-				ret = GLPK.glp_interior(lp, intParam);
-				break;
-		}
-		if (ret != 0)
-			return ret;
-		
-		// Next, set the upper and lower bounds of the flux solution
-		// to be the value we want.
-		double sol = GLPK.glp_get_obj_val(lp);
-		double lb = GLPK.glp_get_col_lb(lp, objReaction);
-		double ub = GLPK.glp_get_col_ub(lp, objReaction);
-		GLPK.glp_set_col_bnds(lp, objReaction, GLPK.GLP_FX, sol, sol);
-		
-		// now, set the Cvector to be all ones.
-		for (int i = 1; i <= numRxns; i++)
-		{
-			GLPK.glp_set_obj_coef(lp, i, 1);
-		}
-
-		// toggle if we're maximizing or minimizing the total
-		if (objStyle == MAXIMIZE_TOTAL_FLUX)
-			GLPK.glp_set_obj_dir(lp, GLPK.GLP_MAX);
-		else
-			GLPK.glp_set_obj_dir(lp, GLPK.GLP_MIN);
-
-		switch(glpkSolverMethod)
-		{
-			case SIMPLEX_METHOD:
-				ret = GLPK.glp_simplex(lp, simParam);
-				break;
-			default:
-				ret = GLPK.glp_interior(lp, intParam);
-				break;
-		}
-
-		// reset the bounds to what they were. resetting the Cvector is
-		// done elsewhere.
-		int type = GLPK.GLP_DB;
-		if (lb == ub)
-			type = GLPK.GLP_FX;
-		GLPK.glp_set_col_bnds(lp, objReaction, type, lb, ub);
-		
-		return ret;
-	}
-	
-	/**
-	 * Optimizes the objective while also optimizing the sum of absolute values of fluxes.
-	 * @return the GLPK status of the solver
-	 */
-	private synchronized int runOptimizeSumAbsoluteValuesFluxes()
-	{
-		// First run - deal with objective flux.		
-		int ret = -1;
-		if (objStyle == MIN_OBJECTIVE_MAX_TOTAL ||
-			objStyle == MIN_OBJECTIVE_MIN_TOTAL)
-			GLPK.glp_set_obj_dir(lp, GLPK.GLP_MIN);
-		else
-			GLPK.glp_set_obj_dir(lp, GLPK.GLP_MAX);
-		
-		if (objStyle == MAX_OBJECTIVE_MIN_TOTAL ||
-			objStyle == MIN_OBJECTIVE_MIN_TOTAL)
-			GLPK.glp_set_obj_dir(lpMSA, GLPK.GLP_MIN);
-		else
-			GLPK.glp_set_obj_dir(lpMSA, GLPK.GLP_MAX);
-		
-		// setup done.
-		
-		int status = -1; //GLPK.glp_simplex(lp, param);
-		simParam.setPresolve(GLPK.GLP_OFF); //Turn presolver off ID 
-		switch(glpkSolverMethod)
-		{
-			case SIMPLEX_METHOD:
-				status = GLPK.glp_simplex(lp, simParam);
-				break;
-			default:
-				status = GLPK.glp_interior(lp, intParam);
-				break;
-		}
-
-		if (status != 0)
-			return status;
-		
-		// now, fetch the objective solution from lp, and fix it as the
-		// upper and lower bounds to lpMSA
-		double sol = GLPK.glp_get_obj_val(lp);
-		GLPK.glp_set_col_bnds(lpMSA, objReaction, GLPK.GLP_FX, sol, sol);
-
-//		ret = GLPK.glp_simplex(lpMSA, param);
-		switch(glpkSolverMethod)
-		{
-			case SIMPLEX_METHOD:
-				ret = GLPK.glp_simplex(lpMSA, simParam);
-				break;
-			default:
-				ret = GLPK.glp_interior(lpMSA, intParam);
-				break;
-		}
-		return ret;
-	}
 	
 	/**
 	 * @return The fluxes from the most recent FBA run
 	 */
 	public double[] getFluxes()
 	{
+
+		double[] v = new double[numRxns];
+		if (runSuccess)
+		{
+			v=fbaOptimizer.getFluxes();
+
+		}
+		return v;
+	}
+
+	/* Debug code	
+	public double[] getFluxesTest(double[] test)
+	{
 		double[] v = new double[numRxns];
 		if (runSuccess)
 		{
 			for (int i = 0; i < numRxns; i++)
 			{
-				if (objStyle == MAXIMIZE_OBJECTIVE_FLUX ||
-					objStyle == MINIMIZE_OBJECTIVE_FLUX ||
-					objStyle == MAXIMIZE_TOTAL_FLUX ||
-					objStyle == MINIMIZE_TOTAL_FLUX)
-					v[i] = GLPK.glp_get_col_prim(lp, i + 1);
-				else
-					v[i] = GLPK.glp_get_col_prim(lpMSA, i + 1);
+				try{
+					v[i] = rxnFluxes[i].get(GRB.DoubleAttr.X);
+				}
+				catch(GRBException e)
+				{
+					System.out.println("Error code: " + e.getErrorCode() + ". " +
+	                         e.getMessage());
+				}
+				//v[i]=fluxes[i];
+				System.out.println(fluxesModel[i]+" "+v[i]+" "+test[i]);
 			}
 		}
 		return v;
 	}
+    */
 	
 	/**
 	 * @return the exchange fluxes from the most recent FBA run
 	 */
+	
 	public double[] getExchangeFluxes()
 	{
 		double[] v = new double[numExch];
 		if (runSuccess)
 		{
-			for (int i = 0; i < numExch; i++)
-			{
-				if (objStyle == MAXIMIZE_OBJECTIVE_FLUX ||
-					objStyle == MINIMIZE_OBJECTIVE_FLUX ||
-					objStyle == MAXIMIZE_TOTAL_FLUX ||
-					objStyle == MINIMIZE_TOTAL_FLUX)
-					v[i] = GLPK.glp_get_col_prim(lp, exch[i]);
-				else
-					v[i] = GLPK.glp_get_col_prim(lpMSA, exch[i]);
-			}
+			v=fbaOptimizer.getExchangeFluxes(exch);
 		}
 		return v;
 	}
@@ -1545,50 +884,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			this.exch = exch;
 	}
 
-	/**
-	 * @return the currently known media conditions, modeled as the lower bounds of fluxes.
-	 * //TODO translate this method to just lower flux bounds. I don't think I use it
-	 * anywhere else anyway... or make it explicit for just FBA and NOT dFBA (or COMETS-style
-	 * dFBA)
-	 */
-	public double[] getMediaConditions()
-	{
-		/*
-		 * We're going with the standard motif that all exchange fluxes are
-		 * constructed such that they flow out from the cell. So the
-		 * "media conditions" are (for now, I know these are rates and not
-		 * concentrations, so YEAH) just the lower bounds on the exchange
-		 * fluxes.
-		 */
-		double[] media = new double[numExch];
-		for (int i = 0; i < numExch; i++)
-		{
-			if (objStyle == MAXIMIZE_OBJECTIVE_FLUX ||
-				objStyle == MINIMIZE_OBJECTIVE_FLUX)
-				media[i] = -GLPK.glp_get_col_lb(lp, exch[i]);
-			else
-				media[i] = -GLPK.glp_get_col_lb(lpMSA, exch[i]);
-		}
-		return media;
-	}
 
-	/**
-	 * Sets the media conditions for an FBA in terms of lower bounds of fluxes (e.g. the
-	 * Palsson standard style) 
-	 * @param media
-	 */
-	public void setMediaConditions(double[] media)
-	{
-		if (media.length != numExch)
-			return;
-		// pretty much assume that media is parallel to exch, and that values
-		// are negative
-		for (int i = 0; i < media.length; i++)
-		{
-			GLPK.glp_set_col_bnds(lp, exch[i], GLPKConstants.GLP_DB, media[i],
-								  GLPK.glp_get_col_ub(lp, exch[i]));
-		}
-	}
+
 
 	/**
 	 * If the FBA run was successful (as denoted by the GLPK status code), this returns
@@ -1597,13 +894,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public double getObjectiveSolution()
 	{
-		if (runSuccess)
-			if (objStyle == MAXIMIZE_OBJECTIVE_FLUX ||
-				objStyle == MINIMIZE_OBJECTIVE_FLUX)
-				return GLPK.glp_get_obj_val(lp);
-			else
-				return GLPK.glp_get_obj_val(lpMSA);
-		return -Double.MAX_VALUE;
+		return fbaOptimizer.getObjectiveSolution(objReaction);
 	}
 	
 	/**
@@ -1615,10 +906,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public double getObjectiveFluxSolution()
 	{
-		if (runSuccess)
-			return GLPK.glp_get_col_prim(lp, objReaction);
-//			return GLPK.glp_get_obj_val(lp);
-		return -Double.MAX_VALUE;
+		return fbaOptimizer.getObjectiveFluxSolution(objReaction);
 	}
 
 	/**
@@ -1639,6 +927,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			double[] ub = null;
 			int obj = 0;
 			int objSt = MAXIMIZE_OBJECTIVE_FLUX;
+			int optim = GUROBI;
 			String[] metNames = null;
 			String[] rxnNames = null;
 			int[] exchRxns = null;
@@ -1672,7 +961,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				
 				// read the file. do necessary stuff
 				String[] tokens = line.split("\\s+");  // split the line based on whitespace
-				
+        				
 				// now we have a tokenized block-header. should be one of the following
 				if (tokens[0].equalsIgnoreCase("SMATRIX"))
 				{
@@ -1906,6 +1195,23 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					}
 					lineNum++;
 					blockOpen = false;
+				}
+				
+				/**************************************************************
+				 **************** LOAD OPTIMIZER ******************************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("OPTIMIZER"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The OPTIMIZER should be followed only by the optimizer value. " + lineNum);
+					}
+					optim=-1;
+					if(tokens[1].equalsIgnoreCase("GUROBI"))
+						optim= GUROBI;
+					else if(tokens[1].equalsIgnoreCase("GLPK"))
+						optim= GLPK;
 				}
 				
 				/**************************************************************
@@ -2329,6 +1635,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				 **************************************************************/
 				else if (tokens[0].equalsIgnoreCase("VMAX_VALUES"))
 				{
+					
 					if (numRxns <= 0)
 					{
 						reader.close();
@@ -2366,7 +1673,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						String[] parsed = vMaxLine.split("\\s+");
 						if (vMaxLine.length() == 0)
 							continue;
-
 						if (parsed.length != 2)
 						{
 							reader.close();
@@ -2511,7 +1817,9 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					exchW[i] = defaultW;
 			}
 			
-			FBAModel model = new FBAModel(S, lb, ub, obj, exchRxns, diffConsts, exchKm, exchVmax, exchHillCoeff, exchAlpha, exchW, metNames, rxnNames, objSt);
+		
+			
+			FBAModel model = new FBAModel(S, lb, ub, obj, exchRxns, diffConsts, exchKm, exchVmax, exchHillCoeff, exchAlpha, exchW, metNames, rxnNames, objSt, optim);
 			model.setDefaultAlpha(defaultAlpha);
 			model.setDefaultW(defaultW);
 			model.setDefaultHill(defaultHill);
@@ -2542,200 +1850,9 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	
 	
 	/**
-	 * Constructs and returns a new <code>FBAModel</code> from a given file in
-	 * the special COMETS file format. And by special, I mean it should wear a helmet
-	 * when it goes outside. I know that's unprofessional and inappropriate, but seriously.
-	 * I can't wait until I can focus on writing good and thoughtful code, and not 
-	 * hacking at something until it works and just leaving it.
-	 * <p>
-	 * Anyway. There's documentation on the format. I'm not gonna put it here.
-	 * @param filename the name of the COMETS model file to load
-	 * @return a shiny new FBAModel
-	 * @throws ModelFileException
-	 */
-//	public static FBAModel loadModelFromFile_old(String filename) throws ModelFileException
-//	{
-//		/*
-//		 * model file format (tab delimited!) FILE_START <num_metabs>
-//		 * <num_reactions>\n <tab-delimited S-matrix - expect num_metabs rows of
-//		 * num_reactions elements>\n <tab-delimited lower bounds - expect one
-//		 * row of num_reactions elements>\n <tab-delimited upper bounds - expect
-//		 * one row of num_reactions elements>\n <objective reaction index -
-//		 * expect a single integer from 1 to num_reactions>\n
-//		 */
-//		
-//		try
-//		{
-//			BufferedReader reader = new BufferedReader(new FileReader(filename));
-//			String line;
-//			int numNonzero = 0;
-//			// get the first line
-//			line = reader.readLine().trim();
-//			// parse out the size of the model
-//			String[] dimStr = line.split("\\s+");
-//			int[] dim = { Integer.valueOf(dimStr[0]),
-//					      Integer.valueOf(dimStr[1]) };
-//			if (dimStr.length > 2)
-//				numNonzero = Integer.valueOf(dimStr[2]);
-//			
-//			// now we know the size of the S matrix
-//			double[][] S = new double[dim[0]][dim[1]];
-//
-//			if (numNonzero == 0) // eg., hasn't been initialized
-//			{
-//				// parse out the next dim[0] lines - these are the S matrix.
-//				for (int i = 0; i < dim[0]; i++)
-//				{
-//					line = reader.readLine().trim();
-//					String[] row = line.split("\\s+");
-//					for (int j = 0; j < dim[1]; j++)
-//					{
-//						S[i][j] = Double.valueOf(row[j]);
-//					}
-//				}
-//			}
-//			else	// if numNonzero != 0, this is a sparse matrix. so load it as one.
-//			{
-//				for (int i=0; i<numNonzero; i++)
-//				{
-//					line = reader.readLine().trim();
-//					String[] row = line.split("\\s+");
-//					S[Integer.valueOf(row[0])-1][Integer.valueOf(row[1])-1] = Double.valueOf(row[2]);
-//				}
-//			}
-//
-//			// the next two lines are the lb and ub
-//			double[] lb = new double[dim[1]];
-//			double[] ub = new double[dim[1]];
-//
-//			line = reader.readLine().trim();
-//			String[] lbStr = line.split("\\s+");
-//			line = reader.readLine().trim();
-//			String[] ubStr = line.split("\\s+");
-//
-//			for (int i = 0; i < dim[1]; i++)
-//			{
-//				lb[i] = Double.valueOf(lbStr[i]);
-//				ub[i] = Double.valueOf(ubStr[i]);
-//			}
-//
-//			// objective line - just one number.
-//			line = reader.readLine().trim();
-//			int obj = Integer.valueOf(line);
-//
-//			// Metabolite names
-//			line = reader.readLine().trim();
-//			String[] metabNames = line.split("\\s+");
-//			if (metabNames.length != dim[0])
-//				throw new ModelFileException("There should be " + dim[0] + " metabolite names, but " + metabNames.length + " were found in file: " + filename);
-//			
-//			// Reaction names
-//			line = reader.readLine().trim();
-//			String[] rxnNames = line.split("\\s+");
-//			if (rxnNames.length != dim[1])
-//				throw new ModelFileException("There should be " + dim[1] + " reaction names, but " + rxnNames.length + " were found in file: " + filename);
-//			
-//			// list of exchange fluxes
-//			line = reader.readLine();
-//			String[] exchIndStr = line.split("\\s+");
-//			int[] exch = new int[exchIndStr.length];
-//			double diffConsts[] = new double[exchIndStr.length];
-//			double exchKm[] = new double[exchIndStr.length];
-//			double exchVmax[] = new double[exchIndStr.length];
-//			double exchHillCoeff[] = new double[exchIndStr.length];
-//			double exchAlpha[] = new double[exchIndStr.length];
-//			double exchW[] = new double[exchIndStr.length];
-//			
-//			for (int i = 0; i < exchIndStr.length; i++)
-//			{
-//				exch[i] = Integer.valueOf(exchIndStr[i]);
-//				diffConsts[i] = -1;
-//				exchKm[i] = -1;
-//				exchVmax[i] = -1;
-//				exchHillCoeff[i] = -1;
-//				exchAlpha[i] = -1;
-//				exchW[i] = -1;
-//			}
-//
-//			/** The remaining lines are optional, and can be fulfilled by default
-//			 *  values by the rest of FBAComets
-//			 */
-//			
-//			// list of diffusion constants for extracellular metabolites
-//			line = reader.readLine();
-//			if (line != null)
-//			{
-//				String[] diffConstStr = line.split("\\s+");
-//				if (diffConstStr.length != diffConsts.length)
-//					throw new ModelFileException("Expected " + diffConsts.length + " diffusion constants, but read " + diffConstStr.length);
-//				for (int i = 0; i < diffConstStr.length; i++)
-//				{
-//					diffConsts[i] = Double.valueOf(diffConstStr[i]);
-//				}
-//			}
-//			
-//			// list of Km values for Monod-style uptake constraints
-//			line = reader.readLine();
-//			if (line != null)
-//			{
-//				String[] kmStr = line.split("\\s+");
-//				if (kmStr.length != exchKm.length)
-//					throw new ModelFileException("Expected " + kmStr.length + " Km values, but read " + kmStr.length);
-//				for (int i = 0; i < kmStr.length; i++)
-//				{
-//					exchKm[i] = Double.valueOf(kmStr[i]); 
-//				}
-//			}
-//			
-//			// list of Vmax values for Monod-style uptake constraints			
-//			line = reader.readLine();
-//			if (line != null)
-//			{
-//				String[] vmaxStr = line.split("\\s+");
-//				if (vmaxStr.length != exchVmax.length)
-//					throw new ModelFileException("Expected " + vmaxStr.length + " Vmax values, but read " + vmaxStr.length);
-//				for (int i = 0; i < vmaxStr.length; i++)
-//				{
-//					exchVmax[i] = Double.valueOf(vmaxStr[i]);
-//				}
-//			}
-//
-//			// list of Hill coefficient values for Monod-style uptake constraints
-//			line = reader.readLine();
-//			if (line != null)
-//			{
-//				String[] hillStr = line.split("\\s+");
-//				if (hillStr.length != exchHillCoeff.length)
-//					throw new ModelFileException("Expected " + hillStr.length + " Hill coefficient values, but read " + hillStr.length);
-//				for (int i = 0; i < hillStr.length; i++)
-//				{
-//					exchHillCoeff[i] = Double.valueOf(hillStr[i]);
-//				}
-//			}
-//
-//			reader.close();
-//
-//			FBAModel model = new FBAModel(S, lb, ub, obj, exch, diffConsts, exchKm, exchVmax, exchHillCoeff, exchAlpha, exchW, metabNames, rxnNames);
-//			model.setFileName(filename);
-//			return model;
-//		}
-//		catch (FileNotFoundException e)
-//		{
-//			throw new ModelFileException(ModelFileException.FILE_NOT_FOUND, "Unable to find model file '" + filename + "'");
-//		} 
-//		catch (IOException e)
-//		{
-//			throw new ModelFileException(ModelFileException.IO_ERROR, "Error in model file '" + filename + "'");
-//		} 
-//		catch (NumberFormatException e)
-//		{
-//			throw new ModelFileException(ModelFileException.NUMBER_FORMAT_ERROR, "Error in model file '" + filename + "'");
-//		}
-//	}
-	
-	/**
 	 * A debug tool that prints the upper and lower bounds to System.out
 	 */
+/*	
 	public void printBounds()
 	{
 		double[] lb = getLowerBounds();
@@ -2749,7 +1866,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		for (int i=0; i<baseExchLB.length; i++)
 			System.out.println(baseExchLB[i]);
 	}
-	
+*/	
 	/**
 	 * @return the names of all extracellular metabolites
 	 */
@@ -2796,23 +1913,24 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			flowDiffConst = val;
 	}
 
+	//public void setFluxesModel(double[] fl)
+	//{
+	//	fluxesModel=fl;
+	//}
+	
+	//public double[] getFluxesModel()
+	//{
+	//	return fluxesModel;
+	//}
 	/**
 	 * Sets the upper bound on the objective reaction. 
 	 * @param ub
 	 * @return PARAMS_ERROR if ub < the current lb for the objective, PARAMS_OK otherwise
 	 */
+	
 	public int setObjectiveUpperBound(double ub)
 	{
-		double lb = GLPK.glp_get_col_lb(lp, objReaction);
-		if (ub < lb)
-			return PARAMS_ERROR;
-		int type = GLPKConstants.GLP_DB;
-		if (lb == ub)
-			type = GLPKConstants.GLP_FX;
-
-		GLPK.glp_set_col_bnds(lp, objReaction, type, lb, ub);
-		
-		return PARAMS_OK;
+		return fbaOptimizer.setObjectiveUpperBound(objReaction, ub);
 	}
 	
 	/**
@@ -2828,99 +1946,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		return panel;
 	}
 	
-	/**
-	 * Constructs a new FBAModel using the primary variables of the main one.
-	 * This is used to clone a new FBAModel for backup.
-	 * @param lp
-	 * @param lpMSA
-	 * @param baseLB
-	 * @param baseUB
-	 * @param baseExchLB
-	 * @param baseExchUB
-	 * @param objReaction
-	 * @param exchIndices
-	 * @param exchKm
-	 * @param exchVmax
-	 * @param exchHillCoeff
-	 * @param metabNames
-	 * @param rxnNames
-	 * @param exchMetabNames
-	 * @param exchRxnNames
-	 */
-//	protected FBAModel(glp_prob lp,
-//					   glp_prob lpMSA,
-//					   double[] baseLB,
-//					   double[] baseUB,
-//					   double[] baseExchLB,
-//					   double[] baseExchUB,
-//					   int objReaction,
-//					   int[] exchIndices,
-//					   double[] exchKm,
-//					   double[] exchVmax,
-//					   double[] exchHillCoeff,
-//					   double[] exchAlpha,
-//					   double[] exchW,
-//					   String[] metabNames,
-//					   String[] rxnNames,
-//					   String[] exchMetabNames,
-//					   String[] exchRxnNames,
-//					   double defaultAlpha,
-//					   double defaultW,
-//					   double defaultKm,
-//					   double defaultVmax,
-//					   double defaultHill,
-//					   double default)
-//	{
-//		this.lp = lp;
-//		this.lpMSA = lpMSA;
-//		
-//		this.exch = exchIndices;
-//		this.exchKm = exchKm;
-//		this.exchVmax = exchVmax;
-//		this.exchHillCoeff = exchHillCoeff;
-//		
-//		this.exchAlpha = exchAlpha;
-//		this.exchW = exchW;
-//		
-//		this.baseLB = baseLB;
-//		this.baseUB = baseUB;
-//		this.baseExchLB = baseExchLB;
-//		this.baseExchUB = baseExchUB;
-//			
-//		this.rxnNames = rxnNames;
-//		this.metabNames = metabNames;
-//		this.exchRxnNames = exchRxnNames;
-//		this.exchMetabNames = exchMetabNames;
-//
-//		this.objReaction = objReaction;
-//		numMetabs = metabNames.length;
-//		numRxns = rxnNames.length;
-//		
-//		this.defaultAlpha = defaultAlpha;
-//		this.defaultHill = defaultHill;
-//		this.defaultKm = defaultKm;
-//		this.defaultVmax = defaultVmax;
-//		this.defaultW = defaultW;
-//		this.defaultLB = defaultLB;
-//		this.defaultUB = defaultUB;
-//		this.defaultMetabDiffConst = defaultMetabDiffConst;
-//		
-//		setParameters();
-//	}
-	
-//	public void copyTest()
-//	{
-//		glp_prob lpNew = GLPK.glp_create_prob();
-//		GLPK.glp_copy_prob(lpNew, lp, GLPK.GLP_ON);
-//		GLPK.glp_set_col_bnds(lpNew, 1, GLPK.GLP_DB, -9000, 9000);
-//		System.out.println("LB: " + GLPK.glp_get_col_lb(lpNew, 1) + " UB: " + GLPK.glp_get_col_ub(lpNew, 1));
-//		System.out.println("LB: " + GLPK.glp_get_col_lb(lp, 1) + " UB: " + GLPK.glp_get_col_ub(lp, 1));
-//	}
-	
-	protected FBAModel(glp_prob lp, glp_prob lpMSA, int numMetabs, int numRxns, int numExch)
+
+	private void setNums(int numMetabs, int numRxns, int numExch)
 	{
-		this.lp = lp;
-		this.lpMSA = lpMSA;
+		//this.lp = lp;
+		//this.lpMSA = lpMSA;
 		this.numMetabs = numMetabs;
 		this.numRxns = numRxns;
 		this.numExch = numExch;
@@ -2929,15 +1959,13 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	/**
 	 * Produces a clone of this <code>FBAModel</code> with all parameters intact.
 	 */
+	
 	public FBAModel clone()
 	{
-		glp_prob lpNew = GLPK.glp_create_prob();
-		GLPK.glp_copy_prob(lpNew, lp, GLPK.GLP_ON);
-
-		glp_prob lpMSANew = GLPK.glp_create_prob();
-		GLPK.glp_copy_prob(lpMSANew, lpMSA, GLPK.GLP_ON);
-
-		FBAModel modelCopy = new FBAModel(lpNew, lpMSANew, numMetabs, numRxns, numExch);
+		FBAModel modelCopy=new FBAModel();
+		modelCopy.setNums(numMetabs, numRxns, numExch);
+		modelCopy.fbaOptimizer=fbaOptimizer.clone();
+		
 		modelCopy.setBaseBounds(getBaseLowerBounds(), getBaseUpperBounds());
 		modelCopy.setBaseExchLowerBounds(getBaseExchLowerBounds());
 		modelCopy.setBaseExchUpperBounds(getBaseExchUpperBounds());
@@ -2961,111 +1989,14 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		modelCopy.setDefaultLB(getDefaultLB());
 		modelCopy.setDefaultUB(getDefaultUB());
 		modelCopy.setDefaultMetabDiffConst(getDefaultMetabDiffConst());
-		
-		
-		
-		
-		
-//		FBAModel modelCopy = new FBAModel(lpNew, 
-//										  lpMSANew,
-//										  getBaseLowerBounds(),
-//										  getBaseUpperBounds(),
-//										  getBaseExchLowerBounds(),
-//										  getBaseExchUpperBounds(),
-//										  getObjectiveIndex(),
-//										  getExchangeIndices(),
-//										  getExchangeKm(),
-//										  getExchangeVmax(),
-//										  getExchangeHillCoefficients(),
-//										  getExchangeAlphaCoefficients(),
-//										  getExchangeWCoefficients(),
-//										  getMetaboliteNames(),
-//										  getReactionNames(),
-//										  getExchangeMetaboliteNames(),
-//										  getExchangeReactionNames());
+		modelCopy.setActive(getActive());
 		modelCopy.setObjectiveStyle(getObjectiveStyle());
 		modelCopy.setFileName(this.getFileName());
-		modelCopy.setParameters();
+		//modelCopy.setParameters();
+		
 		return modelCopy;
 	}
 
-	/**
-	 * A little debug code that prints the stoichiometric matrix.
-	 */
-	public void printMatrix()
-	{
-		printMatrix(false);
-	}
-	
-	/**
-	 * Some debugging code that prints the matrix for the min sum fluxes problem
-	 */
-	public void printMSAMatrix()
-	{
-		printMatrix(true);
-	}
-	
-	/**
-	 * Prints either the lp matrix or the lpMSA matrix, depending on if useMSA is
-	 * false or true
-	 * @param useMSA if true, print the MSA matrix, otherwise the plain lp matrix
-	 */
-	private void printMatrix(boolean useMSA)
-	{
-		int numRows = numMetabs;
-		int numCols = numRxns;
-		if (useMSA)
-		{
-			numRows += numRxns + numRxns;
-			numCols += numRxns;
-		}
-		
-		for (int i=0; i<numRows; i++)
-		{
-			SWIGTYPE_p_int ia;
-			SWIGTYPE_p_double val;
-			ia = GLPK.new_intArray(numCols);
-			val = GLPK.new_doubleArray(numRows);
-			int len = 0;
-			if (!useMSA)
-				len = GLPK.glp_get_mat_row(lp, i+1, ia, val);
-			else
-				len = GLPK.glp_get_mat_row(lpMSA, i+1, ia, val);
-			double[] row = new double[numCols];
-//			System.out.println((i+1) + ":");
-			for (int j=0; j<len; j++)
-			{
-//				System.out.println("\t" + GLPK.intArray_getitem(ia, j+1) + "\t" + GLPK.doubleArray_getitem(val, j+1));
-				row[GLPK.intArray_getitem(ia, j+1)-1] = GLPK.doubleArray_getitem(val, j+1);
-			}
-//			System.out.print((i+1) + ": ");
-			for (int j=0; j<row.length; j++)
-			{
-				System.out.print(row[j] + "\t");
-			}
-			System.out.print("\n");
-		}
-	}
-	
-	/**
-	 * Some debugging code that prints up a single column of the lp matrix on a single line 
-	 * @param j should be a value from 1->N or this does nothing
-	 */
-	public void printColumn(int j)
-	{
-		if (j < 1 || j > numRxns)
-			return;
-		
-		SWIGTYPE_p_int ia = GLPK.new_intArray(numMetabs);
-		SWIGTYPE_p_double col = GLPK.new_doubleArray(numMetabs);
-		int len = GLPK.glp_get_mat_col(lp, j, ia, col);
-		
-		for (int i=0; i<len; i++)
-		{
-			System.out.println(GLPK.doubleArray_getitem(col, i+1));
-		}
-	}
-	
 	/**
 	 * @return the parameters panel for this <code>FBAModel<code>
 	 */
@@ -3135,6 +2066,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 							 minObjMaxFluxButton;
 		private DoubleField flowConstField,
 							growthConstField;
+		//private JComboBox   optimizerBox;
 		
 		public ModelParametersPanel(FBAModel model)
 		{
@@ -3172,6 +2104,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			JLabel growthConstLabel = new JLabel("Growth diffusion constant (cm^2/s): ", JLabel.LEFT);
 			growthConstField = new DoubleField(model.getGrowthDiffusionConstant(), 6, false);
 
+			
 			fbaObjGroup.add(maxObjButton);
 			fbaObjGroup.add(minObjButton);
 			fbaObjGroup.add(maxFluxButton);
@@ -3212,7 +2145,9 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 //			gbc.gridy++;
 //			add(minObjMaxFluxButton, gbc);
 //			gbc.gridy++;
-
+			
+			
+			gbc.gridy++;
 			gbc.gridwidth = 1;
 			add(flowConstLabel, gbc);
 			gbc.gridx = 1;
@@ -3287,7 +2222,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				return FBAModel.MAXIMIZE_OBJECTIVE_FLUX;
 		}
 	}
-
+	
 	/** Set the active parameter to true (activate the model) with 
 	 * an exponential probability with given activation probability rate.
 	 * @param activationRate is the activation probability rate. 
@@ -3317,99 +2252,14 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	{
 		return active;
 	}
-		
-	/**
-	 * Some testing and trial code for this thing.
-	 * @param args
+	
+	/** Get the value of active.
+	 * 
 	 */
-	public static void main(String[] args)
+ 
+	public void setActive(boolean act)
 	{
-		try
-		{
-//			FBAModel model = FBAModel.loadModelFromFile("C:/!COMETS/ecoli_testing/ec_iAF1260.txt");
-			FBAModel model = FBAModel.loadModelFromFile("C:/Documents and Settings/briehl.FLUX4/Desktop/omics.mod");
-			
-			System.out.println("loaded!");
-			model.setSolverMethod(SIMPLEX_METHOD);
-//			model.printMatrix();
-//			model.printMSAMatrix();
-//			model.printColumn(model.getObjectiveIndex());
-
-			double[] exchLB = new double[model.getBaseExchLowerBounds().length];
-//			exchLB[0] = -100;
-//			exchLB[1] = -5;
-//			exchLB[2] = -50;
-//			exchLB[3] = -50;
-//			exchLB[4] = -50;
-//			exchLB[5] = -10;
-//			exchLB[6] = -10;
-			
-			// M9 media for E. coli, glucose and O2 limited
-//			exchLB[59]  = -1000;
-//			exchLB[61]  = -0.01;
-//			exchLB[66]  = -1000;
-//			exchLB[68]  = -1000;
-//			exchLB[69]  = -1000;
-//			exchLB[75]  = -1000;
-//			exchLB[107] = -1000;
-//			exchLB[108] = -1000;
-//			exchLB[143] = -8;
-//			exchLB[166] = -1000;
-//			exchLB[168] = -1000;
-//			exchLB[185] = -1000;
-//			exchLB[210] = -1000;
-//			exchLB[213] = -1000;
-//			exchLB[215] = -1000;
-//			exchLB[218] = -1000;
-//			exchLB[220] = -1000;
-//			exchLB[227] = -18.5;
-//			exchLB[238] = -1000;
-//			exchLB[259] = -1000;
-//			exchLB[279] = -1000;
-//			exchLB[298] = -1000;
-
-			model.setExchLowerBounds(exchLB);
-			exchLB = model.getMediaConditions();
-			double[] exchUB = model.getBaseExchUpperBounds();
-			String[] names = model.getExchangeReactionNames();
-			for (int i=0; i<names.length; i++)
-			{
-				System.out.println(names[i] + "\t" + exchLB[i] + "\t" + exchUB[i]);
-			}
-			
-			long t = System.currentTimeMillis();
-			int stat = 0;
-
-			stat = model.run();
-			System.out.println("model run: " + (System.currentTimeMillis() - t));
-			System.out.println("fba status: " + stat);
-			System.out.println("fba objective: " + model.getObjectiveFluxSolution());
-
-//			stat = model.runForceFlux(805, model.getObjectiveIndex(), 1);
-//			System.out.println("fba status: " + stat);
-//			System.out.println("fba objective: " + model.getObjectiveFluxSolution());
-			
-//			double[] fluxes = model.getFluxes();
-//			model.setObjectiveStyle(FBAModel.MINIMIZE_TOTAL_FLUX);
-//			
-//			stat = model.run();
-//			System.out.println("fba_mav status: " + stat);
-//			double[] msaFluxes = model.getFluxes();
-//			double totalStd = 0, 
-//				   totalMSA = 0;
-//			for (int i=0; i<fluxes.length; i++)
-//			{
-//				totalStd += Math.abs(fluxes[i]);
-//				totalMSA += Math.abs(msaFluxes[i]);
-//				System.out.println(fluxes[i]);
-//			}
-//			System.out.println("\n" + totalStd + "\t" + totalMSA);
-			System.out.println("took " + (System.currentTimeMillis() - t) + " ms");
-		}
-		catch (Exception e)
-		{
-			System.out.println(e);
-		}
+		active=act;
 	}
 
 }

@@ -2240,7 +2240,7 @@ public class FBACometsLoader implements CometsLoader,
 			model.setGrowthDiffusionConstant(pParams.getGrowthDiffRate());
 			System.out.println("Done!\n Testing default parameters...");
 			int result = model.run();
-			System.out.print("Done!\nGLPK status code = " + result + " ");
+			System.out.print("Done!\nOptimizer status code = " + result + " ");
 			if (result == 180 || result == 5)
 				System.out.println("(looks ok!)");
 			else

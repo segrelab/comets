@@ -13,5 +13,6 @@
 	<classpathentry kind="lib" path="/home/dukovski/Downloads/jogl/jogamp-all-platforms/jar/gluegen.jar"/>
 	<classpathentry kind="lib" path="/home/dukovski/Downloads/jogl/jogamp-all-platforms/jar/gluegen-rt.jar"/>
 	<classpathentry kind="lib" path="/home/dukovski/Downloads/jogl/jogamp-all-platforms/jar/gluegen-rt-natives-linux-amd64.jar"/>
+	<classpathentry kind="lib" path="/opt/gurobi502/linux32/lib/gurobi.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
