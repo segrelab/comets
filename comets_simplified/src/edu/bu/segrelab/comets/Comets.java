@@ -787,6 +787,16 @@ public class Comets implements CometsConstants,
 			}
 			newModels[newModels.length-1] = model;
 			
+			//If there is a 3D world get rid of it
+			if (world3D != null)
+			{
+				world3D.destroy();
+			}
+			//Destroy 2D world too
+			if (world != null)
+			{
+				world.destroy();
+			}
 			// If there's no world loaded, make a new one! Done!
 			if (world == null)
 			{
@@ -802,7 +812,7 @@ public class Comets implements CometsConstants,
 			}
 
 			// Otherwise, update the old one and all cells that may (or may not) exist
-			else
+/*			else
 			{
 				world.changeModelsInWorld(models, newModels);
 				if (cellList.size() > 0)
@@ -815,12 +825,22 @@ public class Comets implements CometsConstants,
 					}
 				}
 			}
+*/
+			
 			models = newModels;
 			world.updateWorld();
 			backupState(true);
-			setupPane.clear();
-			setupPane.revalidate();
-			
+			if(!cParams.isCommandLineOnly())
+			{
+					setupPane.removeGraphicSetupPanel();
+					setupPane.addGraphicsSetupPanel(DIMENSIONALITY_2D);
+				//cMenuBar.setDimension(cParams.getNumLayers());
+			}
+			if(setupPane != null)
+			{
+				setupPane.clear();
+				setupPane.revalidate();
+			}
 			fireLoadEvent(new CometsLoadEvent(this, CometsLoadEvent.Type.MODEL));
 		}
 	}
