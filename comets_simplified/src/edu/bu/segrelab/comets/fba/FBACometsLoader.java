@@ -189,13 +189,14 @@ public class FBACometsLoader implements CometsLoader,
 		//Write the file name in the manifest file.
 		try
 		{
-			FileWriter manifestWriter=new FileWriter(new File(path+File.separatorChar+pParams.getManifestFileName()),false);
+			FileWriter manifestWriter=new FileWriter(new File(path+File.separatorChar+pParams.getNopathManifestFileName()),false);
 			manifestWriter.write("LayoutFileName: "+filename+System.getProperty("line.separator"));
 			manifestWriter.close();
-			pParams.setManifestFileName(path+File.separatorChar+pParams.getManifestFileName());
+			pParams.setManifestFileName(path+File.separatorChar+pParams.getNopathManifestFileName());
 		}
 		catch (IOException e)
 		{
+			System.out.println(e.getMessage());
 			System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
 		}		
 

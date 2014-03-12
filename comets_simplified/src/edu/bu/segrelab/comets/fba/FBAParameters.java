@@ -140,6 +140,7 @@ public class FBAParameters implements PackageParameters
 				   totalBiomassLogName;
 	
 	private String manifestFileName = "COMETS_manifest.txt";
+	private final String nopathManifestFileName="COMETS_manifest.txt";
 	
 	private int numRunThreads = 1,
 				numDiffPerStep = 10,
@@ -809,6 +810,14 @@ public class FBAParameters implements PackageParameters
 		return fluxLogFormat; 
 	}
 	
+	/** Gets the name of the manifest file
+	 *  without the path prepended.
+	 * 
+	 */
+	public String getNopathManifestFileName()
+	{
+		return nopathManifestFileName;
+	}
 	
 	/** Gets the name of the manifest file
 	 * 
