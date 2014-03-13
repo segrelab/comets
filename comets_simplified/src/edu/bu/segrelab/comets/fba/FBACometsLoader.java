@@ -162,6 +162,7 @@ public class FBACometsLoader implements CometsLoader,
 	public int loadLayoutFile(String filename, Comets c, boolean useGui) throws IOException
 	{
 		world = null;
+		world3D = null;
 		cellList = null;
 		models = null;
 		this.useGui = useGui;

@@ -1562,11 +1562,15 @@ public class Comets implements CometsConstants,
 			{
 				world.destroy();
 				initWorld.destroy();
+				world = null;
+				initWorld = null;
 			}
 			if (world3D != null)
 			{
 				world3D.destroy();
 				initWorld3D.destroy();
+				world3D = null;
+				initWorld3D = null;
 			}
 			
 			if(!cParams.isCommandLineOnly())

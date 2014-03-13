@@ -464,7 +464,10 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	 */
 	public void showLayoutToolbar(boolean b)
 	{
-		tbp.showLayoutToolbar(b);
+		if(gsp==null)
+			tbp.showLayoutToolbar(false);
+		else
+			tbp.showLayoutToolbar(b);
 		revalidate();
 	}
 
@@ -830,10 +833,12 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 		switch(dimensionality)
 		{
 			case(DIMENSIONALITY_2D) :
+				gsp3d = null;
 				gsp = new GraphicSetupPanel(c, this);
 				add(gsp, gbc);
 				break;
 			case(DIMENSIONALITY_3D) :
+				gsp = null;
 				gsp3d = new GraphicSetupPanel3D(c);
 			    add(gsp3d, gbc);
 				break;
