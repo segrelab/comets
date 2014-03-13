@@ -1685,16 +1685,16 @@ public class Comets implements CometsConstants,
 	public void aboutDialog()
 	{
 		JLabel headerLabel = new JLabel("<html><h3>COMETS: Computation Of Microbial Ecosystems in Time and Space</h3></html>", JLabel.LEFT);
-		JLabel cometsLabel = new JLabel("<html><a href=\"http://comets.bu.edu\">http://comets.bu.edu</a>", JLabel.LEFT);
+		JLabel cometsLabel = new JLabel("<html><a href=\"http://www.bu.edu/segrelab/comets\">http://www.bu.edu/segrelab/comets</a>", JLabel.LEFT);
 		JLabel buLabel = new JLabel("<html>Boston University</html>", JLabel.LEFT);
-		JLabel segreLabel = new JLabel("<html>Daniel Segre lab - <a href=\"http://prelude.bu.edu\">http://prelude.bu.edu</a></html>", JLabel.LEFT);
+		JLabel segreLabel = new JLabel("<html>Daniel Segre lab - <a href=\"http://www.bu.edu/segrelab\">http://www.bu.edu/segrelab</a></html>", JLabel.LEFT);
 		JLabel versionLabel = new JLabel("<html>Version " + versionString + "</html>");
 		
 		cometsLabel.addMouseListener(
 				new MouseAdapter() {
 					public void mouseClicked(MouseEvent e)
 					{
-						openBrowserURL("http://comets.bu.edu");
+						openBrowserURL("http://www.bu.edu/segrelab/comets");
 					}
 				});
 
@@ -1702,7 +1702,7 @@ public class Comets implements CometsConstants,
 				new MouseAdapter() {
 					public void mouseClicked(MouseEvent e)
 					{
-						openBrowserURL("http://prelude.bu.edu");
+						openBrowserURL("http://www.bu.edu/segrelab");
 					}
 				});
 
