@@ -190,7 +190,7 @@ public class CometsMenuBar extends JMenuBar implements CometsConstants
 		fileMenu.add(saveParametersItem);
 		
 		fileMenu.addSeparator();
-		
+/*		
 		setExpansionItem = new JMenuItem("Set COMETS Modeling Package...");
 		setExpansionItem.addActionListener(
 				new ActionListener() {
@@ -202,7 +202,7 @@ public class CometsMenuBar extends JMenuBar implements CometsConstants
 		fileMenu.add(setExpansionItem);
 		
 		fileMenu.addSeparator();
-		
+*/		
 
 		/* Exit program menu item */
 		exitItem = new JMenuItem("Exit");
