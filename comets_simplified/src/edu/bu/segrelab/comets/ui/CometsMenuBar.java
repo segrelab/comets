@@ -273,7 +273,7 @@ public class CometsMenuBar extends JMenuBar implements CometsConstants
 		viewMenu = new JMenu("View");
 		viewMenu.setMnemonic(KeyEvent.VK_V);
 		add(viewMenu);
-		
+/*		
 		viewModelInfoItem = new JCheckBoxMenuItem("Show Model Info");
 		viewModelInfoItem.setMnemonic(KeyEvent.VK_M);
 		viewModelInfoItem.addItemListener(
@@ -285,7 +285,7 @@ public class CometsMenuBar extends JMenuBar implements CometsConstants
 				});
 		viewModelInfoItem.setState(false);
 		viewMenu.add(viewModelInfoItem);
-		
+*/		
 		
 		viewSpaceInfoItem = new JCheckBoxMenuItem("Show Space Info");
 		viewSpaceInfoItem.setMnemonic(KeyEvent.VK_S);
@@ -392,7 +392,7 @@ public class CometsMenuBar extends JMenuBar implements CometsConstants
 		simMenu.addSeparator();
 		
 		/* add all the usual keystroke stuff */
-		
+/*		
 		pauseCycleItem = new JCheckBoxMenuItem("Pause on Cycle");
 		pauseCycleItem.setState(c.getParameters().pauseOnStep());
 		pauseCycleItem.setMnemonic(KeyEvent.VK_C);
@@ -418,6 +418,7 @@ public class CometsMenuBar extends JMenuBar implements CometsConstants
 		simMenu.add(pauseItem);
 		
 		simMenu.addSeparator();
+*/
 		
 		saveBiomassItem = new JMenuItem("Save Current Biomass...");
 		saveBiomassItem.setMnemonic(KeyEvent.VK_B);
