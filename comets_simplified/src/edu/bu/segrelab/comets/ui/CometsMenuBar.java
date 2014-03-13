@@ -503,7 +503,10 @@ public class CometsMenuBar extends JMenuBar implements CometsConstants
 		{
 			case SETUP_MODE :
 				// turn on setup menu stuff
-				layoutMenu.setEnabled(true);
+				if(c.getWorld3D()!=null)
+					layoutMenu.setEnabled(false);
+				else if(c.getWorld()!=null)
+					layoutMenu.setEnabled(true);
 				startSimItem.setEnabled(true);
 				endSimItem.setEnabled(false);
 				saveLayoutFileItem.setEnabled(true);

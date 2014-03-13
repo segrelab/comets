@@ -1590,9 +1590,16 @@ public class Comets implements CometsConstants,
 			// Fetch the relevant data from the layout file
 			
 			if (cParams.getNumLayers()==1)
+			{
 				world = loader.getWorld();
+				this.showLayoutToolbar(true);
+			}
 			else if(cParams.getNumLayers()>1)
+			{
 				world3D = loader.getWorld3D();
+				this.showLayoutToolbar(false);
+			}
+			this.cMenuBar.setMode(SETUP_MODE);
 			models = loader.getModels();
 			cellList = loader.getCells();
 			if (cParams.getNumLayers()==1)
