@@ -57,7 +57,9 @@ public class FBAParameters implements PackageParameters
 	{
 		DIFFUSION_CN("Diffusion (Crank-Nicolson)"),
 		DIFFUSION_EP("Diffusion (Eight Point)"),
-		DIFFUSION_3D("Diffusion 3D");
+		DIFFUSION_3D("Diffusion 3D"),
+		CONVECTION_2D("Convection 2D"),
+		CONVECTION_3D("Convection 3D");
 		//LEVEL_SET("Level Set Relaxation");
 		
 		private String name;

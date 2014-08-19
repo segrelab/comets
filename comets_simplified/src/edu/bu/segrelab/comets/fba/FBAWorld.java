@@ -1485,6 +1485,257 @@ public class FBAWorld extends World2D
 	}
 	
 	
+	/**
+	 * The convection model for biomass transport. 
+	 *
+	 */
+	private void convection2DBiomass()
+	{
+
+		
+		/* more problems.
+		 * 1. cell overlap.
+		 * if we allow cell overlap, there's no problem. just do each
+		 * biomass type in turn.
+		 * if we prevent cell overlap, there's kind of a big problem.
+		 * how do we handle - using equations - the case where cells are
+		 * blocked by each other?
+		 * 
+		 * 2. options
+		 * a. random barrier choice.
+		 * As far as each cell type is concerned, each space occupied by
+		 * a cell acts as a Neumann boundary. So just add those boundaries 
+		 * to each calculation on each diffusion cycle.
+		 */
+		
+		double[][][] deltaDensity = new double[numModels][numCols][numRows];
+		double[][][] biomassDensity = new double[numModels][numCols][numRows];
+		double[][][] biomassDensityIntermediate = new double[numModels][numCols][numRows];
+		double[][][] convectionRHS  = new double[numModels][numCols][numRows];
+		double[][][] convectionRHS1 = new double[numModels][numCols][numRows];
+		double[][][] convectionRHS2 = new double[numModels][numCols][numRows];
+		Iterator<Cell> it = c.getCells().iterator();
+		
+		
+		double dT = cParams.getTimeStep() * 3600; // time step is in hours, diffusion is in seconds
+		double dX = cParams.getSpaceWidth();
+		// capture the current biomass state
+		while (it.hasNext())
+		{
+			FBACell cell = (FBACell)it.next();
+			double[] biomass = cell.getBiomass();  // total biomass
+			double[] deltaBiomass = cell.getDeltaBiomass(); // biomass produced this step
+			//System.out.println(deltaBiomass[0]);
+			
+			int x = cell.getX();
+			int y = cell.getY();
+			for (int k=0; k<numModels; k++)
+			{
+				biomassDensity[k][x][y]=biomass[k];// - deltaBiomass[k];
+				deltaDensity[k][x][y]=deltaBiomass[k];
+				//growthRate[k][x][y]=deltaBiomass[k]/(dT*(biomass[k] - deltaBiomass[k]));
+				convectionRHS1[k][y][y]=cell.getConvectionRHS1()[k];
+				convectionRHS2[k][x][y]=cell.getConvectionRHS2()[k];
+			}
+		}
+		
+		//System.out.println(cParams.allowCellOverlap());
+		
+		if (cParams.allowCellOverlap())
+		{
+			for (int k=0; k<numModels; k++)
+			{
+				if(cParams.getSimulateActivation() && !((FBAModel)models[k]).getActive())
+				{
+					continue;
+				} 
+				double[][] convDiffConstField=new double[numCols][numRows];
+				for (int i=0; i<numCols; i++)
+				{
+					for (int j=0; j<numRows; j++)
+					{
+						convDiffConstField[i][j]=((FBAModel)models[k]).getConvDiffConstant();
+					}
+				}
+				
+				convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
+				for(int i=0;i<numCols;i++)
+				{
+					for(int j=0;j<numRows;j++)
+					{
+						biomassDensityIntermediate[k][i][j]=biomassDensity[k][i][j]+dT*(23.0*convectionRHS[k][i][j]-16.0*convectionRHS1[k][i][j]+5.0*convectionRHS2[k][i][j])/12.0;
+					}
+				}
+				for(int i=0;i<numCols;i++)
+				{
+					for(int j=0;j<numRows;j++)
+					{
+						convectionRHS2[k][i][j]=convectionRHS1[k][i][j];
+						convectionRHS1[k][i][j]=convectionRHS[k][i][j];
+					}
+				}
+				
+				convectionRHS[k]=Utility.getConvectionRHS(biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant());
+				for(int i=0;i<numCols;i++)
+				{
+					for(int j=0;j<numRows;j++)
+					{   
+						biomassDensity[k][i][j]=biomassDensity[k][i][j]+dT*(5.0*convectionRHS[k][i][j]+8.0*convectionRHS1[k][i][j]-1.0*convectionRHS2[k][i][j])/12.0;
+                        //add random gaussioan noise
+						//System.out.println(((FBAModel)models[k]).getNoiseVariance());
+						//System.out.println(Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance()));
+						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance());
+					}
+				}
+
+				
+			}
+		}
+		else
+		{
+			int[] order = Utility.randomOrder(numModels);
+			//Commenting the above line and uncommenting below takes out 
+			//the randomization of the order in which the models are updated
+			//I.Dukovski
+			//int[] order = new int[numModels];
+			//for (int a=0; a<numModels; a++)
+			//{
+			//	order[a]=a;
+			//}
+			//
+			for (int k=0; k<order.length; k++)
+			{
+				int curModel = order[k];
+				// figure out where species k can't go.
+				// then diffuse it across that area
+				// this just went from being O(n) --> O(n^2). :(
+				if(cParams.getSimulateActivation() && !((FBAModel)models[curModel]).getActive())
+				{
+					continue;
+				}
+				boolean[][] barrierState = new boolean[numCols][numRows];
+				if (DEBUG) System.out.println("setting barrier state");
+				for (int i=0; i<numCols; i++)
+				{
+					for (int j=0; j<numRows; j++)
+					{
+						double otherBiomass = 0;
+						for (int l=0; l<numModels; l++)
+						{
+							if (l!=curModel)
+								//otherBiomass += biomassGrowthState[l][i][j] + biomassFlowState[l][i][j];
+								otherBiomass+=biomassDensity[l][i][j];
+						}
+						barrierState[i][j] = barrier[i][j] || (otherBiomass > 0);
+					}
+				}
+				double[][] convDiffConstField=new double[numCols][numRows];
+				for (int i=0; i<numCols; i++)
+				{
+					for (int j=0; j<numRows; j++)
+					{
+						convDiffConstField[i][j]=((FBAModel)models[curModel]).getConvDiffConstant();
+					}
+				}
+				convectionRHS[curModel]=Utility.getConvectionRHS(biomassDensity[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant()); 	
+				for(int i=0;i<numCols;i++)
+				{
+					for(int j=0;j<numRows;j++)
+					{
+						biomassDensityIntermediate[curModel][i][j]=biomassDensity[curModel][i][j]+dT*(23.0*convectionRHS[curModel][i][j]-16.0*convectionRHS1[curModel][i][j]+5.0*convectionRHS2[curModel][i][j])/12.0;
+					}
+				}
+				for(int i=0;i<numCols;i++)
+				{
+					for(int j=0;j<numRows;j++)
+					{
+						convectionRHS2[curModel][i][j]=convectionRHS1[curModel][i][j];
+						convectionRHS1[curModel][i][j]=convectionRHS[curModel][i][j];
+					}
+				}
+				
+				convectionRHS[curModel]=Utility.getConvectionRHS(biomassDensityIntermediate[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant());
+				for(int i=0;i<numCols;i++)
+				{
+					for(int j=0;j<numRows;j++)
+					{   
+						biomassDensity[curModel][i][j]=biomassDensity[curModel][i][j]+dT*(5.0*convectionRHS[curModel][i][j]+8.0*convectionRHS1[curModel][i][j]-1.0*convectionRHS2[curModel][i][j])/12.0;
+						//System.out.println(biomassDensity[k][i][j]);
+						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance());
+					}
+				}
+
+
+				/* There's a numerical problem inherent to doing diffusion:
+				 * Even having a small concentration in a single space can diffuse out to 
+				 * a tiny concentration on the fringes of the grid (even down to ~1e-20),
+				 * effectively blocking any diffusion of other species. 
+				 * Even though, when new cells are built from the fresh diffusion, any 
+				 * tiny concentrations will just disappear and "die". 
+				 * 
+				 * To counter this, run a check - any space in the freshly diffused areas
+				 * that do not meet the minimum biomass threshold should just be wiped out.
+				 * 
+				 * This is only a problem here because each species is diffused separately,
+				 * with the new diffusion used to make Neumann boundaries for the next
+				 * species.
+				 */
+				for (int i=0; i<numCols; i++)
+				{
+					for (int j=0; j<numRows; j++)
+					{
+						if (biomassDensity[curModel][i][j] < cParams.getMinSpaceBiomass())
+						{
+							biomassDensity[curModel][i][j] = 0;
+						}
+					}
+				}
+			}
+		}
+		// update the world with the results.
+		
+		for (int i=0; i<numCols; i++)
+		{
+			for (int j=0; j<numRows; j++)
+			{
+				// if there's some value at biomassState[][i][j];
+				double[] newBiomass = new double[numModels];
+				double[] newConvectionRHS1=new double[numModels];
+				double[] newConvectionRHS2=new double[numModels];
+				
+				for (int k=0; k<numModels; k++)
+				{
+					newBiomass[k] = biomassDensity[k][i][j];
+					newConvectionRHS1[k]=convectionRHS1[k][i][j];
+					newConvectionRHS2[k]=convectionRHS2[k][i][j];
+					//System.out.println(i+","+j+"     "+biomassDensity[k][i][j]);
+				}
+			
+				if (Utility.hasNonzeroValue(newBiomass) || Utility.hasNonzeroValue(newConvectionRHS1) || Utility.hasNonzeroValue(newConvectionRHS1))
+				{
+					//System.out.println(i+"  "+j);
+					//System.out.println("OK");
+					if (isOccupied(i,j))
+					{
+						//System.out.println("OK1");
+						Cell cell = (Cell)getCellAt(i,j);
+						cell.setBiomass(newBiomass);
+						cell.setConvectionRHS1(newConvectionRHS1);
+						cell.setConvectionRHS2(newConvectionRHS2);
+					}
+					else // make a new Cell here
+					{   
+						//System.out.println("OK2");
+						Cell cell = new FBACell(i, j, newBiomass, this, (FBAModel[])models, cParams, pParams);
+						cell.setConvectionRHS1(newConvectionRHS1);
+						cell.setConvectionRHS2(newConvectionRHS2);
+						c.getCells().add(cell);
+					}
+				}
+			}
+		}
+	}
+	
 /************** OLD DIFFUSION METHODS ************************/
 	
 //	public void diffuseMedia()
@@ -1629,7 +1880,7 @@ public class FBAWorld extends World2D
 
 			// 2. tell all the cells to run
 			List<Cell> deadCells = new ArrayList<Cell>();
-			long t = System.currentTimeMillis();
+			//long t = System.currentTimeMillis();
 			for (int i = 0; i < c.getCells().size(); i++)
 			{
 				// print("running cell " + i + "...");
@@ -1639,23 +1890,31 @@ public class FBAWorld extends World2D
 					deadCells.add(cell);
 				// println(" done!");
 			}
-			System.out.println("total fba time = " + (System.currentTimeMillis() - t));
+			//System.out.println("total fba time = " + (System.currentTimeMillis() - t));
 
 			// remove dead cells.
-			for (int i = 0; i < deadCells.size(); i++)
+			switch(pParams.getBiomassMotionStyle())
 			{
-				// System.out.println("removing deadcell " + i + " of " +
-				// deadCells.size());
-				Cell cell = (Cell) c.getCells().remove(
-						c.getCells().indexOf(deadCells.get(i)));
-				removeCell(cell.getX(), cell.getY());
+				case CONVECTION_2D:
+					;
+					break;
+				default:
+					for (int i = 0; i < deadCells.size(); i++)
+					{
+						// System.out.println("removing deadcell " + i + " of " +
+						// deadCells.size());
+						Cell cell = (Cell) c.getCells().remove(
+								c.getCells().indexOf(deadCells.get(i)));
+						removeCell(cell.getX(), cell.getY());
+					}
+					break;
 			}
 			deadCells.clear();
 		}
 
 		// 3. diffuse media and biomass
-		for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
-		{
+		//for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
+		//{
 			diffuseMediaFick();
 			
 			switch (pParams.getBiomassMotionStyle())
@@ -1666,10 +1925,14 @@ public class FBAWorld extends World2D
 				case DIFFUSION_EP :
 					diffuseBiomass(pParams.getBiomassMotionStyle());
 					break;
+				case CONVECTION_2D :
+			    	convection2DBiomass();
+			    	break;
 				default :
+					System.out.println("No biomass diffusion! Set the diffusion parameter to 'CN', 'EP' or 'Convection2D'");
 					break;
 			}
-		}
+		//}
 
 		// 4. set static media
 		applyStaticMedia();

@@ -29,6 +29,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private final int id;
 	private int cellColor;
 	private double[] biomass;
+	private double[] convectionRHS1;
+	private double[] convectionRHS2;
 	private double[] deltaBiomass;
 	private double[][] fluxes;
 	  
@@ -88,6 +90,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.pParams = pParams;
 		this.biomass = new double[fbaModels.length];
 		setBiomass(biomass);
+		this.convectionRHS1=new double[biomass.length];
+		this.convectionRHS2=new double[biomass.length];
 
 		if (cParams.showGraphics())
 			cellColor = calculateColor();
@@ -216,6 +220,31 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	{
 		return setBiomass3D(values, false);
 	}	
+	
+	/**
+	 * Sets the previous step convectionRHS1.
+	 * @param values
+	 */
+	public void setConvectionRHS1(double[] values)
+	{
+		for (int i = 0; i < convectionRHS1.length; i++)
+		{
+				convectionRHS1[i] = values[i];
+		}
+	}
+	
+	/**
+	 * Sets the previous step convectionRHS2.
+	 * @param values
+	 */
+	public void setConvectionRHS2(double[] values)
+	{
+		for (int i = 0; i < convectionRHS2.length; i++)
+		{
+				convectionRHS2[i] = values[i];
+		}
+	}
+	
 	/**
 	 * Either sets the biomass for this Cell to the quantities given in <code>values</code>
 	 * (if delta is false), or adjusts it by those values if delta is true. 
@@ -439,6 +468,24 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	}
 	
 	/**
+	 * Returns the convectionRHS1 from the previous step in the <code>FBACell</code>
+	 * @return a double[] containing the calculated ConvectionRHS1 from a previous step in the <code>FBACell</code>.
+	 */
+	public synchronized double[] getConvectionRHS1()
+	{
+		return convectionRHS1;
+	}
+	
+	/**
+	 * Returns the convectionRHS1 from 2 steps away in the <code>FBACell</code>
+	 * @return a double[] containing the total convectionRHS2 from two steps away in the <code>FBACell</code>.
+	 */
+	public synchronized double[] getConvectionRHS2()
+	{
+		return convectionRHS2;
+	}
+	
+	/**
 	 * @return the most recent change in biomass that occurred in the cell, typically due
 	 * to cell growth through FBA.
 	 */
@@ -506,7 +553,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //			return CELL_OK;
 		deltaBiomass = new double[models.length];
 		
-		double rho = 1.1;
+		double rho = 1.0;
 		
 		// If we have multiple concurrent models in the cell, we want to update
 		// them all in random order.
@@ -697,6 +744,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				/***************** GET BIOMASS CONCENTRATION CHANGE ****************/
 				// biomass is in grams
 				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep() * biomass[i];
+				if(deltaBiomass[i]<0.0)deltaBiomass[i]=0.0;
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());
 //				System.out.println("solution: " + ((FBAModel)models[i]).getObjectiveSolution()) / (biomass[i] * cParams.getTimeStep()));

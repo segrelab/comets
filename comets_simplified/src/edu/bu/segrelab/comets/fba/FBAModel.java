@@ -109,6 +109,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 	private double flowDiffConst; // = 1e-5;
 	private double growthDiffConst; // = 5e-5;
+	private double elasticModulusConst;
+	private double frictionConst;
+	private double packedDensity;
+	private double convectionDiffConst;
+	private double noiseVariance;
 	private int objReaction;
 	private int objStyle;
 	
@@ -946,7 +951,12 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   defaultHill = 0,
 				   defaultLB = -1000,
 				   defaultUB = 1000,
-				   defaultDiff = 1e-6;
+				   defaultDiff = 1e-6,
+				   elasticModulusConst=1,
+				   frictionConst=1,
+				   convDiffConst=1,
+				   packDensity=1,
+				   noiseVariance=0.0;
 			
 			boolean blockOpen = false;
 			
@@ -1212,6 +1222,100 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						optim= GUROBI;
 					else if(tokens[1].equalsIgnoreCase("GLPK"))
 						optim= GLPK;
+				}
+				
+				/**************************************************************
+				 **************** LOAD ELASTIC MODULUS ************************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("elasticModulus"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The ElasticModulus should be followed only by the modulus value at line " + lineNum);
+					}
+					elasticModulusConst = Double.parseDouble(tokens[1]);
+					if (elasticModulusConst < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The elastic modulus value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
+				
+				/**************************************************************
+				 **************** LOAD PACKED DENSITY ************************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("packedDensity"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The packedDensity should be followed only by the value at line " + lineNum);
+					}
+					packDensity = Double.parseDouble(tokens[1]);
+					if (packDensity < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The packedDensity value given at line " + lineNum + "should be > 0");
+					}
+					
+				}
+				
+				/**************************************************************
+				 **************** LOAD NOISE VARIANCE ************************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("noiseVariance"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The noiseVariance should be followed only by the value at line " + lineNum);
+					}
+					packDensity = Double.parseDouble(tokens[1]);
+					if (noiseVariance < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The noiseVariance value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
+				/**************************************************************
+				 **************** LOAD FRICTION CONSTANT **********************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("frictionConstant"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The FrictionConstant should be followed only by its value at line " + lineNum);
+					}
+					frictionConst = Double.parseDouble(tokens[1]);
+					if (frictionConst <= 0)
+					{
+						reader.close();
+						throw new ModelFileException("The frictionConstant value given at line " + lineNum + "should be > 0");
+					}
+					
+				}
+				
+				/**************************************************************
+				 **************** LOAD DIFFUSION CONSTANT (CONVECTION MODEL)***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("convDiffConstant"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The convDiffConstant should be followed only by its value at line " + lineNum);
+					}
+					convDiffConst = Double.parseDouble(tokens[1]);
+					if (convDiffConst < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The convDiffConstant value given at line " + lineNum + "should be => 0");
+					}
+					
 				}
 				
 				/**************************************************************
@@ -1828,6 +1932,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setDefaultLB(defaultLB);
 			model.setDefaultUB(defaultUB);
 			model.setDefaultMetabDiffConst(defaultDiff);
+			model.setElasticModulusConstant(elasticModulusConst);
+			model.setFrictionConstant(frictionConst);
+			model.setConvDiffConstant(convDiffConst);
+			model.setPackedDensity(packDensity);
+			model.setNoiseVariance(noiseVariance);
 			
 			
 			model.setFileName(filename);
@@ -1912,6 +2021,82 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		if (val >= 0)
 			flowDiffConst = val;
 	}
+	
+	/**
+	 * Returns the value of packedDensity in g/cm^2 or g/cm^3
+	 * @return
+	 */
+	public double getPackedDensity()
+	{
+		return packedDensity;
+	}
+	
+	/**
+	 * returns the value of packedDensity in g/cm^2 or g/cm^3
+	 * @return
+	 */
+	public void setPackedDensity(double density)
+	{
+		packedDensity=density;
+	}
+	
+	/**
+	 * @return the value of the elastic modulus constant in Pa
+	 */
+	public double getElasticModulusConstant()
+	{
+		return elasticModulusConst;
+	}
+	
+	/**
+	 * Sets the elastic modulus constant in Pa
+	 */
+	public void setElasticModulusConstant(double val)
+	{
+		elasticModulusConst=val;
+	}
+	
+	/**
+	 * @return the value of the diffusion constant for the convection model in cm^2/s
+	 */
+	public double getConvDiffConstant()
+	{
+		return convectionDiffConst;
+	}
+	
+	/**
+	 * Sets the elastic modulus constant in Pa
+	 */
+	public void setConvDiffConstant(double val)
+	{
+		convectionDiffConst=val;;
+	}
+	
+	public double getNoiseVariance()
+	{
+		return noiseVariance;
+	}
+	
+	public void setNoiseVariance(double variance)
+	{
+		noiseVariance=variance;
+	}
+	/**
+	 * @return the value of the friction constant  in cm^/s
+	 */
+	public double getFrictionConstant()
+	{
+		return frictionConst;
+	}
+	
+	/**
+	 * Sets the elastic modulus constant in Pa
+	 */
+	public void setFrictionConstant(double val)
+	{
+		frictionConst=val;;
+	}
+	
 
 	//public void setFluxesModel(double[] fl)
 	//{
@@ -1992,6 +2177,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		modelCopy.setActive(getActive());
 		modelCopy.setObjectiveStyle(getObjectiveStyle());
 		modelCopy.setFileName(this.getFileName());
+		modelCopy.setElasticModulusConstant(getElasticModulusConstant());
+		modelCopy.setFrictionConstant(getFrictionConstant());
+		modelCopy.setConvDiffConstant(getConvDiffConstant());
+		modelCopy.setPackedDensity(getPackedDensity());
+		modelCopy.setNoiseVariance(getNoiseVariance());
 		//modelCopy.setParameters();
 		
 		return modelCopy;
@@ -2065,7 +2255,12 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 							 maxObjMaxFluxButton,
 							 minObjMaxFluxButton;
 		private DoubleField flowConstField,
-							growthConstField;
+							growthConstField,
+							elasticModulusField,
+							frictionConstField,
+		                    convDiffConstField,
+		                    packedDensityField,
+		                    noiseVarianceField;
 		//private JComboBox   optimizerBox;
 		
 		public ModelParametersPanel(FBAModel model)
@@ -2103,6 +2298,16 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			flowConstField = new DoubleField(model.getFlowDiffusionConstant(), 6, false);
 			JLabel growthConstLabel = new JLabel("Growth diffusion constant (cm^2/s): ", JLabel.LEFT);
 			growthConstField = new DoubleField(model.getGrowthDiffusionConstant(), 6, false);
+			JLabel elasticModulusLabel = new JLabel("Elastic modulus constant (Pa): ", JLabel.LEFT);
+			elasticModulusField = new DoubleField(model.getElasticModulusConstant(), 6, false);
+			JLabel frictionConstLabel = new JLabel("Friction constant (cm^2/s): ", JLabel.LEFT);
+			frictionConstField = new DoubleField(model.getFrictionConstant(), 6, false);
+			JLabel convDiffConstLabel = new JLabel("Conv. model diffusion constant (cm^2/s): ", JLabel.LEFT);
+			convDiffConstField = new DoubleField(model.getConvDiffConstant(), 6, false);
+			JLabel packedDensityLabel = new JLabel("Packed Density (g/cm^2) or (g/cm^3): ", JLabel.LEFT);
+			packedDensityField = new DoubleField(model.getPackedDensity(), 6, false);
+			JLabel noiseVarianceLabel = new JLabel("Noise variance: ", JLabel.LEFT);
+			noiseVarianceField = new DoubleField(model.getNoiseVariance(), 6, false);
 
 			
 			fbaObjGroup.add(maxObjButton);
@@ -2158,6 +2363,36 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			add(growthConstLabel, gbc);
 			gbc.gridx = 1;
 			add(growthConstField, gbc);
+			
+			gbc.gridy++;
+			gbc.gridx = 0;
+			add(elasticModulusLabel, gbc);
+			gbc.gridx = 1;
+			add(elasticModulusField, gbc);
+			
+			gbc.gridy++;
+			gbc.gridx = 0;
+			add(frictionConstLabel, gbc);
+			gbc.gridx = 1;
+			add(frictionConstField, gbc);
+			
+			gbc.gridy++;
+			gbc.gridx = 0;
+			add(convDiffConstLabel, gbc);
+			gbc.gridx = 1;
+			add(convDiffConstField, gbc);
+			
+			gbc.gridy++;
+			gbc.gridx = 0;
+			add(packedDensityLabel, gbc);
+			gbc.gridx = 1;
+			add(packedDensityField, gbc);
+			
+			gbc.gridy++;
+			gbc.gridx = 0;
+			add(noiseVarianceLabel, gbc);
+			gbc.gridx = 1;
+			add(noiseVarianceField, gbc);
 		}
 		
 		public void updateModelParameters()
@@ -2166,6 +2401,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setObjectiveStyle(getSelectedObjectiveStyle());
 			model.setGrowthDiffusionConstant(growthConstField.getDoubleValue());
 			model.setFlowDiffusionConstant(flowConstField.getDoubleValue());
+			model.setElasticModulusConstant(elasticModulusField.getDoubleValue());
+			model.setFrictionConstant(frictionConstField.getDoubleValue());
+			model.setConvDiffConstant(convDiffConstField.getDoubleValue());
+			model.setPackedDensity(packedDensityField.getDoubleValue());
+			model.setNoiseVariance(noiseVarianceField.getDoubleValue());
 		}
 		
 		private void setSelectedObjectiveButton(int objStyle)

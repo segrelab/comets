@@ -135,6 +135,9 @@ public abstract class Cell implements CometsConstants
 	 */
 	public abstract int setBiomass3D(double[] values);
 	
+	public abstract void setConvectionRHS1(double[] values);
+	public abstract void setConvectionRHS2(double[] values);
+	
 	/**
 	 * 
 	 * @param oldModels
