@@ -1979,19 +1979,19 @@ public class FBAWorld3D extends World3D
 		int ret = PARAMS_OK;
 		if (pParams.getNumRunThreads() > 1)
 		{	
-			try
-			{
-				PrintWriter out1 = new PrintWriter(new FileWriter("fbatime_multithread.txt",true));
-			    long t = System.currentTimeMillis();
+			//try
+			//{
+			//	PrintWriter out1 = new PrintWriter(new FileWriter("fbatime_multithread.txt",true));
+			//    long t = System.currentTimeMillis();
 			    ret = runThreaded();
 			    //System.out.println("total mt fba time = "+(System.currentTimeMillis()-t));
 			    //out1.println((System.currentTimeMillis()-t));
-                out1.close();
-		    }
-		    catch (IOException e)
-		    {
-			    System.out.println("File fbatime_mutithread.dat not found");
-		    }
+            //    out1.close();
+		    //}
+		    //catch (IOException e)
+		    //{
+			//    System.out.println("File fbatime_mutithread.dat not found");
+		    //}
 		}
 		else
 		{
@@ -2008,10 +2008,10 @@ public class FBAWorld3D extends World3D
 
 			// 2. tell all the cells to run
 			List<Cell> deadCells = new ArrayList<Cell>();
-			try
-			{
-				PrintWriter out1 = new PrintWriter(new FileWriter("fbatime_singlethread.txt",true));
-			    long t = System.currentTimeMillis();
+			//try
+			//{
+			//	PrintWriter out1 = new PrintWriter(new FileWriter("fbatime_singlethread.txt",true));
+			//    long t = System.currentTimeMillis();
 			    for (int i = 0; i < c.getCells().size(); i++)
 			    { 
 				    // print("running cell " + i + "...");
@@ -2023,12 +2023,12 @@ public class FBAWorld3D extends World3D
 			    }
 			    //System.out.println("total st fba time = " + (System.currentTimeMillis() - t));
                 //out1.println((System.currentTimeMillis() - t));
-                out1.close();
-			}
-			catch(IOException e)
-			{
-				System.out.println("File fbatime_singlethread.txt not found.");
-			}
+             //   out1.close();
+			//}
+			//catch(IOException e)
+			//{
+			//	System.out.println("File fbatime_singlethread.txt not found.");
+			//}
 			// remove dead cells.
 			switch(pParams.getBiomassMotionStyle())
 			{
@@ -2049,11 +2049,11 @@ public class FBAWorld3D extends World3D
 			deadCells.clear();
 		}
         
-		try
-		{
-		    long t = System.currentTimeMillis();
+		//try
+		//{
+		//    long t = System.currentTimeMillis();
 		    // 3. diffuse media and biomass
-            PrintWriter out1 = new PrintWriter(new FileWriter("difftime.txt",true));
+        //    PrintWriter out1 = new PrintWriter(new FileWriter("difftime.txt",true));
 //System.out.println("ok"+cParams.getDiffusionsPerStep());
 //System.out.println("OK"+pParams.getNumDiffusionsPerStep());
 //System.out.println("flow"+pParams.getFlowDiffRate());
@@ -2062,8 +2062,8 @@ public class FBAWorld3D extends World3D
 //System.out.println("style "+pParams.getExchangeStyle());
 //System.out.println("numDiff "+pParams.getNumDiffusionsPerStep());
 			//for (int i = 0; i < cParams.getDiffusionsPerStep(); i++)
-            for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
-		    {          	      	
+            //for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
+		    //{          	      	
 			    diffuseMediaFick();
 			    //diffuseBiomass(pParams.getBiomassMotionStyle());
 			    switch (pParams.getBiomassMotionStyle())
@@ -2084,14 +2084,14 @@ public class FBAWorld3D extends World3D
 //					    break;
 			    }
 
-		    }
+		    //}
 //out1.println((System.currentTimeMillis() - t));
-            out1.close();
-		}
-		catch(IOException e)
-		{
-			System.out.println("File difftime.txt not found.");
-		}
+         //   out1.close();
+		//}
+		//catch(IOException e)
+		//{
+		//	System.out.println("File difftime.txt not found.");
+		//}
 		//System.out.println("total st diffusion time = " + (System.currentTimeMillis() - t));
 		
 		//t = System.currentTimeMillis();
