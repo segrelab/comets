@@ -2165,13 +2165,21 @@ public class FBAWorld3D extends World3D
 		}
 
 		// remove dead cells.
-		for (int i = 0; i < deadCells.size(); i++)
+		switch(pParams.getBiomassMotionStyle())
 		{
-			// System.out.println("removing deadcell " + i + " of " +
-			// deadCells.size());
-			Cell cell = (Cell) c.getCells().remove(
-					c.getCells().indexOf(deadCells.get(i)));
-			removeCell(cell.getX(), cell.getY(), cell.getZ());
+			case CONVECTION_3D:
+				;
+				break;
+			default:
+				for (int i = 0; i < deadCells.size(); i++)
+				{
+					// System.out.println("removing deadcell " + i + " of " +
+					// deadCells.size());
+					Cell cell = (Cell) c.getCells().remove(
+							c.getCells().indexOf(deadCells.get(i)));
+					removeCell(cell.getX(), cell.getY(), cell.getZ());
+				}
+				break;
 		}
 		deadCells.clear();
 		return 0;
