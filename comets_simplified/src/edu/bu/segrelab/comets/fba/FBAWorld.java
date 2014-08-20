@@ -1564,6 +1564,11 @@ public class FBAWorld extends World2D
 					for(int j=0;j<numRows;j++)
 					{
 						biomassDensityIntermediate[k][i][j]=biomassDensity[k][i][j]+dT*(23.0*convectionRHS[k][i][j]-16.0*convectionRHS1[k][i][j]+5.0*convectionRHS2[k][i][j])/12.0;
+						if(biomassDensityIntermediate[k][i][j]<0.0)
+						{
+							biomassDensityIntermediate[k][i][j]=0.0;
+							System.out.println("Warning: Negative biomass, reduce the time step.");
+						}
 					}
 				}
 				for(int i=0;i<numCols;i++)
@@ -1581,10 +1586,20 @@ public class FBAWorld extends World2D
 					for(int j=0;j<numRows;j++)
 					{   
 						biomassDensity[k][i][j]=biomassDensity[k][i][j]+dT*(5.0*convectionRHS[k][i][j]+8.0*convectionRHS1[k][i][j]-1.0*convectionRHS2[k][i][j])/12.0;
-                        //add random gaussioan noise
+						if(biomassDensity[k][i][j]<0.0)
+						{
+							biomassDensity[k][i][j]=0.0;
+							System.out.println("Warning: Negative biomass, reduce the time step.");
+						}
+						//add random gaussioan noise
 						//System.out.println(((FBAModel)models[k]).getNoiseVariance());
 						//System.out.println(Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance()));
 						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance());
+						if(biomassDensity[k][i][j]<0.0)
+						{
+							biomassDensity[k][i][j]=0.0;
+							System.out.println("Warning: Negative biomass, reduce the time step.");
+						}
 					}
 				}
 
@@ -1643,6 +1658,11 @@ public class FBAWorld extends World2D
 					for(int j=0;j<numRows;j++)
 					{
 						biomassDensityIntermediate[curModel][i][j]=biomassDensity[curModel][i][j]+dT*(23.0*convectionRHS[curModel][i][j]-16.0*convectionRHS1[curModel][i][j]+5.0*convectionRHS2[curModel][i][j])/12.0;
+						if(biomassDensityIntermediate[curModel][i][j]<0.0)
+						{
+							biomassDensityIntermediate[curModel][i][j]=0.0;
+							System.out.println("Warning: Negative biomass, reduce the time step.");
+						}
 					}
 				}
 				for(int i=0;i<numCols;i++)
@@ -1660,8 +1680,18 @@ public class FBAWorld extends World2D
 					for(int j=0;j<numRows;j++)
 					{   
 						biomassDensity[curModel][i][j]=biomassDensity[curModel][i][j]+dT*(5.0*convectionRHS[curModel][i][j]+8.0*convectionRHS1[curModel][i][j]-1.0*convectionRHS2[curModel][i][j])/12.0;
+						if(biomassDensity[curModel][i][j]<0.0)
+						{
+							biomassDensity[curModel][i][j]=0.0;
+							System.out.println("Warning: Negative biomass, reduce the time step.");
+						}
 						//System.out.println(biomassDensity[k][i][j]);
-						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance());
+						biomassDensity[curModel][i][j]=biomassDensity[curModel][i][j]+deltaDensity[curModel][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance());
+						if(biomassDensity[curModel][i][j]<0.0)
+						{
+							biomassDensity[curModel][i][j]=0.0;
+							System.out.println("Warning: Negative biomass, reduce the time step.");
+						}
 					}
 				}
 
