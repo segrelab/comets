@@ -94,7 +94,7 @@ public class Comets implements CometsConstants,
 	 * by each cell just runs through a diffusion routine.
 	 */
 	public static boolean DIFFUSION_TEST_MODE = false;
-	private String versionString = "2.2.0, 3 September 2014";
+	private String versionString = "2.2.1, 16 September 2014";
 
 	// The setup pane 
 	private CometsSimRunner runner;
@@ -523,7 +523,7 @@ public class Comets implements CometsConstants,
 		try
 		{
 			//image.setRGB(0, 0, widthPixels, heightPixels, pixels, 0, 1);
-			String imageNum = String.format("%03d", curCycle);
+			String imageNum = String.format("%05d", curCycle);
 			ImageIO.write(image, cParams.getSlideshowExt(), new File(cParams.getSlideshowName() + "_" + imageNum + "." + cParams.getSlideshowExt()));
 		}
 		catch (IOException e)
