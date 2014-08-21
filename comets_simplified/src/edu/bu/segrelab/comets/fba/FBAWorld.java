@@ -1534,7 +1534,7 @@ public class FBAWorld extends World2D
 				biomassDensity[k][x][y]=biomass[k];// - deltaBiomass[k];
 				deltaDensity[k][x][y]=deltaBiomass[k];
 				//growthRate[k][x][y]=deltaBiomass[k]/(dT*(biomass[k] - deltaBiomass[k]));
-				convectionRHS1[k][y][y]=cell.getConvectionRHS1()[k];
+				convectionRHS1[k][x][y]=cell.getConvectionRHS1()[k];
 				convectionRHS2[k][x][y]=cell.getConvectionRHS2()[k];
 			}
 		}
