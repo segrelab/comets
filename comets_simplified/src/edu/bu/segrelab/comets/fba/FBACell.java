@@ -22,7 +22,7 @@ import edu.bu.segrelab.comets.util.Utility;
 public class FBACell extends edu.bu.segrelab.comets.Cell 
 					 implements edu.bu.segrelab.comets.CometsConstants
 {
-	private Model[] fbaModels;
+	private FBAModel[] fbaModels;
 	private FBAWorld world;
 	private FBAWorld3D world3D;
 	
@@ -48,7 +48,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	 */
 	public FBACell(int x, int y, 
 				   FBAWorld world, 
-				   Model[] fbaModels, 
+				   FBAModel[] fbaModels, 
 				   CometsParameters cParams, 
 				   FBAParameters pParams)
 	{
@@ -76,7 +76,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	public FBACell(int x, int y, 
 				   double[] biomass,
 				   FBAWorld world,
-				   Model[] fbaModels,
+				   FBAModel[] fbaModels,
 				   CometsParameters cParams,
 				   FBAParameters pParams)
 	{
@@ -128,7 +128,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	public FBACell(int x, int y, int z,
 				   double[] biomass,
 				   FBAWorld3D world3D,
-				   Model[] fbaModels,
+				   FBAModel[] fbaModels,
 				   CometsParameters cParams,
 				   FBAParameters pParams)
 	{
@@ -143,6 +143,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.pParams = pParams;
 		this.biomass = new double[fbaModels.length];
 		setBiomass3D(biomass);
+		this.convectionRHS1=new double[biomass.length];
+		this.convectionRHS2=new double[biomass.length];
+		
 		if (cParams.showGraphics())
 			cellColor = calculateColor();
 		else
