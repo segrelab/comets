@@ -10,7 +10,9 @@ bin/
 # ============================
 *.a
 *.dll
+*.dylib
 *.jar
+*.la
 *.so
 
 # Archives, packages, and other compressed files

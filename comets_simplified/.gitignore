@@ -1,1 +1,25 @@
-/bin
+# COMETS project Git-ignored file list.
+
+# Binaries and other executables
+# ==============================
+
+# Libraries and included files
+# ============================
+lib/
+
+# Archives, packages, and other compressed files
+# ==============================================
+
+# Databases, logs, and other storage files
+# ========================================
+
+# Operating system and/or program auto-generated files
+# ====================================================
+.classpath
+.project
+
+# Backup and/or other temporary files
+# ===================================
+
+# Miscellaneous
+# =============
