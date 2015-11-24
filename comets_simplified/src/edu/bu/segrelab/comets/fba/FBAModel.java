@@ -1272,7 +1272,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						reader.close();
 						throw new ModelFileException("The noiseVariance should be followed only by the value at line " + lineNum);
 					}
-					packDensity = Double.parseDouble(tokens[1]);
+					noiseVariance = Double.parseDouble(tokens[1]);
 					if (noiseVariance < 0)
 					{
 						reader.close();

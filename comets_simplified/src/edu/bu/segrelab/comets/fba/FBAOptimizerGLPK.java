@@ -48,7 +48,7 @@ public class FBAOptimizerGLPK extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		try
 		{
 			System.loadLibrary("glpk_java");
-			GLPK.init_glpk();
+//			GLPK.init_glpk();
 		}
 		catch (UnsatisfiedLinkError e)
 		{
