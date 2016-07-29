@@ -55,8 +55,8 @@ public class FBAParameters implements PackageParameters
 	
 	public enum BiomassMotionStyle
 	{
-		DIFFUSION_CN("Diffusion (Crank-Nicolson)"),
-		DIFFUSION_EP("Diffusion (Eight Point)"),
+		DIFFUSION_CN("Diffusion 2D(Crank-Nicolson)"),
+		DIFFUSION_EP("Diffusion 2D(Eight Point)"),
 		DIFFUSION_3D("Diffusion 3D"),
 		CONVECTION_2D("Convection 2D"),
 		CONVECTION_3D("Convection 3D");
@@ -134,12 +134,14 @@ public class FBAParameters implements PackageParameters
 					writeMediaLog,
 					writeBiomassLog,
 					writeTotalBiomassLog,
+					writeMatFile,
 					useLogNameTimeStamp;
 	
 	private String fluxLogName,
 				   mediaLogName,
 				   biomassLogName,
-				   totalBiomassLogName;
+				   totalBiomassLogName,
+				   matFileName;
 	
 	private String manifestFileName = "COMETS_manifest.txt";
 	private final String nopathManifestFileName="COMETS_manifest.txt";
@@ -149,7 +151,8 @@ public class FBAParameters implements PackageParameters
 				fluxLogRate = 1,
 				mediaLogRate = 1,
 				biomassLogRate = 1,
-				totalBiomassLogRate = 1;
+				totalBiomassLogRate = 1,
+				matFileRate = 1;
 	
 	private ExchangeStyle exchangeStyle = ExchangeStyle.STANDARD;
 	
@@ -186,11 +189,13 @@ public class FBAParameters implements PackageParameters
 		writeMediaLog = false;
 		writeBiomassLog = false;
 		writeTotalBiomassLog = false;
+		writeMatFile = false;
 		useLogNameTimeStamp = true;
 		
 		fluxLogName = "flux_log.txt";
 		mediaLogName = "media_log.txt";
 		biomassLogName = "biomass_log.txt";
+		matFileName = "comets_log.mat";
 		totalBiomassLogName = "total_biomass_log.txt";
 		
 		paramValues = new HashMap<String, Object>();
@@ -223,6 +228,9 @@ public class FBAParameters implements PackageParameters
 		paramValues.put("writetotalbiomasslog", new Boolean(writeTotalBiomassLog));
 		paramTypes.put("writetotalbiomasslog", ParameterType.BOOLEAN);
 		
+		paramValues.put("writematfile", new Boolean(writeMatFile));
+		paramTypes.put("writematfile", ParameterType.BOOLEAN);
+		
 		paramValues.put("uselognametimestamp", new Boolean(useLogNameTimeStamp));
 		paramTypes.put("uselognametimestamp", ParameterType.BOOLEAN);
 
@@ -237,6 +245,9 @@ public class FBAParameters implements PackageParameters
 		
 		paramValues.put("totalbiomasslogname", totalBiomassLogName);
 		paramTypes.put("totalbiomasslogname", ParameterType.STRING);
+		
+		paramValues.put("matfilename", matFileName);
+		paramTypes.put("matfilename", ParameterType.STRING);
 		
 		paramValues.put("fluxlogformat", fluxLogFormat);
 		paramTypes.put("fluxlogformat", ParameterType.STRING);
@@ -289,6 +300,9 @@ public class FBAParameters implements PackageParameters
 		paramValues.put("totalbiomasslograte", new Integer(totalBiomassLogRate));
 		paramTypes.put("totalbiomasslograte", ParameterType.INT);
 		
+		paramValues.put("matfilerate", new Integer(matFileRate));
+		paramTypes.put("matfilerate", ParameterType.INT);
+		
 		paramValues.put("defaultdiffconst", new Double(defaultDiffConst));
 		paramTypes.put("defaultdiffconst", ParameterType.DOUBLE);
 		
@@ -302,13 +316,14 @@ public class FBAParameters implements PackageParameters
 		writeMediaLog(((Boolean)paramValues.get("writemedialog")).booleanValue());
 		writeBiomassLog(((Boolean)paramValues.get("writebiomasslog")).booleanValue());
 		writeTotalBiomassLog(((Boolean)paramValues.get("writetotalbiomasslog")).booleanValue());
+		writeMatFile(((Boolean)paramValues.get("writematfile")).booleanValue());
 		useLogNameTimeStamp(((Boolean)paramValues.get("uselognametimestamp")).booleanValue());
 		setFluxLogName((String)paramValues.get("fluxlogname"));
 		setMediaLogName((String)paramValues.get("medialogname"));
 		setBiomassLogName((String)paramValues.get("biomasslogname"));
 		setTotalBiomassLogName((String)paramValues.get("totalbiomasslogname"));
-		//setFluxLogFormat((LogFormat)paramValues.get("fluxlogformat"));
-
+		setMatFileName((String)paramValues.get("matfilename"));
+		
 		if(paramValues.get("fluxlogformat") instanceof String)
 			setFluxLogFormat(LogFormat.findByName((String)paramValues.get("fluxlogformat")));
 		else
@@ -354,6 +369,7 @@ public class FBAParameters implements PackageParameters
 		setMediaLogRate(((Integer)paramValues.get("medialograte")).intValue());
 		setBiomassLogRate(((Integer)paramValues.get("biomasslograte")).intValue());
 		setTotalBiomassLogRate(((Integer)paramValues.get("totalbiomasslograte")).intValue());
+		setMatFileRate(((Integer)paramValues.get("matfilerate")).intValue());
 		setNumDiffusionsPerStep(((Integer)paramValues.get("numdiffperstep")).intValue());
 		setDefaultDiffusionConstant(((Double)paramValues.get("defaultdiffconst")).doubleValue());
 	}
@@ -525,6 +541,25 @@ public class FBAParameters implements PackageParameters
 	{
 		if (i > 0)
 			totalBiomassLogRate = i;
+	}
+	
+	/**
+	 * @return the number of simulation steps that occur between every .mat file log write
+	 */
+	public int getMatFileRate()
+	{
+		return matFileRate; 
+	}
+	
+	/**
+	 * Sets the number of steps that occur between every .mat file log write. If 
+	 * <code>i</code> is less than zero, nothing is changed.
+	 * @param i
+	 */
+	public void setMatFileRate(int i)
+	{
+		if (i > 0)
+			matFileRate = i;
 	}
 	
 	/**
@@ -959,6 +994,48 @@ public class FBAParameters implements PackageParameters
 		if (s.length() > 0)
 			totalBiomassLogName = s;
 	}
+	
+
+	/**
+	 * @return true if a .mat file log will be written
+	 */
+	public boolean writeMatFile() 
+	{ 
+		return writeMatFile; 
+	}
+	
+	/**
+	 * Tells COMETS to write a .mat file log or not. 
+	 * See the COMETS documentation for format
+	 * details. 
+	 * @param b if true, writes a .mat file log
+	 */
+	public void writeMatFile(boolean b) 
+	{ 
+		writeMatFile = b; 
+	}
+	
+	/**
+	 * @return the current file name for the .mat file log
+	 */
+	public String getMatFileName()
+	{
+		return matFileName; 
+	}
+	
+	/**
+	 * Sets the name of the .mat log file, if one is going to be written.
+	 * If there is no string (or an empty string), nothing is changed.
+	 * <br>
+	 * See documentation for the format.
+	 * @param name the name of the flux log file.
+	 */
+	public void setMatFileName(String s)
+	{
+		if (s.length() > 0)
+			matFileName = s;
+	}
+	
 	
 	/**
 	 * @return the number of FBA run threads to be used in simulation

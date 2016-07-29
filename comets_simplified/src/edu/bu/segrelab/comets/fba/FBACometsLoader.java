@@ -186,7 +186,6 @@ public class FBACometsLoader implements CometsLoader,
 
 		File f = new File(filename);
 		String path = f.getParent();
-		
 		//Write the file name in the manifest file.
 		try
 		{
@@ -200,12 +199,10 @@ public class FBACometsLoader implements CometsLoader,
 			System.out.println(e.getMessage());
 			System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
 		}		
-
 		/*
 		 * makes and stores internally: an FBAWorld, an array of FBAModels, an
 		 * ArrayList of FBACells
-		 */
-		
+		 */		
 		try
 		{
 			BufferedReader reader = new BufferedReader(new FileReader(filename));
@@ -1311,7 +1308,7 @@ public class FBACometsLoader implements CometsLoader,
 			refreshPoints.add(new RefreshPoint(Integer.valueOf(refreshParsed[0]), Integer.valueOf(refreshParsed[1]), Integer.valueOf(refreshParsed[2]), refresh));
 		}
 		return LoaderState.OK;
-    }	
+	}
 	
 	private LoaderState parseStaticMediaBlock(String[] header, List<String> lines, double[] staticMedia, boolean[] globalStatic, Set<StaticPoint> staticPoints) throws LayoutFileException,
 																																							  NumberFormatException

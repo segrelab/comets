@@ -37,6 +37,16 @@ import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 
+import edu.bu.segrelab.comets.fba.FBAParameters;
+import edu.bu.segrelab.comets.CometsParameters;
+
+import java.io.*;
+
+import com.jmatio.io.*;
+import com.jmatio.types.*;
+
+import java.lang.reflect.Field;
+
 /**
  * FBAWorld
  * --------
@@ -45,6 +55,7 @@ import edu.bu.segrelab.comets.util.Utility;
  * COMETS (which is, well, the core part of COMETS as it'll be published).
  * @author Bill Riehl briehl@bu.edu
  */
+
 public class FBAWorld extends World2D 
 					  implements CometsConstants
 {
@@ -59,6 +70,8 @@ public class FBAWorld extends World2D
 	private int threadLock;						// while threaded FBA is running, this = number of cells remaining
 
 	private FBAParameters pParams;
+	private CometsParameters cParams;
+	
 	private List<Cell> deadCells;				// list of cells to be removed at the end of a run
 	private Stack<Cell> runCells;				// stack of cells yet to be run by threads
 
@@ -76,6 +89,10 @@ public class FBAWorld extends World2D
 						fluxLogWriter,
 						biomassLogWriter,
 						totalBiomassLogWriter;
+	
+	private MatFileIncrementalWriter matFileWriter;
+	//private MLStructure matWorldStructure;
+	
 	
 	private Set<Circle> circleSet;
 
@@ -106,6 +123,7 @@ public class FBAWorld extends World2D
 	{
 		this(c, startingMedia.length);
 		pParams = (FBAParameters)c.getPackageParameters();
+		cParams = (CometsParameters)c.getParameters();
 //		this.models = models;
 		numModels = models.length;
 		this.models = new FBAModel[numModels];
@@ -301,6 +319,224 @@ public class FBAWorld extends World2D
 				totalBiomassLogWriter = null;
 			}
 		}
+	
+		// Init the total biomass log and write the first line
+		if (pParams.writeMatFile())
+		{
+			String name = adjustLogFileName(pParams.getMatFileName(), timeStamp);
+			try
+			{   
+				ArrayList list = new ArrayList();	
+				//Write the fba parameters
+				for (Field field : pParams.getClass().getDeclaredFields())
+				{
+					if(field.getType()== double.class)
+					{
+						field.setAccessible(true);
+						double[][] value=new double[1][1];
+						try{
+							value[0][0]=field.getDouble(pParams);
+					    }
+					    catch (IllegalAccessException e) 
+					    {
+					    	System.out.print("Error: Cannot write .mat file"+e);
+					    }
+						MLDouble fieldnamevalue=new MLDouble(field.getName(),value);
+							list.add(fieldnamevalue);
+					}
+					else if(field.getType()== int.class)
+					{
+						field.setAccessible(true);
+						double[][] value=new double[1][1];
+						try{
+							value[0][0]=field.getDouble(pParams);
+					    }
+					    catch (IllegalAccessException e) 
+					    {
+					    	System.out.print("Error: Cannot write .mat file"+e);
+					    }
+						MLDouble fieldnamevalue=new MLDouble(field.getName(),value);
+							list.add(fieldnamevalue);
+					}
+					else if(field.getType()== String.class)
+					{
+						field.setAccessible(true);
+						String stringvalue=new String("");
+						try{
+							stringvalue=(String)field.get(pParams);
+					    }
+					    catch (IllegalAccessException e) 
+					    {
+					    	System.out.print("Error: Cannot write .mat file"+e);
+					    }
+						MLChar fieldnamevalue=new MLChar(field.getName(),stringvalue);
+							list.add(fieldnamevalue);
+					}
+					
+				}
+				
+				//Write the comets parameters
+				for (Field field : cParams.getClass().getDeclaredFields())
+				{
+					if(field.getType()== double.class)
+					{
+						field.setAccessible(true);
+						double[][] value=new double[1][1];
+						try{
+							value[0][0]=field.getDouble(cParams);
+					    }
+					    catch (IllegalAccessException e) 
+					    {
+					    	System.out.print("Error: Cannot write .mat file"+e);
+					    }
+						MLDouble fieldnamevalue=new MLDouble(field.getName(),value);
+							list.add(fieldnamevalue);
+					}
+					else if(field.getType()== int.class)
+					{
+						field.setAccessible(true);
+						double[][] value=new double[1][1];
+						try{
+							value[0][0]=field.getDouble(cParams);
+					    }
+					    catch (IllegalAccessException e) 
+					    {
+					    	System.out.print("Error: Cannot write .mat file"+e);
+					    }
+						MLDouble fieldnamevalue=new MLDouble(field.getName(),value);
+							list.add(fieldnamevalue);
+					}
+					else if(field.getType()== String.class)
+					{
+						field.setAccessible(true);
+						String stringvalue=new String("");
+						try{
+							stringvalue=(String)field.get(cParams);
+					    }
+					    catch (IllegalAccessException e) 
+					    {
+					    	System.out.print("Error: Cannot write .mat file"+e);
+					    }
+						MLChar fieldnamevalue=new MLChar(field.getName(),stringvalue);
+							list.add(fieldnamevalue);
+					}
+					
+				}
+				
+				//Write models
+				for(int i=0;i<models.length;i++)
+				{
+					for (Field field : models[i].getClass().getDeclaredFields())
+					{
+						if(field.getType()== double.class)
+						{
+							field.setAccessible(true);
+							double[][] value=new double[1][1];
+							try{
+								value[0][0]=field.getDouble(models[i]);
+						    }
+						    catch (IllegalAccessException e) 
+						    {
+						    	System.out.print("Error: Cannot write .mat file"+e);
+						    }
+							MLDouble fieldnamevalue=new MLDouble("model"+i+"_"+field.getName(),value);
+							list.add(fieldnamevalue);
+						}
+						else if(field.getType()== double[][].class)
+						{
+							field.setAccessible(true);
+							//double[][] value= (double[][])field.get(models[i]);
+							//System.out.print(field.getName());
+							try{
+								double[][] value=(double[][])field.get(models[i]);
+								MLDouble fieldnamevalue=new MLDouble("model"+i+"_"+field.getName(),value);
+								list.add(fieldnamevalue);
+						    }
+						    catch (IllegalAccessException e) 
+						    {
+						    	System.out.print("Error: Cannot write .mat file"+e);
+						    }
+							//MLDouble fieldnamevalue=new MLDouble("model"+i+"_"+field.getName(),value);
+							//list.add(fieldnamevalue);
+						}
+						else if(field.getType()== int.class)
+						{
+							field.setAccessible(true);
+							double[][] value=new double[1][1];
+							try{
+								value[0][0]=(double) field.getInt(models[i]);
+						    }
+						    catch (IllegalAccessException e) 
+						    {
+						    	System.out.print("Error: Cannot write .mat file"+e);
+						    }
+							MLDouble fieldnamevalue=new MLDouble("model"+i+"_"+field.getName(),value);
+								list.add(fieldnamevalue);
+						}
+						else if(field.getType()== String.class)
+						{
+							field.setAccessible(true);
+							String stringvalue=new String("");
+							try{
+								stringvalue=(String)field.get(models[i]);
+						    }
+						    catch (IllegalAccessException e) 
+						    {
+						    	System.out.print("Error: Cannot write .mat file"+e);
+						    }
+							MLChar fieldnamevalue=new MLChar("model"+i+"_"+field.getName(),stringvalue);
+								list.add(fieldnamevalue);
+						}
+					}
+				}
+				
+				//Write the layout/world 	
+				//Write the boolean and double members of the world class
+				
+				for (Field field : this.getClass().getDeclaredFields())
+				{
+					if(field.getType()== double.class)
+					{
+						field.setAccessible(true);
+						double[][] value=new double[1][1];
+						try{
+							value[0][0]=field.getDouble(this);
+					    }
+					    catch (IllegalAccessException e) 
+					    {
+					    	System.out.print("Error: Cannot write .mat file"+e);
+					    }
+						MLDouble fieldnamevalue=new MLDouble(field.getName(),value);
+							list.add(fieldnamevalue);
+					}
+					else if(field.getType()== boolean.class)
+					{
+						field.setAccessible(true);
+						double[][] value=new double[1][1];
+						try{
+							if(field.getBoolean(this))value[0][0]=1.0;
+							else if(!(field.getBoolean(this)))value[0][0]=0.0;
+					    }
+					    catch (IllegalAccessException e) 
+					    {
+					    	System.out.print("Error: Cannot write .mat file"+e);
+					    }
+						MLDouble fieldnamevalue=new MLDouble(field.getName(),value);
+							list.add(fieldnamevalue);
+					}
+				}
+				
+				
+				matFileWriter = new MatFileIncrementalWriter(name);
+				matFileWriter.write(list);
+			}
+			catch (IOException e)
+			{
+				System.out.println("Unable to initialize .mat file '" + pParams.getMatFileName() + "'\nContinuing without saving log.");
+				totalBiomassLogWriter = null;
+			}
+		}
+	
 	}
 	
 	/**
@@ -1524,7 +1760,8 @@ public class FBAWorld extends World2D
 		{
 			FBACell cell = (FBACell)it.next();
 			double[] biomass = cell.getBiomass();  // total biomass
-			double[] deltaBiomass = cell.getDeltaBiomass(); // biomass produced this step
+			double[] deltaBiomass = cell.getDeltaBiomass();
+			// biomass produced this step
 			//System.out.println(deltaBiomass[0]);
 			
 			int x = cell.getX();
@@ -1989,6 +2226,8 @@ public class FBAWorld extends World2D
 			writeBiomassLog();
 		if (pParams.writeTotalBiomassLog() && currentTimePoint % pParams.getTotalBiomassLogRate() == 0)
 			writeTotalBiomassLog();
+		if (pParams.writeMatFile() && currentTimePoint % pParams.getMatFileRate() == 0)
+			writeMatFile();
 		return ret;
 	}
 	
@@ -2290,6 +2529,125 @@ public class FBAWorld extends World2D
 		}
 	}
 
+	/**
+	 * Writes to the .mat file log if it's at the correct time point. See documentation 
+	 * on .mat file format.
+	 */
+	private void writeMatFile()
+	{
+		if (matFileWriter != null)
+		{
+			
+			for(int i=0; i<models.length; i++)
+			{   	
+				//First do the biomass
+				int[] dimsBiomass=new int[]{cParams.getNumRows(), cParams.getNumCols()};
+				String varNameBiomass="biomass_time_"+currentTimePoint+"_model_"+i;
+				MLDouble biomassML=new MLDouble(varNameBiomass,dimsBiomass);
+				
+				Iterator<Cell> it = c.getCells().iterator();
+				while (it.hasNext())
+				{
+					FBACell cell = (FBACell)it.next();
+					double[] biomass = cell.getBiomass();
+					biomassML.set(biomass[i],cell.getX()+cell.getY()*dimsBiomass[1]);
+				}
+				try
+				{   
+					matFileWriter.write(biomassML);
+				}
+				catch (IOException e)
+				{
+					System.out.println("Unable to write to .mat file '" + pParams.getMatFileName() + "'\nContinuing without saving log.");
+				}
+				
+				
+				// Do the fluxes	
+
+				FBACell zeroCell= (FBACell) c.getCells().get(0);
+				//System.out.println(zeroCell);
+				//System.out.println(zeroCell.getFluxes()[i].length);
+				int[] dimsFlux=new int[]{cParams.getNumCols(), cParams.getNumRows(),zeroCell.getFluxes()[i].length};
+				String varNameFlux="fluxes_time_"+currentTimePoint+"_model_"+i;
+				MLDouble fluxesML=new MLDouble(varNameFlux,dimsFlux);				
+				double[][] fluxes=new double[zeroCell.getBiomass().length][zeroCell.getFluxes()[i].length];
+				
+				for(int k=0;k<zeroCell.getFluxes()[i].length; k++)fluxes[i][k]=0.0;
+					
+				Iterator<Cell> itFluxes = c.getCells().iterator();
+			
+				while (itFluxes.hasNext())
+				{
+					FBACell cell = (FBACell)itFluxes.next();
+					if(cell.getFluxes()[0]!=null)
+					{
+						fluxes = cell.getFluxes();						
+						for(int j=0; j<cell.getFluxes()[i].length; j++)
+						{
+							fluxesML.set(fluxes[i][j],cell.getX()+cell.getY()*dimsFlux[0]+j*dimsFlux[0]*dimsFlux[1]);
+						}
+					}
+				}
+			
+				try
+				{   	
+					matFileWriter.write(fluxesML);
+				}
+				catch (IOException e)
+				{
+					System.out.println("Unable to write to .mat file '" + pParams.getMatFileName() + "'\nContinuing without saving log.");
+				}
+				
+			}
+			
+			//Do the total biomass
+			//double[] curTotalBiomass = calculateTotalBiomass();
+			
+			//int[] dimsBiomass=new int[]{cParams.getNumRows(), cParams.getNumCols()};
+			String varNameTotalBiomass="total_biomass_time_"+currentTimePoint;
+			//System.out.print(models.length);
+			int[] dimsTotalBiomass=new int[]{models.length,1};
+			MLDouble totalBiomassML=new MLDouble(varNameTotalBiomass,dimsTotalBiomass);
+			double[] totalBiomass=new double[models.length];
+			totalBiomass = calculateTotalBiomass();
+			for(int i=0;i<models.length;i++)
+			{
+				totalBiomassML.set(totalBiomass[i],i);
+			}
+			try
+			{   
+				matFileWriter.write(totalBiomassML);
+			}
+			catch (IOException e)
+			{
+				System.out.println("Unable to write to .mat file '" + pParams.getMatFileName() + "'\nContinuing without saving log.");
+			}
+			
+			
+			
+			//Do the media
+			int[] dimsMedia=new int[]{cParams.getNumCols(), cParams.getNumRows(),media[0][0].length};
+			String varNameMedia="media_time_"+currentTimePoint;
+			MLDouble mediaML=new MLDouble(varNameMedia,dimsMedia);								
+			
+			for(int i=0; i<cParams.getNumCols();i++)
+				for(int j=0; j<cParams.getNumRows();j++)
+					for(int k=0; k<media[0][0].length; k++)
+					{
+						mediaML.set(media[i][j][k],i+j*cParams.getNumCols()+k*cParams.getNumCols()*cParams.getNumRows());
+					}
+			
+			try
+			{   	
+				matFileWriter.write(mediaML);
+			}
+			catch (IOException e)
+			{
+				System.out.println("Unable to write to .mat file '" + pParams.getMatFileName() + "'\nContinuing without saving log.");
+			}
+		}
+	}
+	
 	/**
 	 * Sets the state of a given FBACell to be either dead or alive.
 	 * @param cell

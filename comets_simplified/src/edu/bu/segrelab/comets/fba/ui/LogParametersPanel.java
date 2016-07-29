@@ -40,28 +40,35 @@ public class LogParametersPanel extends JPanel
 								RATE = "Rate: ",
 								TIME_STAMP = "Time stamp each log file",
 								BORDER = "Log Files",
-								NAME = "Output Log";
+								NAME = "Output Log",
+								WRITE_MAT = "Write .mat log file",
+								MAT_FILE_NAME = ".mat file name";
+	
 	
 	private JCheckBox writeFluxLogBox,
 					  writeMediaLogBox,
 					  writeBiomassLogBox,
 					  writeTotalBiomassLogBox,
+					  writeMatFileBox,
 					  useTimeStampBox;
 
 	private JTextField fluxLogField,
 					   mediaLogField,
 					   biomassLogField,
-					   totalBiomassLogField;
+					   totalBiomassLogField,
+					   matFileField;
 
 	private JButton fluxLogButton,
 					mediaLogButton,
 					biomassLogButton,
-					totalBiomassLogButton;
+					totalBiomassLogButton,
+					matFileButton;
 	
 	private IntField fluxLogRateField,
 					 mediaLogRateField,
 					 biomassLogRateField,
-					 totalBiomassLogRateField;
+					 totalBiomassLogRateField,
+					 matFileRateField;
 	
 	private JLabel fluxLogLbl,
 				   mediaLogLbl,
@@ -70,7 +77,9 @@ public class LogParametersPanel extends JPanel
 				   fluxLogRateLbl,
 				   mediaLogRateLbl,
 				   biomassLogRateLbl,
-				   totalBiomassLogRateLbl;
+				   totalBiomassLogRateLbl,
+				   matFileLbl,
+				   matFileRateLbl;
 	
 	private FBAParameters fbaParams;
 	public LogParametersPanel(FBAParameters fbaParams)
@@ -173,8 +182,29 @@ public class LogParametersPanel extends JPanel
 		gbc.gridx = 5;
 		this.add(totalBiomassLogButton, gbc);
 		
+		gbc.anchor = GridBagConstraints.WEST;
 		gbc.gridx = 0;
 		gbc.gridy = 4;
+		this.add(writeMatFileBox, gbc);
+		
+		gbc.anchor = GridBagConstraints.EAST;
+		gbc.gridx = 1;
+		this.add(matFileRateLbl, gbc);
+		
+		gbc.gridx = 2;
+		this.add(matFileRateField, gbc);
+		
+		gbc.gridx = 3;
+		this.add(matFileLbl, gbc);
+		
+		gbc.gridx = 4;
+		this.add(matFileField, gbc);
+		
+		gbc.gridx = 5;
+		this.add(matFileButton, gbc);
+		
+		gbc.gridx = 0;
+		gbc.gridy = 5;
 		gbc.gridwidth = 3;
 		gbc.anchor = GridBagConstraints.WEST;
 		this.add(useTimeStampBox, gbc);		
@@ -298,7 +328,29 @@ public class LogParametersPanel extends JPanel
 					}
 				});
 				
-						
+		/************* INITIALIZE MAT FILE WIDGET ******************/
+		writeMatFileBox.addItemListener(
+				new ItemListener() 
+				{
+					public void itemStateChanged(ItemEvent e)
+					{
+						matFileLbl.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+						matFileField.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+						matFileButton.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+						matFileRateLbl.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+						matFileRateField.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+					}
+				});
+
+
+		matFileButton.addActionListener(
+				new ActionListener()
+				{
+					public void actionPerformed(ActionEvent e)
+					{
+						selectLogFile(matFileField);
+					}
+				});		
 	}
 	
 	private void selectLogFile(JTextField field)
@@ -321,31 +373,37 @@ public class LogParametersPanel extends JPanel
 		writeMediaLogBox = new JCheckBox(WRITE_MEDIA, fbaParams.writeMediaLog());
 		writeBiomassLogBox = new JCheckBox(WRITE_BIOMASS, fbaParams.writeBiomassLog());
 		writeTotalBiomassLogBox = new JCheckBox(WRITE_TOTAL_BIOMASS, fbaParams.writeTotalBiomassLog());
+		writeMatFileBox = new JCheckBox(WRITE_MAT,fbaParams.writeMatFile());
 		
 		fluxLogRateLbl = new JLabel(RATE, JLabel.LEFT);
 		mediaLogRateLbl = new JLabel(RATE, JLabel.LEFT);
 		biomassLogRateLbl = new JLabel(RATE, JLabel.LEFT);
 		totalBiomassLogRateLbl = new JLabel(RATE, JLabel.LEFT);
+		matFileRateLbl = new JLabel(RATE,JLabel.LEFT);
 		
 		fluxLogRateField = new IntField(fbaParams.getFluxLogRate(), LOG_RATE_COLS, false);
 		mediaLogRateField = new IntField(fbaParams.getMediaLogRate(), LOG_RATE_COLS, false);
 		biomassLogRateField = new IntField(fbaParams.getBiomassLogRate(), LOG_RATE_COLS, false);
 		totalBiomassLogRateField = new IntField(fbaParams.getTotalBiomassLogRate(), LOG_RATE_COLS, false);
+		matFileRateField = new IntField(fbaParams.getMatFileRate(), LOG_RATE_COLS, false);
 		
 		fluxLogField = new JTextField(fbaParams.getFluxLogName(), LOG_NAME_COLS);
 		mediaLogField = new JTextField(fbaParams.getMediaLogName(), LOG_NAME_COLS);
 		biomassLogField = new JTextField(fbaParams.getBiomassLogName(), LOG_NAME_COLS);
 		totalBiomassLogField = new JTextField(fbaParams.getTotalBiomassLogName(), LOG_NAME_COLS);
+		matFileField = new JTextField(fbaParams.getMatFileName(), LOG_NAME_COLS);
 		
 		fluxLogButton = new JButton(SELECT);
 		mediaLogButton = new JButton(SELECT);
 		biomassLogButton = new JButton(SELECT);
 		totalBiomassLogButton = new JButton(SELECT);
+		matFileButton = new JButton(SELECT);
 		
 		fluxLogLbl = new JLabel(FLUX_NAME, JLabel.LEFT);
 		mediaLogLbl = new JLabel(MEDIA_NAME, JLabel.LEFT);
 		biomassLogLbl = new JLabel(BIOMASS_NAME, JLabel.LEFT);
 		totalBiomassLogLbl = new JLabel(TOTAL_BIOMASS_NAME, JLabel.LEFT);
+		matFileLbl = new JLabel(MAT_FILE_NAME, JLabel.LEFT);
 		
 		/*
 		 * Set the initial state of the other widgets.
@@ -385,6 +443,18 @@ public class LogParametersPanel extends JPanel
 			totalBiomassLogRateLbl.setEnabled(false);
 			totalBiomassLogRateField.setEnabled(false);
 		}
+		
+
+		if (!fbaParams.writeMatFile())
+		{
+			matFileLbl.setEnabled(false);
+			matFileField.setEnabled(false);
+			matFileButton.setEnabled(false);
+			matFileRateLbl.setEnabled(false);
+			matFileRateField.setEnabled(false);
+		}
+
+		
 	}
 
 	@Override
@@ -396,16 +466,19 @@ public class LogParametersPanel extends JPanel
 		fbaParams.writeMediaLog(writeMediaLogBox.isSelected());
 		fbaParams.writeBiomassLog(writeBiomassLogBox.isSelected());
 		fbaParams.writeTotalBiomassLog(writeTotalBiomassLogBox.isSelected());
+		fbaParams.writeMatFile(writeMatFileBox.isSelected());
 		
 		fbaParams.setFluxLogName(fluxLogField.getText());
 		fbaParams.setMediaLogName(mediaLogField.getText());
 		fbaParams.setBiomassLogName(biomassLogField.getText());
 		fbaParams.setTotalBiomassLogName(totalBiomassLogField.getText());
+		fbaParams.setMatFileName(matFileField.getText());
 		
 		fbaParams.setFluxLogRate(fluxLogRateField.getIntValue());
 		fbaParams.setMediaLogRate(mediaLogRateField.getIntValue());
 		fbaParams.setBiomassLogRate(biomassLogRateField.getIntValue());
 		fbaParams.setTotalBiomassLogRate(totalBiomassLogRateField.getIntValue());
+		fbaParams.setMatFileRate(matFileRateField.getIntValue());
 	}
 
 	@Override
@@ -451,6 +524,12 @@ public class LogParametersPanel extends JPanel
 		totalBiomassLogButton.setEnabled(fbaParams.writeTotalBiomassLog());
 		totalBiomassLogRateLbl.setEnabled(fbaParams.writeTotalBiomassLog());
 		totalBiomassLogRateField.setEnabled(fbaParams.writeTotalBiomassLog());
+		
+		matFileLbl.setEnabled(fbaParams.writeMatFile());
+		matFileField.setEnabled(fbaParams.writeMatFile());
+		matFileButton.setEnabled(fbaParams.writeMatFile());
+		matFileRateLbl.setEnabled(fbaParams.writeMatFile());
+		matFileRateField.setEnabled(fbaParams.writeMatFile());
 		
 	}
 

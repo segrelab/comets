@@ -1419,7 +1419,7 @@ public class FBAWorld3D extends World3D
 					if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_3D)
 						biomassGrowthState[k] = Utility.diffuse3D(biomassGrowthState[k], barrier, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
 					if (style != FBAParameters.BiomassMotionStyle.DIFFUSION_3D)
-						System.out.println("No biomass diffusion! The diffusion parameter must be set to 'Diffusion 3D'. ");	
+						System.out.println("No biomass diffusion! The diffusion parameter must be set to 'Diffusion 3D'. ");
 				}
 				if (((FBAModel)models[k]).getFlowDiffusionConstant() > 0)
 				{

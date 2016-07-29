@@ -550,7 +550,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	 * FBACell, and CometsConstants.PARAMS_ERROR if the number of models passed doesn't match
 	 * the number of different species this FBACell is aware of. 
 	 */
-	public synchronized int run(Model[] models)
+	public synchronized int run(FBAModel[] models)
 	{
 //		if (Comets.DIFFUSION_TEST_MODE)
 //			return CELL_OK;
@@ -561,6 +561,14 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		// If we have multiple concurrent models in the cell, we want to update
 		// them all in random order.
 		int[] updateOrder = Utility.randomOrder(models.length);
+		//Commenting the above line and uncommenting below takes out 
+		//the randomization of the order in which the models are updated
+		//I.Dukovski
+		//int[] updateOrder = new int[models.length];
+		//for (int a=0; a<models.length; a++)
+		//{
+		//	updateOrder[a]=a;
+		//}
 		for (int a=0; a<updateOrder.length; a++)
 		{
 			// i = the current model index to run.
@@ -571,20 +579,18 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			{
 				continue;
 			}
-
 			//try to activate, if not active skip to next.
 		    if(cParams.getSimulateActivation() && !((FBAModel)models[i]).activate(cParams.getActivateRate()))
 		    {
 		    	continue;
-		    }			
-			
+		    }
 			/************************* CALCULATE MAX EXCHANGE FLUXES ******************************/
 			double[] media=null;//=world3D.getModelMediaAt(x, y, z, i);
 			if(cParams.getNumLayers() == 1)
 				media = world.getModelMediaAt(x, y, i);
 			else if (cParams.getNumLayers() > 1)
 				media = world3D.getModelMediaAt(x, y, z, i);
-		
+			
 			double[] lb = ((FBAModel)models[i]).getBaseExchLowerBounds();
 			double[] ub = ((FBAModel)models[i]).getBaseExchUpperBounds();
 //			String[] exchNames = ((FBAModel)models[i]).getExchangeReactionNames();
@@ -596,7 +602,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			switch (pParams.getExchangeStyle())
 			{
 				case MONOD :
-					double[] kmArr = ((FBAModel)models[i]).getExchangeKm(); 
+					double[] kmArr = ((FBAModel)models[i]).getExchangeKm();
 					double[] vMaxArr = ((FBAModel)models[i]).getExchangeVmax();
 					double[] hillCoeffArr = ((FBAModel)models[i]).getExchangeHillCoefficients();
 
@@ -620,9 +626,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(media[j]/(cParams.getTimeStep()*biomass[i])));
 						}
 						else
-							rates[j] = Math.min(Math.abs(lb[j]),
-											Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
-						// End of modified code
+						{
+							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
+						}
+							// End of modified code
 
 //						vTilde[j] = (vMax * Math.pow(media[j]/cParams.getSpaceVolume(), hill))/(km + Math.pow(media[j]/cParams.getSpaceVolume(), hill));
 //
@@ -750,7 +757,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				if(deltaBiomass[i]<0.0)deltaBiomass[i]=0.0;
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());
-//				System.out.println("solution: " + ((FBAModel)models[i]).getObjectiveSolution()) / (biomass[i] * cParams.getTimeStep()));
+				//System.out.println("solution: " + ((FBAModel)models[i]).getObjectiveSolution());
 				
 				if (cParams.showGraphics())
 					cellColor = calculateColor();
