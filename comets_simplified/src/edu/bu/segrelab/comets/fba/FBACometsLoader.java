@@ -362,6 +362,11 @@ public class FBACometsLoader implements CometsLoader,
 							    c.getParameters().setNumLayers(Integer.valueOf(worldParsed[3]));
 							else if(worldParsed.length == 3)
 								c.getParameters().setNumLayers(Integer.valueOf(1));
+							
+							if (Integer.valueOf(worldParsed[3])==1)
+							{
+								throw new IOException("In a 3D simulation the number of layers along the 3rd coordinate must be larger than 1.");
+							}	
 						}
 					
 						/****************** BARRIER *************************/
@@ -802,7 +807,6 @@ public class FBACometsLoader implements CometsLoader,
 							throw new IOException("Gotta load FBA models and define the grid first! The 'initial_pop' tag\n     should be at the end of the file!");
 						}
 					}
-
 					List<String> lines = collectLayoutFileBlock(reader);
 					parseInitialPopBlock(parsed, lines);
 				}

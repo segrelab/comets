@@ -94,7 +94,7 @@ public class Comets implements CometsConstants,
 	 * by each cell just runs through a diffusion routine.
 	 */
 	public static boolean DIFFUSION_TEST_MODE = false;
-	private String versionString = "2.2.2, 4 August 2015";
+	private String versionString = "2.2.3, 2 August 2016";
 
 	// The setup pane 
 	private CometsSimRunner runner;
@@ -451,7 +451,7 @@ public class Comets implements CometsConstants,
 		reader.close();
 		
 		// everything's loaded... supposedly. make sure, then run.
-		if (world == null)
+		if (world == null && world3D == null)
 			throw new IOException("No world loaded - halting execution. You might want to check your layout file.");
 		else if (models == null || models.length == 0)
 			throw new IOException("No models loaded - halting execution. You might want to check the location of the model files or the model files themselves.");
