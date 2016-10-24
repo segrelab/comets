@@ -114,7 +114,7 @@ public class CometsSimRunner extends Thread
 					c.fireSimulationStateChangeEvent(new SimulationStateChangeEvent(SimulationStateChangeEvent.State.PAUSE));
 				}
 				if (c.getParameters().showCycleTime())
-				//	System.out.println("Cycle complete in " + (System.currentTimeMillis() - start)/1000.0 + "s");
+					System.out.println("Cycle complete in " + (System.currentTimeMillis() - start)/1000.0 + "s");
 				totalTime += System.currentTimeMillis() - start;
 				c.updateOnCycle();
 			}

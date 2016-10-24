@@ -70,7 +70,15 @@ public class FBACometsLoader implements CometsLoader,
 	private boolean useGui;
 	private Comets c;
 	private int lineCount;
-	
+	private boolean substrate = false;
+	private boolean modelDiffusion = false;
+	private boolean specific = false;
+	private boolean friction = false;
+	private double[][] substrateDiffConsts;
+	private double[][] modelDiffConsts;
+	private int[][] substrateLayout;
+	private double[][] specificMedia;
+	private double[][] substrateFrictionConsts;
 	private static final String MODEL_FILE = "model_file",
 								MODEL_WORLD = "model_world",
 								GRID_SIZE = "grid_size",
@@ -87,7 +95,12 @@ public class FBACometsLoader implements CometsLoader,
 								BARRIER = "barrier",
 								MEDIA = "media",
 								PARAMETERS = "parameters",
-								DIFFUSION_CONST = "diffusion_constants";
+								DIFFUSION_CONST = "diffusion_constants",
+								SUBSTRATE_DIFFUSIVITY = "substrate_diffusivity",
+								SUBSTRATE_FRICTION = "substrate_friction",
+								MODEL_DIFFUSIVITY = "model_diffusivity",
+								SUBSTRATE_LAYOUT = "substrate_layout",
+								SPECIFIC_MEDIA = "specific_media";
 	/**
 	 * Returns the recently loaded World2D.
 	 */
@@ -202,7 +215,7 @@ public class FBACometsLoader implements CometsLoader,
 		/*
 		 * makes and stores internally: an FBAWorld, an array of FBAModels, an
 		 * ArrayList of FBACells
-		 */		
+		 */
 		try
 		{
 			BufferedReader reader = new BufferedReader(new FileReader(filename));
@@ -270,7 +283,6 @@ public class FBACometsLoader implements CometsLoader,
 					if (state == LoaderState.CANCELED)
 						throw new LayoutFileException("Layout file loading canceled", lineCount);
 				}
-				
 				else if (parsed[0].equalsIgnoreCase(MODEL_WORLD))
 				{
 					Map<String, Point2D.Double> media = new HashMap<String, Point2D.Double>();
@@ -363,10 +375,10 @@ public class FBACometsLoader implements CometsLoader,
 							else if(worldParsed.length == 3)
 								c.getParameters().setNumLayers(Integer.valueOf(1));
 							
-							if (Integer.valueOf(worldParsed[3])==1)
-							{
-								throw new IOException("In a 3D simulation the number of layers along the 3rd coordinate must be larger than 1.");
-							}	
+							//if (Integer.valueOf(worldParsed[3])==1)
+							//{
+							//	throw new IOException("In a 3D simulation the number of layers along the 3rd coordinate must be larger than 1.");
+							//}	
 						}
 					
 						/****************** BARRIER *************************/
@@ -395,6 +407,47 @@ public class FBACometsLoader implements CometsLoader,
 							pParams.setDefaultDiffusionConstant(Double.parseDouble(worldParsed[1]));
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseMediaDiffusionConstantsBlock(lines, diffConsts);
+						}
+						/****************** DIFFUSION CONSTANTS BY SUBSTRATE ********************/
+						
+						else if (worldParsed[0].equalsIgnoreCase(SUBSTRATE_DIFFUSIVITY))
+						{
+							substrate = true;
+							List<String> lines = collectLayoutFileBlock(reader);
+							state = parseSubstrateDiffusionConstantsBlock(lines,numMedia);
+						}
+						/****************** FRICTION CONSTANTS BY SUBSTRATE ********************/
+						
+						else if (worldParsed[0].equalsIgnoreCase(SUBSTRATE_FRICTION))
+						{
+							friction = true;
+							List<String> lines = collectLayoutFileBlock(reader);
+							state = parseSubstrateFrictionConstantsBlock(lines);
+						}
+						/****************** DIFFUSION CONSTANTS BY MODEL ********************/
+						
+						else if (worldParsed[0].equalsIgnoreCase(MODEL_DIFFUSIVITY))
+						{
+							modelDiffusion = true;
+							List<String> lines = collectLayoutFileBlock(reader);
+							state = parseModelDiffusionConstantsBlock(lines,numMedia);
+						}
+						
+						/****************** SUBSTRATE LAYOUT ********************/
+						
+						else if (worldParsed[0].equalsIgnoreCase(SUBSTRATE_LAYOUT))
+						{
+							List<String> lines = collectLayoutFileBlock(reader);
+							state = parseSubstrateLayoutBlock(lines,c.getParameters().getNumCols(),c.getParameters().getNumRows());
+						}
+						
+						/****************** SPECIFIC MEDIA ********************/
+						
+						else if (worldParsed[0].equalsIgnoreCase(SPECIFIC_MEDIA))
+						{
+							specific = true;
+							List<String> lines = collectLayoutFileBlock(reader);
+							state = parseSpecificMediaBlock(lines);
 						}
 						
 						/****************** MEDIA ***********************/
@@ -634,7 +687,6 @@ public class FBACometsLoader implements CometsLoader,
 								}
 							}
 						}
-					
 						/* Set diffusion constants */
 						double[] diffusionConsts = new double[numMedia];
 						double defaultDiffConst = pParams.getDefaultDiffusionConstant();
@@ -649,6 +701,22 @@ public class FBACometsLoader implements CometsLoader,
 							}
 						}
 						world.setDiffusionConstants(diffusionConsts);
+						if(substrate)
+						{
+							world.setSubstrateDiffusion(substrateDiffConsts);
+							world.setSubstrateLayout(substrateLayout);
+						}
+						if(modelDiffusion){
+							world.setModelDiffusivity(modelDiffConsts);		
+						}
+						if(specific)
+						{
+							world.setSpecificMedia(specificMedia);
+						}
+						if(friction)
+						{
+							world.setSubstrateFriction(substrateFrictionConsts);
+						}
 						System.out.println("Done!");
 					}
 					else if(c.getParameters().getNumLayers()>1)
@@ -1107,6 +1175,184 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return LoaderState.OK;
 		
+	}
+	
+	private LoaderState parseSubstrateDiffusionConstantsBlock(List<String> lines, int numMedia) throws LayoutFileException,
+	   NumberFormatException
+	{
+		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
+		 * 
+		 * diffusion_constants  <default>
+		 * 		<medium number> <diff_const>
+		 * 		<medium number> <diff_const>
+		 * //
+		 */
+		Integer i = 0;
+		substrateDiffConsts = new double[lines.size()][numMedia];
+		for (String line : lines)
+		{
+			lineCount++;
+			if (line.length() == 0)
+				continue;
+
+			String[] diffConstParsed = line.split("\\s+");
+			if (diffConstParsed.length != numMedia)
+				throw new LayoutFileException("Each line of the 'diffusion_constants' block should have two tokens.\n The first should be the index of the medium component, followed by its (non-default) diffusion constant.", lineCount);
+
+			else
+			{				
+				for(int j = 0;j<numMedia;j++)
+				{
+					substrateDiffConsts[i][j] = Double.parseDouble(diffConstParsed[j]);
+				}
+				i++;
+			}
+		}
+		return LoaderState.OK;
+
+	}
+	
+	private LoaderState parseSubstrateFrictionConstantsBlock(List<String> lines) throws LayoutFileException,
+	   NumberFormatException
+	{
+		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
+		 * 
+		 * diffusion_constants  <default>
+		 * 		<medium number> <diff_const>
+		 * 		<medium number> <diff_const>
+		 * //
+		 */
+		Integer i = 0;
+		substrateFrictionConsts = new double[lines.size()][models.length];
+		for (String line : lines)
+		{
+			lineCount++;
+			if (line.length() == 0)
+				continue;
+
+			String[] diffConstParsed = line.split("\\s+");
+			if (diffConstParsed.length != models.length)
+				throw new LayoutFileException("Each line of the 'diffusion_constants' block should have two tokens.\n The first should be the index of the medium component, followed by its (non-default) diffusion constant.", lineCount);
+
+			else
+			{				
+				for(int j = 0;j<models.length;j++)
+				{
+					substrateFrictionConsts[i][j] = Double.parseDouble(diffConstParsed[j]);
+				}
+				i++;
+			}
+		}
+		return LoaderState.OK;
+
+	}
+	private LoaderState parseModelDiffusionConstantsBlock(List<String> lines, int numMedia) throws LayoutFileException,
+	   NumberFormatException
+	{
+		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
+		 * 
+		 * diffusion_constants  <default>
+		 * 		<medium number> <diff_const>
+		 * 		<medium number> <diff_const>
+		 * //
+		 */
+		Integer i = 0;
+		modelDiffConsts = new double[lines.size()][numMedia];
+		for (String line : lines)
+		{
+			lineCount++;
+			if (line.length() == 0)
+				continue;
+
+			String[] diffConstParsed = line.split("\\s+");
+			if (diffConstParsed.length != numMedia)
+				throw new LayoutFileException("Each line of the 'diffusion_constants' block should have two tokens.\n The first should be the index of the medium component, followed by its (non-default) diffusion constant.", lineCount);
+
+			else
+			{				
+				for(int j = 0;j<numMedia;j++)
+				{
+					modelDiffConsts[i][j] = Double.parseDouble(diffConstParsed[j]);
+				}
+				i++;
+			}
+		}
+		return LoaderState.OK;
+
+	}
+	
+	private LoaderState parseSubstrateLayoutBlock(List<String> lines,int cols,int rows) throws LayoutFileException,
+	   NumberFormatException
+	{
+		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
+		 * 
+		 * diffusion_constants  <default>
+		 * 		<medium number> <diff_const>
+		 * 		<medium number> <diff_const>
+		 * //
+		 */
+		if (lines.size() != rows)
+			throw new LayoutFileException("Each line of the 'diffusion_constants' block should have two tokens.\n The first should be the index of the medium component, followed by its (non-default) diffusion constant.", lineCount);
+		else
+		{
+			Integer i = 0;
+			substrateLayout = new int[cols][rows];
+			for (String line : lines)
+			{
+				lineCount++;
+				if (line.length() == 0)
+					continue;
+
+				String[] layoutParsed = line.split("\\s+");
+				if (layoutParsed.length != cols)
+					throw new LayoutFileException("Each line of the 'diffusion_constants' block should have two tokens.\n The first should be the index of the medium component, followed by its (non-default) diffusion constant.", lineCount);
+
+				else
+				{				
+					for(int j = 0;j<cols;j++)
+					{
+						substrateLayout[j][i] = Integer.parseInt(layoutParsed[j]);
+					}
+					i++;
+				}
+			}
+		}
+			return LoaderState.OK;
+
+	}
+	
+	private LoaderState parseSpecificMediaBlock(List<String> lines) throws LayoutFileException,
+	   NumberFormatException
+	{
+		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
+		 * 
+		 * diffusion_constants  <default>
+		 * 		<medium number> <diff_const>
+		 * 		<medium number> <diff_const>
+		 * //
+		 */
+		Integer i = 0;
+		specificMedia = new double[4][lines.size()];
+		for (String line : lines)
+		{
+			lineCount++;
+			if (line.length() == 0)
+				continue;
+				
+			String[] sMediaParsed = line.split("\\s+");
+			if (sMediaParsed.length != 4)
+				throw new LayoutFileException("Each line of the 'specific_media' block should have two tokens.\n The first should be the index of the medium component, followed by its (non-default) diffusion constant.", lineCount);
+
+			else
+			{				
+				for(int j = 0;j<4;j++)
+				{
+					specificMedia[j][i] = Double.parseDouble(sMediaParsed[j]);
+				}
+				i++;
+			}
+		}
+		return LoaderState.OK;
 	}
 	
 	private LoaderState parseInitialPopBlock(String[] header, List<String> lines) throws LayoutFileException,

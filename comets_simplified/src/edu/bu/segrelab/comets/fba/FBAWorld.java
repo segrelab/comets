@@ -67,6 +67,8 @@ public class FBAWorld extends World2D
 	private boolean[][][] diffuseBiomassOut;	// as above, but diffusing out
 	private boolean[][][] diffuseMediaIn;		// as above, but for media
 	private boolean[][][] diffuseMediaOut;
+	private double[][][] diffusionRHS1;
+	private double[][][] diffusionRHS2;
 	private int threadLock;						// while threaded FBA is running, this = number of cells remaining
 
 	private FBAParameters pParams;
@@ -98,6 +100,14 @@ public class FBAWorld extends World2D
 
 	private double defaultDiffConst;
 	
+	private int[][] substrateLayout;
+	private double[][] modelDiffusivity;
+	private boolean diffuseContext = false;
+	private boolean frictionContext = false;
+	private boolean diffuseModel = false;
+	private FBASubstrate[] substrates;
+	
+	private int numSubstrates;
 	/**
 	 * Initialize a new, empty world, tied the current <code>Comets</code> with a given
 	 * number of medium components
@@ -134,6 +144,8 @@ public class FBAWorld extends World2D
 		dirichlet = new boolean[numCols][numRows];
 		diffuseMediaIn = new boolean[numCols][numRows][numMedia];
 		diffuseMediaOut = new boolean[numCols][numRows][numMedia];
+		diffusionRHS1 = new double[numMedia][numCols][numRows];
+		diffusionRHS2 = new double[numMedia][numCols][numRows];
 		diffuseBiomassIn = new boolean[numCols][numRows][numModels];
 		diffuseBiomassOut = new boolean[numCols][numRows][numModels];
 		nutrientDiffConsts = new double[numMedia];
@@ -149,6 +161,8 @@ public class FBAWorld extends World2D
 				for (int k = 0; k < numMedia; k++)
 				{
 					media[i][j][k] = startingMedia[k];
+					diffusionRHS1[k][i][j] = 0;
+					diffusionRHS2[k][i][j] = 0;
 					diffuseMediaIn[i][j][k] = true;
 					diffuseMediaOut[i][j][k] = true;
 				}
@@ -1449,6 +1463,129 @@ public class FBAWorld extends World2D
 			}
 		}
 	}
+	/**
+	 * Diffuses media according to RHS and predictor-corrector 2D system. Each media layer
+	 * is diffused separately, by calling Utility.getDiffusionRHS() on each one in turn.
+	 */
+	private void diffuseMediaContext()
+	{
+//		long time = System.currentTimeMillis();
+		/**
+		 * Foreach of the media types, copy each media layer into a
+		 * new double[][], pipe over to Utility.diffusionFick(), then
+		 * copy the solutions back into that layer.
+		 * 
+		 * The added io time for copying, etc, might make it take longer,
+		 * but it will more than make up for it in readability/
+		 * maintainability.
+		 */
+		
+		double dT = cParams.getTimeStep() * 3600/pParams.getNumDiffusionsPerStep(); // time units = hours ( as in fba ), convert to seconds
+		double dX = cParams.getSpaceWidth();
+		double[][][] diffusionRHS  = new double[numMedia][numCols][numRows];
+		
+		if (DEBUG)
+		{
+			System.out.println("dT: " + dT + "\tdX: " + dX);
+			System.out.println("media diff consts:");
+			for (int i=0; i<nutrientDiffConsts.length; i++)
+			{
+				System.out.print("\t" + nutrientDiffConsts[i]);
+			}
+			System.out.println();
+		}
+		
+		for (int k=0; k<numMedia; k++)
+		{
+			//get current state of world (media,RHS1,RHS2)
+			double[][] mediaLayer = new double[numCols][numRows];
+			double[][] mediaLayerIntermediate = new double[numCols][numRows];
+			double[][] mediaRHS1 = new double[numCols][numRows];
+			double[][] mediaRHS2 = new double[numCols][numRows];
+			for (int i=0; i<numCols; i++)
+			{
+				for (int j=0; j<numRows; j++)
+				{
+					mediaLayer[i][j] = media[i][j][k];
+					mediaRHS1[i][j] = diffusionRHS1[k][i][j];
+					mediaRHS2[i][j] = diffusionRHS2[k][i][j];
+				}
+			}
+			//calculate diffusion and update world
+			//if(cParams.getSimulateActivation() && !((FBAModel)models[k]).getActive())
+			//{
+			//	continue;
+			//} 
+			double[][] convDiffConstField=new double[numCols][numRows];
+			for (int i=0; i<numCols; i++)
+			{
+				for (int j=0; j<numRows; j++)
+				{
+					//if (diffuseContext)
+					//{
+						if(isOccupied(i,j) && diffuseModel)
+						{
+							Cell cell = (Cell)getCellAt(i,j);
+							double[] biomass = cell.getBiomass();
+							double totalBiomass = 0;
+							if(Utility.hasNonzeroValue(biomass)){
+								for(int l=0; l< biomass.length; l++){
+									totalBiomass += biomass[l];
+									convDiffConstField[i][j] += biomass[l]*modelDiffusivity[l][k];
+								}
+								convDiffConstField[i][j] = convDiffConstField[i][j]/totalBiomass;
+							}
+						} else
+						{
+							convDiffConstField[i][j]=substrates[substrateLayout[i][j]-1].getMediaDiff(k);
+						}
+					//} //else
+					//{
+						//convDiffConstField[i][j] = nutrientDiffConsts[k];
+					//}
+				}
+			}
+			
+			diffusionRHS[k]=Utility.getDiffusionRHS(mediaLayer,convDiffConstField,barrier,dX);
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{
+					mediaLayerIntermediate[i][j]=mediaLayer[i][j]+dT*(23.0*diffusionRHS[k][i][j]-16.0*diffusionRHS1[k][i][j]+5.0*diffusionRHS2[k][i][j])/12.0;
+					if(mediaLayerIntermediate[i][j]<0.0)
+					{
+						mediaLayerIntermediate[i][j]=0.0;
+						System.out.println("Warning: Negative "+k+" at " +i+","+j+", reduce the time step.");
+					}
+				}
+			}
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{
+					diffusionRHS2[k][i][j]=diffusionRHS1[k][i][j];
+					diffusionRHS1[k][i][j]=diffusionRHS[k][i][j];
+				}
+			}
+			
+			diffusionRHS[k]=Utility.getDiffusionRHS(mediaLayerIntermediate,convDiffConstField,barrier,dX);
+			//System.out.println("drhs" + diffusionRHS[k][0][1]);
+			//System.out.println("dfxn" + Utility.getDiffusionRHS(mediaLayerIntermediate,convDiffConstField,barrier,dX)[1][0]);
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{   
+					mediaLayer[i][j]=mediaLayer[i][j]+dT*(5.0*diffusionRHS[k][i][j]+8.0*diffusionRHS1[k][i][j]-1.0*diffusionRHS2[k][i][j])/12.0;			
+					if(mediaLayer[i][j]<0.0)
+					{
+						mediaLayer[i][j]=0.0;
+						System.out.println("Warning: Negative "+k+" at " +i+","+j+", reduce the time step.");
+					}
+					media[i][j][k] = mediaLayer[i][j];
+				}
+			}
+		}
+	}
 	
 	/**
 	 * Diffuses biomass in a new, novel fashion.
@@ -1760,8 +1897,7 @@ public class FBAWorld extends World2D
 		{
 			FBACell cell = (FBACell)it.next();
 			double[] biomass = cell.getBiomass();  // total biomass
-			double[] deltaBiomass = cell.getDeltaBiomass();
-			// biomass produced this step
+			double[] deltaBiomass = cell.getDeltaBiomass(); // biomass produced this step
 			//System.out.println(deltaBiomass[0]);
 			
 			int x = cell.getX();
@@ -1787,15 +1923,22 @@ public class FBAWorld extends World2D
 					continue;
 				} 
 				double[][] convDiffConstField=new double[numCols][numRows];
+				double[][] frictionField = new double[numCols][numRows];
 				for (int i=0; i<numCols; i++)
 				{
 					for (int j=0; j<numRows; j++)
 					{
 						convDiffConstField[i][j]=((FBAModel)models[k]).getConvDiffConstant();
+						if(frictionContext){
+							frictionField[i][j] = substrates[substrateLayout[i][j]-1].getBiomassDiff(k);
+						}
 					}
 				}
-				
-				convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
+				if (frictionContext){
+					convectionRHS[k]=Utility.getConvectionRHSc(biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),frictionField); 	
+				}else{
+					convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
+				}
 				for(int i=0;i<numCols;i++)
 				{
 					for(int j=0;j<numRows;j++)
@@ -1804,7 +1947,7 @@ public class FBAWorld extends World2D
 						if(biomassDensityIntermediate[k][i][j]<0.0)
 						{
 							biomassDensityIntermediate[k][i][j]=0.0;
-							System.out.println("Warning: Negative biomass, reduce the time step.");
+							System.out.println("Warning: Negative biomass at " + i +","+j+ " , reduce the time step.");
 						}
 					}
 				}
@@ -1816,8 +1959,11 @@ public class FBAWorld extends World2D
 						convectionRHS1[k][i][j]=convectionRHS[k][i][j];
 					}
 				}
-				
-				convectionRHS[k]=Utility.getConvectionRHS(biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant());
+				if (frictionContext){
+					convectionRHS[k]=Utility.getConvectionRHSc(biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),frictionField); 	
+				}else{
+					convectionRHS[k]=Utility.getConvectionRHS(biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
+				}
 				for(int i=0;i<numCols;i++)
 				{
 					for(int j=0;j<numRows;j++)
@@ -1826,16 +1972,16 @@ public class FBAWorld extends World2D
 						if(biomassDensity[k][i][j]<0.0)
 						{
 							biomassDensity[k][i][j]=0.0;
-							System.out.println("Warning: Negative biomass, reduce the time step.");
+							System.out.println("Warning: Negative biomass at " + i +","+j+ " , reduce the time step.");
 						}
-						//add random gaussioan noise
+						//add random gaussian noise
 						//System.out.println(((FBAModel)models[k]).getNoiseVariance());
 						//System.out.println(Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance()));
 						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance());
 						if(biomassDensity[k][i][j]<0.0)
 						{
 							biomassDensity[k][i][j]=0.0;
-							System.out.println("Warning: Negative biomass, reduce the time step.");
+							System.out.println("Warning: Negative biomass at " + i +","+j+ " , reduce the time step.");
 						}
 					}
 				}
@@ -2182,8 +2328,18 @@ public class FBAWorld extends World2D
 		// 3. diffuse media and biomass
 		//for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
 		//{
-			diffuseMediaFick();
-			
+			if (diffuseContext)
+			{
+				System.out.println(pParams.getNumDiffusionsPerStep());
+				for(int i = 0; i< pParams.getNumDiffusionsPerStep(); i++){
+					diffuseMediaContext();
+				}		
+				System.out.println("context");
+			} else
+			{
+				diffuseMediaFick();
+				System.out.println("Fick");
+			}
 			switch (pParams.getBiomassMotionStyle())
 			{
 				case DIFFUSION_CN :
@@ -3463,5 +3619,76 @@ public class FBAWorld extends World2D
 	{
 		if(numMedia == diffConsts.length)
 			this.nutrientDiffConsts = diffConsts;
+	}
+	
+	public void setSubstrateDiffusion(double[][] substrateDiffConsts)
+	{
+		numSubstrates = substrateDiffConsts.length;
+		substrates = new FBASubstrate[numSubstrates];
+		for (int i = 0; i < numSubstrates; i++){
+			double[] substrateConsts = new double[numMedia];
+			for (int j = 0; j < numMedia;j++){
+				substrateConsts[j] = substrateDiffConsts[i][j];
+			}
+			substrates[i] = new FBASubstrate(substrateConsts,substrateConsts);
+		}
+		diffuseContext = true;
+	}
+	public void setSubstrateFriction(double[][] substrateDiffConsts)
+	{
+		for (int i = 0; i < numSubstrates; i++){
+			double[] substrateConsts = new double[numModels];
+			for (int j = 0; j < numModels;j++){
+				substrateConsts[j] = substrateDiffConsts[i][j];
+			}
+			substrates[i].setBiomassDiff(substrateConsts);
+		}
+		frictionContext = true;
+	}
+	public void setSubstrateLayout(final int[][] substrateLayout)
+	{
+		int cols = substrateLayout.length;
+		int rows = substrateLayout[0].length;
+		this.substrateLayout = new int[cols][rows];
+		for (int i = 0; i < cols; i++){
+			for (int j = 0; j < rows; j++){
+				this.substrateLayout[i][j] = substrateLayout[i][j];
+			}
+		}
+	}
+	public void setModelDiffusivity(final double[][] modelDiffusivity)
+	{
+		int cols = modelDiffusivity.length;
+		int rows = modelDiffusivity[0].length;
+		this.modelDiffusivity = new double[cols][rows];
+		for (int i = 0; i < cols; i++){
+			for (int j = 0; j < rows; j++){
+				this.modelDiffusivity[i][j] = modelDiffusivity[i][j];
+			}
+		}
+		diffuseModel = true;
+	}
+	public void setSpecificMedia(final double[][] specificMedia)
+	{
+		int rows = specificMedia[0].length;
+		for (int j = 0; j < rows; j++){
+			if((int)specificMedia[0][j]>=0){
+				media[(int)specificMedia[0][j]][(int)specificMedia[1][j]][(int)specificMedia[2][j]] = specificMedia[3][j];
+			}else{
+				setSubstrateMedia((int)specificMedia[1][j],(int)specificMedia[2][j],specificMedia[3][j]);
+			}
+		}
+	}
+	public void setSubstrateMedia(int substrate, int mediaNum, double amount)
+	{
+		for (int i=0; i<numCols; i++)
+		{
+			for (int j=0; j<numRows; j++)
+			{
+				if(substrateLayout[i][j]==substrate){
+					media[i][j][mediaNum] = amount;
+				}
+			}
+		}
 	}
 }

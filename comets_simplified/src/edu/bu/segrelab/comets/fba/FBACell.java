@@ -590,7 +590,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				media = world.getModelMediaAt(x, y, i);
 			else if (cParams.getNumLayers() > 1)
 				media = world3D.getModelMediaAt(x, y, z, i);
-			
 			double[] lb = ((FBAModel)models[i]).getBaseExchLowerBounds();
 			double[] ub = ((FBAModel)models[i]).getBaseExchUpperBounds();
 //			String[] exchNames = ((FBAModel)models[i]).getExchangeReactionNames();
@@ -757,7 +756,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				if(deltaBiomass[i]<0.0)deltaBiomass[i]=0.0;
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());
-				//System.out.println("solution: " + ((FBAModel)models[i]).getObjectiveSolution());
+//				System.out.println("solution: " + ((FBAModel)models[i]).getObjectiveSolution());
 				
 				if (cParams.showGraphics())
 					cellColor = calculateColor();

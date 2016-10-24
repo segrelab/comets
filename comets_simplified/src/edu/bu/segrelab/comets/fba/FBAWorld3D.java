@@ -61,6 +61,8 @@ public class FBAWorld3D extends World3D
 	private boolean[][][][] diffuseBiomassOut;	// as above, but diffusing out
 	private boolean[][][][] diffuseMediaIn;		// as above, but for media
 	private boolean[][][][] diffuseMediaOut;
+	private double[][][][] diffusionRHS1;
+	private double[][][][] diffusionRHS2;
 	private int threadLock;						// while threaded FBA is running, this = number of cells remaining
 
 	private FBAParameters pParams;
@@ -137,6 +139,8 @@ public class FBAWorld3D extends World3D
 					for (int k = 0; k < numMedia; k++)
 					{
 						media[i][j][l][k] = startingMedia[k];
+						diffusionRHS1[i][j][l][k] = 0;
+						diffusionRHS2[i][j][l][k] = 0;
 						diffuseMediaIn[i][j][l][k] = true;
 						diffuseMediaOut[i][j][l][k] = true;
 					}
@@ -1849,7 +1853,129 @@ public class FBAWorld3D extends World3D
 			}
 		}
 	}
-	
+	//WIP
+	private void diffuseMediaContext()
+	{
+		if (pParams.getNumDiffusionsPerStep() == 0)
+			return;
+		
+//		long time = System.currentTimeMillis();
+		/**
+		 * Foreach of the media types, copy each media layer into a
+		 * new double[][], pipe over to Utility.diffusionFick(), then
+		 * copy the solutions back into that layer.
+		 * 
+		 * The added io time for copying, etc, might make it take longer,
+		 * but it will more than make up for it in readability/
+		 * maintainability.
+		 */
+		
+		double dT = cParams.getTimeStep() * 3600; // time units = hours ( as in fba ), convert to seconds
+		double dX = cParams.getSpaceWidth();
+		double[][][][] diffusionRHS  = new double[numCols][numRows][numLayers][numMedia];
+		
+		if (DEBUG)
+		{
+			System.out.println("dT: " + dT + "\tdX: " + dX);
+			System.out.println("media diff consts:");
+			for (int i=0; i<nutrientDiffConsts.length; i++)
+			{
+				System.out.print("\t" + nutrientDiffConsts[i]);
+			}
+			System.out.println();
+		}
+		
+		for (int k=0; k<numMedia; k++)
+		{
+			//get current state of world (media,RHS1,RHS2)
+			double[][][] mediaLayer = new double[numCols][numRows][numLayers];
+			double[][][] mediaLayerIntermediate = new double[numCols][numRows][numLayers];
+			double[][][] mediaRHS1 = new double[numCols][numRows][numLayers];
+			double[][][] mediaRHS2 = new double[numCols][numRows][numLayers];
+			for (int i=0; i<numCols; i++)
+			{
+				for (int j=0; j<numRows; j++)
+				{
+					for (int l=0; j<numLayers; l++)
+					{
+						mediaLayer[i][j][l] = media[i][j][l][k];
+						mediaRHS1[i][j][l] = diffusionRHS1[i][j][l][k];
+						mediaRHS2[i][j][l] = diffusionRHS2[i][j][l][k];
+					}
+				}
+			}
+			//calculate diffusion and update world
+			if(cParams.getSimulateActivation() && !((FBAModel)models[k]).getActive())
+			{
+				continue;
+			} 
+			double[][][] convDiffConstField=new double[numCols][numRows][numLayers];
+			for (int i=0; i<numCols; i++)
+			{
+				for (int j=0; j<numRows; j++)
+				{
+					for (int l=0; j<numLayers; l++)
+					{
+						//TODO add new diffusion model
+						//may need to add a cell iterator to get needed parameters
+						convDiffConstField[i][j][l]=((FBAModel)models[k]).getConvDiffConstant();
+					}
+				}
+			}
+			
+			diffusionRHS[k]=Utility.getDiffusionRHS3D(mediaLayer,convDiffConstField,barrier,dX); 	
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{
+					for (int l=0; j<numLayers; l++)
+					{
+						mediaLayerIntermediate[i][j][l]=mediaLayer[i][j][l]+dT*(23.0*diffusionRHS[i][j][l][k]-16.0*diffusionRHS1[i][j][l][k]+5.0*diffusionRHS2[i][j][l][k])/12.0;
+						if(mediaLayerIntermediate[i][j][l]<0.0)
+						{
+							mediaLayerIntermediate[i][j][l]=0.0;
+							System.out.println("Warning: Negative biomass, reduce the time step.");
+						}
+					}
+				}
+			}
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{
+					for (int l=0; j<numLayers; l++)
+					{
+						diffusionRHS2[i][j][l][k]=diffusionRHS1[i][j][l][k];
+						diffusionRHS1[i][j][l][k]=diffusionRHS[i][j][l][k];
+					}
+				}
+			}
+			
+			diffusionRHS[k]=Utility.getDiffusionRHS3D(mediaLayerIntermediate,convDiffConstField,barrier,dX);
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{
+					for (int l=0; j<numLayers; l++)
+					{
+						mediaLayer[i][j][l]=mediaLayer[i][j][l]+dT*(5.0*diffusionRHS[i][j][l][k]+8.0*diffusionRHS1[i][j][l][k]-1.0*diffusionRHS2[i][j][l][k])/12.0;
+						if(mediaLayer[i][j][l]<0.0)
+						{
+							mediaLayer[i][j][l]=0.0;
+							System.out.println("Warning: Negative biomass, reduce the time step.");
+						}
+					
+						if(mediaLayer[i][j][l]<0.0)
+						{
+							mediaLayer[i][j][l]=0.0;
+							System.out.println("Warning: Negative biomass, reduce the time step.");
+						}
+					}
+				}
+			}
+		}
+	}
+	//WIP
 /************** OLD DIFFUSION METHODS ************************/
 	
 //	public void diffuseMedia()
