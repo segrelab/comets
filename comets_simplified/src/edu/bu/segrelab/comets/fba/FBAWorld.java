@@ -213,6 +213,10 @@ public class FBAWorld extends World2D
 		}
 		System.out.println();
 		
+		//Intialize the random number generator. Two rnds are used. 
+		Utility.randomSetSeed(pParams.getRandomSeed());
+	
+		
 		
 		currentTimePoint = 0;
 		DateFormat df = new SimpleDateFormat("_yyyyMMddHHmmss");
@@ -1977,7 +1981,7 @@ public class FBAWorld extends World2D
 						//add random gaussian noise
 						//System.out.println(((FBAModel)models[k]).getNoiseVariance());
 						//System.out.println(Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance()));
-						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance());
+						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance(),pParams.getRandomSeed());
 						if(biomassDensity[k][i][j]<0.0)
 						{
 							biomassDensity[k][i][j]=0.0;

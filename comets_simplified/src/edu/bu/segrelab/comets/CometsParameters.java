@@ -97,6 +97,8 @@ public class CometsParameters implements CometsConstants
 				barrierColor = 0xff7D7D7D,
 				backgroundColor = 0xff000000;
 	
+	//private long seed=0; /*Random class (in utils) seed */
+	
 	private String slideshowExt = "png",
 				   slideshowName = "slideshow",
 				   lastDirectory = ".";
@@ -182,7 +184,9 @@ public class CometsParameters implements CometsConstants
 		setBarrierColor(((Integer)paramValues.get("barriercolor")).intValue());
 		setBackgroundColor(((Integer)paramValues.get("backgroundcolor")).intValue());
 		setDisplayLayer(((Integer)paramValues.get("displaylayer")).intValue());
-		setSlideshowLayer(((Integer)paramValues.get("slideshowlayer")).intValue());		
+		setSlideshowLayer(((Integer)paramValues.get("slideshowlayer")).intValue());	
+		
+		//setSeed(((Long)paramValues.get("seed")).longValue());
 
 		setSlideshowExt(((String)paramValues.get("slideshowext")));
 		setSlideshowName(((String)paramValues.get("slideshowname")));
@@ -296,6 +300,9 @@ public class CometsParameters implements CometsConstants
 		
 		paramValues.put("simulateactivation", new Boolean(simulateActivation));
 		paramTypes.put("simulateactivation", ParameterType.BOOLEAN);
+		
+		//paramValues.put("seed", new Long(seed));
+		//paramTypes.put("seed", ParameterType.LONG);
 	}
 	
 	public ParameterState setParameter(String p, String v)
@@ -337,6 +344,16 @@ public class CometsParameters implements CometsConstants
 				try
 				{
 					paramValues.put(p, Integer.parseInt(v));
+				}
+				catch (NumberFormatException e)
+				{
+					return ParameterState.WRONG_TYPE;
+				}
+				break;
+			case LONG :
+				try
+				{
+					paramValues.put(p, Long.parseLong(v));
 				}
 				catch (NumberFormatException e)
 				{
@@ -1053,6 +1070,23 @@ public class CometsParameters implements CometsConstants
 		this.pixelScale = pixelScale; 
 	}
 
+	/**
+	 * Sets the seed of the random number generator.
+	 * @param seed
+	 */
+	//public void setSeed(long seed)
+	//{
+	//	this.seed=seed;
+	//}
+	/**
+	 * Returns the seed of the random number generator.
+	 * @return
+	 */
+	//public long getSeed()
+	//{
+	//	return seed;
+	//}
+	
 	/**
 	 * Sets the time step of each simulation in arbitrary time units. That is, the time units
 	 * are dependent on whatever calculation is going on in the <code>Model</code> being used.

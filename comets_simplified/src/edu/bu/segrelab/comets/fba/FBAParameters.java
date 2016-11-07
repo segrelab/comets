@@ -154,6 +154,8 @@ public class FBAParameters implements PackageParameters
 				totalBiomassLogRate = 1,
 				matFileRate = 1;
 	
+	private long randomSeed=0;
+	
 	private ExchangeStyle exchangeStyle = ExchangeStyle.STANDARD;
 	
 	private BiomassMotionStyle biomassMotionStyle = BiomassMotionStyle.DIFFUSION_CN;
@@ -308,6 +310,9 @@ public class FBAParameters implements PackageParameters
 		
 		paramValues.put("numdiffperstep", new Integer(numDiffPerStep));
 		paramTypes.put("numdiffperstep", ParameterType.INT);
+		
+		paramValues.put("randomseed", new Long(randomSeed));
+		paramTypes.put("randomseed", ParameterType.LONG);
 	}
 	
 	public void loadParameterState()
@@ -372,6 +377,7 @@ public class FBAParameters implements PackageParameters
 		setMatFileRate(((Integer)paramValues.get("matfilerate")).intValue());
 		setNumDiffusionsPerStep(((Integer)paramValues.get("numdiffperstep")).intValue());
 		setDefaultDiffusionConstant(((Double)paramValues.get("defaultdiffconst")).doubleValue());
+		setRandomSeed(((Long)paramValues.get("randomseed")).longValue());
 	}
 	
 	public ParameterState setParameter(String p, String v)
@@ -407,6 +413,16 @@ public class FBAParameters implements PackageParameters
 					return ParameterState.WRONG_TYPE;
 				}
 				break;
+			case LONG :
+					try
+					{
+						paramValues.put(p, Long.parseLong(v));
+					}
+					catch (NumberFormatException e)
+					{
+						return ParameterState.WRONG_TYPE;
+					}
+					break;
 			case STRING :
 				paramValues.put(p, v);
 				break;
@@ -1045,6 +1061,7 @@ public class FBAParameters implements PackageParameters
 		return numRunThreads; 
 	}
 	
+	
 	/**
 	 * Sets the number of FBA run threads. When greater than 1, each thread will act
 	 * as a worker during the simulation, calculating FBA solutions on any incomplete 
@@ -1059,6 +1076,25 @@ public class FBAParameters implements PackageParameters
 		if (n < 1)
 			n = 1;
 		numRunThreads = n;
+	}
+	
+	/**
+	 * Returns the seed of the random number generator.
+	 * @return
+	 */
+	
+	public long getRandomSeed()
+	{
+		return randomSeed;
+	}
+	
+	/** 
+	 * Sets the seed
+	 * @param seed
+	 */
+	public void setRandomSeed(long seed)
+	{
+		randomSeed=seed;
 	}
 	
 	public String getLastDirectory()

@@ -192,6 +192,8 @@ public class FBAWorld3D extends World3D
 		}
 		System.out.println();
 		
+		//Intialize the random number generator. Two rnds are used. 
+		Utility.randomSetSeed(pParams.getRandomSeed());
 		
 		currentTimePoint = 0;
 		DateFormat df = new SimpleDateFormat("_yyyyMMddHHmmss");

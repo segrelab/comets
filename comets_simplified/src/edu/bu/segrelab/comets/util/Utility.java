@@ -7,6 +7,7 @@ import java.util.Random;
 import java.util.Set;
 
 import edu.bu.segrelab.comets.CometsConstants;
+import edu.bu.segrelab.comets.CometsParameters;
 
 /**
  * Implements a number of static utility functions. For example, this includes a 
@@ -159,7 +160,16 @@ public class Utility implements CometsConstants
 	{
 		return rand.nextFloat();
 	}
-
+	
+    /**
+     * Sets the seed, resets with the seed, the random number generator.
+     * 
+     */
+	public static void randomSetSeed(long seed)
+	{
+		rand.setSeed(seed);
+	}
+	
 	/**
 	 * Finds and returns the maximum double value (i.e. the value closest to
 	 * positive infinity) from the array.
@@ -1001,6 +1011,36 @@ public class Utility implements CometsConstants
 		double rand1,rand2;
 		rand1=Math.random();
 		rand2=Math.random();
+		
+		if(rand1==0.0)
+		{
+			return 0.0;
+		}
+		else
+		{
+			return Math.sqrt(-2.0*variance*Math.log(rand1))*Math.sin(2.0*Math.PI*rand2);
+		}
+	}
+	
+	/**
+	 * Returns a random number from the gaussian distribution: exp(-0.5*x^2/variance)/sqrt(variance*2*PI).
+	 * Same as above, with rnd number generator seed as input. If seed is zero, the old method is used.
+	 * @param variance
+	 * @return
+	 */
+	public static double gaussianNoise(double variance, long seed)
+	{
+		double rand1,rand2;
+		if(seed==0)
+		{
+			rand1=Math.random();
+			rand2=Math.random();
+		}
+		else
+		{	
+			rand1=rand.nextDouble();
+			rand2=rand.nextDouble();
+		}
 		
 		if(rand1==0.0)
 		{
