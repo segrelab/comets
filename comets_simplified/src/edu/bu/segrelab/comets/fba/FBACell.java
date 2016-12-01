@@ -752,7 +752,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 				/***************** GET BIOMASS CONCENTRATION CHANGE ****************/
 				// biomass is in grams
-				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep() * biomass[i];
+				deltaBiomass[i] = (double)(((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];
 				if(deltaBiomass[i]<0.0)deltaBiomass[i]=0.0;
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());
