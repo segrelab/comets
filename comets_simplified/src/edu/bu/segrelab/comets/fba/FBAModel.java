@@ -239,7 +239,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					final int objStyle,
 					final int optim)
 	{
-		this(m, l, u, r, optim);
+		this(m, l, u, r, b, optim);
 		
 		if (exch == null)
 			throw new IllegalArgumentException("There must be an array of exchange reactions.");
@@ -1282,12 +1282,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						throw new ModelFileException("The stoichiometric matrix should be loaded before the biomass reaction at line " + lineNum);
 					}
 
-					/* do it this way for two reasons.
-					 * 1. consistency - everything else is a block of data
-					 * 2. malleability - make it easier to convert to loading a linear
-					 * 					 combination of reactions as the objective
-					 */
-					
 					String objLine = null;
 					blockOpen = true;
 
