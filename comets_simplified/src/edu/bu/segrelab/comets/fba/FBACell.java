@@ -563,7 +563,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		int[] updateOrder = Utility.randomOrder(models.length);
 		//Commenting the above line and uncommenting below takes out 
 		//the randomization of the order in which the models are updated
-		//I.Dukovski
+		//I.Dukovski 
+		//TODO: Parameterize this switch to give users the option
 		//int[] updateOrder = new int[models.length];
 		//for (int a=0; a<models.length; a++)
 		//{

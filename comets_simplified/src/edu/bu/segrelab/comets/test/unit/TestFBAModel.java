@@ -13,9 +13,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import edu.bu.segrelab.comets.Comets;
-import edu.bu.segrelab.comets.Model;
-import edu.bu.segrelab.comets.fba.FBACometsLoader;
 import edu.bu.segrelab.comets.fba.FBAModel;
 
 /**An incomplete test case for the FBAModel class. As of December 2016 tests in this
