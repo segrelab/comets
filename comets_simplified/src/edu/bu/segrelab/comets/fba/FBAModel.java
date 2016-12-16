@@ -115,6 +115,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double convectionDiffConst;
 	private double noiseVariance;
 	private int objReaction;
+	private int biomassReaction;
 	private int objStyle;
 	
 	private double defaultLB = 0,
@@ -159,8 +160,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 	/**
 	 * Create a new FBAModel with stoichiometric matrix m, lower bounds l, upper bounds u,
-	 * and objective reaction r and optimizer optim. Note that, as we're using GLPK, r is from 1->N, not
-	 * 0->N-1.
+	 * and objective/biomass reaction r and optimizer optim. Note that, as we're using GLPK,
+	 * r is from 1->N, not * 0->N-1.
 	 * @param m
 	 * @param l
 	 * @param u
@@ -168,6 +169,22 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * @param optim
 	 */
 	public FBAModel(double[][] m, double[] l, double[] u, int r, int optim)
+	{
+		this(m, l, u, r, r, optim);
+	}
+	
+	/**
+	 * Create a new FBAModel with stoichiometric matrix m, lower bounds l, upper bounds u,
+	 * objective reaction r, biomass reaction b and optimizer optim. Note that, as we're 
+	 * using GLPK, r is from 1->N, not * 0->N-1.
+	 * @param m
+	 * @param l
+	 * @param u
+	 * @param r
+	 * @param b
+	 * @param optim
+	 */
+	public FBAModel(double[][] m, double[] l, double[] u, int r, int b, int optim)
 	{
 		runSuccess = false;
 		objStyle = MAX_OBJECTIVE_MIN_TOTAL;
@@ -185,7 +202,9 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		numRxns = m[0].length;
 		setBaseBounds(l, u);
 		setObjectiveReaction(r);
+		setBiomassReaction(b);
 	}
+
 
 	/**
 	 * Create a new FBAModel with all the trimmings.
@@ -193,6 +212,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * @param l lower bounds
 	 * @param u upper bounds
 	 * @param r objective reaction (remember 1->N!)
+	 * @param b biomass reaction (remember 1->N)
 	 * @param exch indices of exchange reactions
 	 * @param exchDiffConsts diffusion constants of all extracellular metabolites
 	 * @param exchKm Michaelis constant of each exchange reaction
@@ -200,12 +220,13 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * @param exchHillCoeff Hill coefficient for each exchange reaction (Monod style)
 	 * @param metabNames array of metabolite names
 	 * @param rxnNames array of reaction names
-	 * @optim optimizer
+	 * @param optim optimizer
 	 */
 	public FBAModel(final double[][] m, 
 					final double[] l, 
 					final double[] u, 
 					int r, 
+					int b,
 					final int[] exch, 
 					final double[] exchDiffConsts,
 					final double[] exchKm, 
@@ -218,7 +239,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					final int objStyle,
 					final int optim)
 	{
-		this(m, l, u, r, optim);
+		this(m, l, u, r, b, optim);
 		
 		if (exch == null)
 			throw new IllegalArgumentException("There must be an array of exchange reactions.");
@@ -268,6 +289,40 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			baseExchLB[i] = baseLB[exch[i]-1];
 			baseExchUB[i] = baseUB[exch[i]-1];
 		}
+	}
+	
+	/**Constructor added to make the biomass reaction optional. If not given,
+	 * the objective reaction will be used to calculate biomass flux
+	 * @param m Stoichiometric matrix
+	 * @param l lower bounds
+	 * @param u upper bounds
+	 * @param r objective reaction (remember 1->N!)
+	 * @param exch indices of exchange reactions
+	 * @param exchDiffConsts diffusion constants of all extracellular metabolites
+	 * @param exchKm Michaelis constant of each exchange reaction
+	 * @param exchVmax Vmax for each exchange reaction (Michaelis-Menten style)
+	 * @param exchHillCoeff Hill coefficient for each exchange reaction (Monod style)
+	 * @param metabNames array of metabolite names
+	 * @param rxnNames array of reaction names
+	 * @param optim optimizer
+	 */
+	public FBAModel(final double[][] m, 
+					final double[] l, 
+					final double[] u, 
+					int r, 
+					final int[] exch, 
+					final double[] exchDiffConsts,
+					final double[] exchKm, 
+					final double[] exchVmax, 
+					final double[] exchHillCoeff,
+					final double[] exchAlpha,
+					final double[] exchW,
+					final String[] metabNames, 
+					final String[] rxnNames,
+					final int objStyle,
+					final int optim){
+		this(m,l,u,r,r,exch,exchDiffConsts,exchKm,exchVmax,exchHillCoeff,exchAlpha,
+				exchW,metabNames,rxnNames,objStyle,optim);
 	}
 
 
@@ -913,6 +968,16 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	{
 		return fbaOptimizer.getObjectiveFluxSolution(objReaction);
 	}
+	
+	public double getBiomassFluxSolution()
+	{
+		/*TODO: The function this is calling refers to "Objective" in its name, but 
+		 * it appears that it can be used to refer to any reaction. Fix this if that's
+		 * not the case, or rename the function to getFluxSolution if I've got it right
+		 * -MQuintin 12/1/2016
+		 */
+		return fbaOptimizer.getObjectiveFluxSolution(biomassReaction);
+	}
 
 	/**
 	 * New and improved (hopefully) file loader.
@@ -931,6 +996,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			double[] lb = null;
 			double[] ub = null;
 			int obj = 0;
+			int bio = 0;
 			int objSt = MAXIMIZE_OBJECTIVE_FLUX;
 			int optim = GUROBI;
 			String[] metNames = null;
@@ -1202,6 +1268,42 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 							reader.close();
 							throw new ModelFileException("Wrong OBJECTIVE_STYLE input value in model file."); 
 						}
+					}
+					lineNum++;
+					blockOpen = false;
+				}
+				/**************************************************************
+				 *************** LOAD BIOMASS REACTION ************************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("BIOMASS"))
+				{
+					if (numRxns <= 0) {
+						reader.close();
+						throw new ModelFileException("The stoichiometric matrix should be loaded before the biomass reaction at line " + lineNum);
+					}
+
+					String objLine = null;
+					blockOpen = true;
+
+					while (!(objLine = reader.readLine().trim()).equalsIgnoreCase("//"))
+					{
+						lineNum++;
+						if (objLine.length() == 0)
+							continue;
+
+						String[] parsed = objLine.split("\\s+");
+						if (parsed.length != 1) {
+							reader.close();
+							throw new ModelFileException("There should be just 1 element for the biomass line - the index of the reaction.");
+						}
+						
+						int rxn = Integer.parseInt(parsed[0]);
+						if (rxn < 1 || rxn > numRxns) {
+							reader.close();
+							throw new ModelFileException("The reaction index in BIOMASS block line " + lineNum + " should be between 1 and " + numRxns);
+						}
+						
+						bio = rxn;
 					}
 					lineNum++;
 					blockOpen = false;
@@ -1922,8 +2024,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			}
 			
 		
+			if (bio == 0){ //if the Biomass reaction wasn't specified, use the Objective reaction
+				bio = obj;
+			}
 			
-			FBAModel model = new FBAModel(S, lb, ub, obj, exchRxns, diffConsts, exchKm, exchVmax, exchHillCoeff, exchAlpha, exchW, metNames, rxnNames, objSt, optim);
+			FBAModel model = new FBAModel(S, lb, ub, obj, bio, exchRxns, diffConsts, exchKm, exchVmax, exchHillCoeff, exchAlpha, exchW, metNames, rxnNames, objSt, optim);
 			model.setDefaultAlpha(defaultAlpha);
 			model.setDefaultW(defaultW);
 			model.setDefaultHill(defaultHill);
@@ -2119,6 +2224,17 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	}
 	
 	/**
+	 * Sets the lower bound on the objective reaction. 
+	 * @param ulb
+	 * @return PARAMS_ERROR if lb > the current ub for the objective, PARAMS_OK otherwise
+	 */
+	
+	public int setObjectiveLowerBound(double lb)
+	{
+		return fbaOptimizer.setObjectiveLowerBound(objReaction, lb);
+	}
+	
+	/**
 	 * Returns the info panel for this <code>FBAModel</code> (as required by 
 	 * the <code>Model</code> class
 	 * 
@@ -2155,6 +2271,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		modelCopy.setBaseExchLowerBounds(getBaseExchLowerBounds());
 		modelCopy.setBaseExchUpperBounds(getBaseExchUpperBounds());
 		modelCopy.setObjectiveReaction(getObjectiveIndex());
+		modelCopy.setBiomassReaction(getBiomassReaction());
 		modelCopy.setExchangeIndices(getExchangeIndices());
 		modelCopy.setExchangeKm(getExchangeKm());
 		modelCopy.setExchangeVmax(getExchangeVmax());
@@ -2500,6 +2617,20 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	public void setActive(boolean act)
 	{
 		active=act;
+	}
+	
+	/**
+	 * @return the biomassReaction
+	 */
+	public int getBiomassReaction() {
+		return biomassReaction;
+	}
+
+	/**
+	 * @param biomassReaction the biomassReaction to set
+	 */
+	public void setBiomassReaction(int biomassReaction) {
+		this.biomassReaction = biomassReaction;
 	}
 
 }
