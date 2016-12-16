@@ -563,7 +563,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		int[] updateOrder = Utility.randomOrder(models.length);
 		//Commenting the above line and uncommenting below takes out 
 		//the randomization of the order in which the models are updated
-		//I.Dukovski
+		//I.Dukovski 
+		//TODO: Parameterize this switch to give users the option
 		//int[] updateOrder = new int[models.length];
 		//for (int a=0; a<models.length; a++)
 		//{
@@ -752,7 +753,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 				/***************** GET BIOMASS CONCENTRATION CHANGE ****************/
 				// biomass is in grams
-				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep() * biomass[i];
+				deltaBiomass[i] = (double)(((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];
 				if(deltaBiomass[i]<0.0)deltaBiomass[i]=0.0;
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());
