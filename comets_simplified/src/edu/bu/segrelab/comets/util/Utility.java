@@ -1031,6 +1031,7 @@ public class Utility implements CometsConstants
 	public static double gaussianNoise(double variance, long seed)
 	{
 		double rand1,rand2;
+		//System.out.println(seed);
 		if(seed==0)
 		{
 			rand1=Math.random();
