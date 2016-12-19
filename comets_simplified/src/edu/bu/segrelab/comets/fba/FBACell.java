@@ -561,15 +561,16 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		// If we have multiple concurrent models in the cell, we want to update
 		// them all in random order.
 		int[] updateOrder = Utility.randomOrder(models.length);
-		//Commenting the above line and uncommenting below takes out 
-		//the randomization of the order in which the models are updated
-		//I.Dukovski 
-		//TODO: Parameterize this switch to give users the option
-		//int[] updateOrder = new int[models.length];
-		//for (int a=0; a<models.length; a++)
-		//{
-		//	updateOrder[a]=a;
-		//}
+		//unless cParams.randomOrder is false, 
+		//in which case we run each model in the same order every time
+		if (!pParams.getRandomOrder()){ 
+			updateOrder = new int[models.length];
+			for (int a=0; a<models.length; a++)
+			{
+				updateOrder[a]=a;
+			}
+		}
+		
 		for (int a=0; a<updateOrder.length; a++)
 		{
 			// i = the current model index to run.
