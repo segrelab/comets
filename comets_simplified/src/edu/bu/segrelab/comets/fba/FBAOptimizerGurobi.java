@@ -640,6 +640,34 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	}
 	
 	/**
+	 * Sets the lower bound on the objective reaction. 
+	 * @param objreact
+	 * @param lb
+	 * @return PARAMS_OK 
+	 */
+	
+	public int setObjectiveLowerBound(int objreact, double lb)
+	{
+		GRBVar[] objFlux=new GRBVar[1];
+		double[] lbarray=new double[1];
+		try{
+			rxnFluxes[objreact-1].set(GRB.DoubleAttr.LB, lb);
+			objFlux[0]=rxnFluxes[objreact-1];
+			lbarray[0]=lb;
+			model.set(GRB.DoubleAttr.LB,objFlux,lbarray);
+			model.update();
+		}
+		catch(GRBException e)
+		{
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+                    e.getMessage());
+		}
+		
+		return PARAMS_OK;
+	}
+	
+	
+	/**
 	 * Produces a clone of this <code>FBAOptimizerGurobi</code> with all parameters intact.
 	 */
 	

@@ -2224,6 +2224,17 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	}
 	
 	/**
+	 * Sets the lower bound on the objective reaction. 
+	 * @param ulb
+	 * @return PARAMS_ERROR if lb > the current ub for the objective, PARAMS_OK otherwise
+	 */
+	
+	public int setObjectiveLowerBound(double lb)
+	{
+		return fbaOptimizer.setObjectiveLowerBound(objReaction, lb);
+	}
+	
+	/**
 	 * Returns the info panel for this <code>FBAModel</code> (as required by 
 	 * the <code>Model</code> class
 	 * 
