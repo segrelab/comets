@@ -2224,6 +2224,16 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	}
 	
 	/**
+	 * Sets the upper bound on the biomass reaction. 
+	 * @param ub
+	 * @return PARAMS_ERROR if ub < the current lb for the objective, PARAMS_OK otherwise
+	 */
+	public int setBiomassUpperBound(double ub)
+	{
+		return fbaOptimizer.setObjectiveUpperBound(biomassReaction, ub);
+	}
+	
+	/**
 	 * Sets the lower bound on the objective reaction. 
 	 * @param ulb
 	 * @return PARAMS_ERROR if lb > the current ub for the objective, PARAMS_OK otherwise

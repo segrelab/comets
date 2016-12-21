@@ -706,8 +706,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			
 
 			/************************* SET MAX BIOMASS *****************************/
-			((FBAModel)models[i]).setObjectiveUpperBound((cParams.getMaxSpaceBiomass() - (Utility.sum(biomass) + Utility.sum(deltaBiomass))) / (biomass[i] * cParams.getTimeStep()));
-//			((FBAModel)models[i]).setObjectiveUpperBound((cParams.getMaxSpaceBiomass() - (Utility.sum(biomass) + Utility.sum(deltaBiomass))));
+			((FBAModel)models[i]).setBiomassUpperBound((cParams.getMaxSpaceBiomass() - (Utility.sum(biomass) + Utility.sum(deltaBiomass))) / (biomass[i] * cParams.getTimeStep()));
 			
 			if (DEBUG)
 			{
