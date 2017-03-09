@@ -576,7 +576,7 @@ public class FBACometsLoader implements CometsLoader,
 						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
 						if (mediaRefresh != null)
 						{
-							world.setMediaRefreshAmount(mediaRefresh);
+							//world.setMediaRefreshAmount(mediaRefresh);
 							for (RefreshPoint rp : refreshPoints)
 							{
 								world.addMediaRefreshSpace(rp);
@@ -589,7 +589,7 @@ public class FBACometsLoader implements CometsLoader,
 							{
 								world.addStaticMediaSpace(sp);
 							}
-							world.setGlobalStaticMedia(staticMedia, globalStatic);
+							//world.setGlobalStaticMedia(staticMedia, globalStatic);
 						}
 						
 						// set barrier spaces.
