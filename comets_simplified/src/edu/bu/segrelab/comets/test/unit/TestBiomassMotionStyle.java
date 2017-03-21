@@ -28,6 +28,8 @@ public class TestBiomassMotionStyle{
 	 * DIFFUSION_CN, and that the value of DIFFUSION_CN contains "2D"
 	 * 
 	 * This allows backwards compatibility with files created for v2.2.2 or earlier
+	 * @author mquintin
+	 * 14 February 2017
 	 */
 	@Test
 	public void testLegacyCN(){
