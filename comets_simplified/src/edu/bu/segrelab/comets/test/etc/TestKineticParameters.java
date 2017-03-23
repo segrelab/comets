@@ -21,6 +21,7 @@ import org.junit.Test;
  */
 
 import edu.bu.segrelab.comets.Comets;
+import edu.bu.segrelab.comets.PackageParameters;
 import edu.bu.segrelab.comets.fba.FBACometsLoader;
 public class TestKineticParameters {
 
@@ -32,7 +33,6 @@ public class TestKineticParameters {
 		URL scriptURL = TestKineticParameters.class.getResource("../resources/resKineticParameters/comets_script.txt");
 		comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
 				"-script", scriptURL.getPath()});
-		
 	}
 
 	@AfterClass
@@ -41,6 +41,7 @@ public class TestKineticParameters {
 
 	@Before
 	public void setUp() throws Exception {
+		comets.resetSimulationToSavedState();
 	}
 
 	@After
