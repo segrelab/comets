@@ -2,7 +2,7 @@
 	activateRate = 0.001
 	allowCellOverlap = true
 	deathRate = 0
-	maxCycles = 200
+	maxCycles = 1
 	maxSpaceBiomass = 2.0002
 	minSpaceBiomass = 2.5e-11
 	pauseOnStep = false
@@ -33,10 +33,10 @@
 	defaultKm = 0.01
 	defaultVmax = 10
 	defaultW = 10
-	writeFluxLog = true
+	writeFluxLog = false
 	fluxLogName = C:\sync\biomes\enz\analysis\rates_and_params\log_flux.m
 	fluxLogRate = 1
-	writeMediaLog = true
+	writeMediaLog = false
 	mediaLogName = C:\sync\biomes\enz\analysis\rates_and_params\log_media.m
 	mediaLogRate = 1
 	writeBiomassLog = false
