@@ -1022,6 +1022,26 @@ public class FBAOptimizerGLPK extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		return PARAMS_OK;
 	}
 	
+	/**
+	 * Sets the lower bound on the objective reaction. 
+	 * @param ub
+	 * @return PARAMS_ERROR if ub < the current lb for the objective, PARAMS_OK otherwise
+	 */
+	public int setObjectiveLowerBound(int objreact, double lb)
+	{
+		/*
+		double ub = GLPK.glp_get_col_ub(lp, objReaction);
+		if (ub < lb)
+			return PARAMS_ERROR;
+		int type = GLPKConstants.GLP_DB;
+		if (lb == ub)
+			type = GLPKConstants.GLP_FX;
+
+		GLPK.glp_set_col_bnds(up, objreact, type, lb, ub);
+		*/
+		return PARAMS_OK;
+	}
+	
 
 	
 	protected FBAOptimizerGLPK(glp_prob lp, glp_prob lpMSA, int numMetabs, int numRxns, int numExch)

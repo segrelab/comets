@@ -189,6 +189,82 @@ public class FBAWorld extends World2D
 		threadLock = 0;
 	}
 	
+	/**
+	 * Initialize a new FBAWorld connected to the given <code>Comets</code> class with 
+	 * initial global media and their names, and associated FBAModels, the refresh and static media
+	 * @param c
+	 * @param mediaNames names of each initial medium component (should match the
+	 * extracellular metabolite names of each FBAModel)
+	 * @param startingMedia amount of media to start in each space
+	 * @param models models to apply to the world
+	 * @param refreshMedia the the amount of media added at each step. 
+	 * @param mediaStatic the amount at which the media is fixed
+	 * @param staticGlobal boolean if the the median is static or not  
+	 */
+	public FBAWorld(Comets c, String[] mediaNames, double[] startingMedia,
+					Model[] models, double[] refreshMedia, double[] mediaStatic, boolean[] staticGlobal)
+	{
+		this(c, startingMedia.length);
+		pParams = (FBAParameters)c.getPackageParameters();
+		cParams = (CometsParameters)c.getParameters();
+//		this.models = models;
+		numModels = models.length;
+		this.models = new FBAModel[numModels];
+		for (int i=0; i<numModels; i++)
+		{
+			this.models[i] = (FBAModel)models[i];
+		}
+		dirichlet = new boolean[numCols][numRows];
+		diffuseMediaIn = new boolean[numCols][numRows][numMedia];
+		diffuseMediaOut = new boolean[numCols][numRows][numMedia];
+		diffusionRHS1 = new double[numMedia][numCols][numRows];
+		diffusionRHS2 = new double[numMedia][numCols][numRows];
+		diffuseBiomassIn = new boolean[numCols][numRows][numModels];
+		diffuseBiomassOut = new boolean[numCols][numRows][numModels];
+		nutrientDiffConsts = new double[numMedia];
+		
+		/*
+		 * Initialize everything so that it can diffuse everywhere,
+		 * and the startingMedia is uniform across the grid.
+		 */
+		for (int i = 0; i < numCols; i++)
+		{
+			for (int j = 0; j < numRows; j++)
+			{
+				for (int k = 0; k < numMedia; k++)
+				{
+					media[i][j][k] = startingMedia[k];
+					diffusionRHS1[k][i][j] = 0;
+					diffusionRHS2[k][i][j] = 0;
+					diffuseMediaIn[i][j][k] = true;
+					diffuseMediaOut[i][j][k] = true;
+				}
+				for (int k = 0; k < numModels; k++)
+				{
+					diffuseBiomassIn[i][j][k] = true;
+					diffuseBiomassOut[i][j][k] = true;
+				}
+			}
+		}
+		defaultDiffConst = pParams.getDefaultDiffusionConstant();
+		for (int i = 0; i < numMedia; i++)
+		{
+			nutrientDiffConsts[i] = defaultDiffConst;
+			mediaRefresh = refreshMedia;
+			staticMedia = mediaStatic;
+			isStatic = staticGlobal;
+		}
+		this.mediaNames = mediaNames;
+
+		runCells = new Stack<Cell>();
+		circleSet = null;
+
+		// applies all models to the world - puts names, etc, in the right order,
+		// and sets media diffusion constants where appropriate
+		changeModelsInWorld(models, models);
+		threadLock = 0;
+	}
+	
 	public void setDefaultMediaDiffusionConstant(double defaultDiffConst)
 	{
 		for (int i=0; i<nutrientDiffConsts.length; i++)
@@ -1981,6 +2057,7 @@ public class FBAWorld extends World2D
 						//add random gaussian noise
 						//System.out.println(((FBAModel)models[k]).getNoiseVariance());
 						//System.out.println(Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance()));
+						//System.out.println("here0   "+pParams.getRandomSeed());
 						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance(),pParams.getRandomSeed());
 						if(biomassDensity[k][i][j]<0.0)
 						{
@@ -2072,8 +2149,8 @@ public class FBAWorld extends World2D
 							biomassDensity[curModel][i][j]=0.0;
 							System.out.println("Warning: Negative biomass, reduce the time step.");
 						}
-						//System.out.println(biomassDensity[k][i][j]);
-						biomassDensity[curModel][i][j]=biomassDensity[curModel][i][j]+deltaDensity[curModel][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance());
+						//System.out.println("here0   "+pParams.getRandomSeed());
+						biomassDensity[curModel][i][j]=biomassDensity[curModel][i][j]+deltaDensity[curModel][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance(),pParams.getRandomSeed());
 						if(biomassDensity[curModel][i][j]<0.0)
 						{
 							biomassDensity[curModel][i][j]=0.0;
@@ -2342,7 +2419,7 @@ public class FBAWorld extends World2D
 			} else
 			{
 				diffuseMediaFick();
-				System.out.println("Fick");
+				//System.out.println("Fick");
 			}
 			switch (pParams.getBiomassMotionStyle())
 			{

@@ -32,6 +32,8 @@ public abstract class FBAOptimizer  implements edu.bu.segrelab.comets.CometsCons
 	
 	public abstract int setObjectiveUpperBound(int objReaction, double ub);
 	
+	public abstract int setObjectiveLowerBound(int objReaction, double lb);
+	
 	public abstract double[] getFluxes();
 	
 	public abstract double[] getExchangeFluxes(int[] exch);

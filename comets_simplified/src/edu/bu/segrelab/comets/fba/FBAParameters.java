@@ -80,6 +80,12 @@ public class FBAParameters implements PackageParameters
 
 		public static BiomassMotionStyle findByName(String name)
 		{
+			//Before 3D was introduced, old versions didn't include "2D" in
+			//this style. This check is needed to not break older input files
+			if (name.equalsIgnoreCase("Diffusion (Crank-Nicolson)")){
+				return DIFFUSION_CN;
+			}
+			
 			for (BiomassMotionStyle style : BiomassMotionStyle.values())
 			{
 				if (style.toString().equalsIgnoreCase(name))
@@ -135,7 +141,8 @@ public class FBAParameters implements PackageParameters
 					writeBiomassLog,
 					writeTotalBiomassLog,
 					writeMatFile,
-					useLogNameTimeStamp;
+					useLogNameTimeStamp,
+					randomOrder = true; //shuffle the order each model in a cell is run
 	
 	private String fluxLogName,
 				   mediaLogName,
@@ -313,6 +320,9 @@ public class FBAParameters implements PackageParameters
 		
 		paramValues.put("randomseed", new Long(randomSeed));
 		paramTypes.put("randomseed", ParameterType.LONG);
+		
+		paramValues.put("randomorder", new Boolean(randomOrder));
+		paramTypes.put("randomorder", ParameterType.BOOLEAN);
 	}
 	
 	public void loadParameterState()
@@ -328,6 +338,7 @@ public class FBAParameters implements PackageParameters
 		setBiomassLogName((String)paramValues.get("biomasslogname"));
 		setTotalBiomassLogName((String)paramValues.get("totalbiomasslogname"));
 		setMatFileName((String)paramValues.get("matfilename"));
+		setRandomOrder(((Boolean)paramValues.get("randomorder")).booleanValue());
 		
 		if(paramValues.get("fluxlogformat") instanceof String)
 			setFluxLogFormat(LogFormat.findByName((String)paramValues.get("fluxlogformat")));
@@ -1095,6 +1106,20 @@ public class FBAParameters implements PackageParameters
 	public void setRandomSeed(long seed)
 	{
 		randomSeed=seed;
+	}
+	
+	/** Should the models in a cell be run in a random order?
+	 * @return the randomOrder
+	 */
+	public boolean getRandomOrder() {
+		return randomOrder;
+	}
+
+	/** Should the models in a cell be run in a random order?
+	 * @param randomOrder the randomOrder to set
+	 */
+	public void setRandomOrder(boolean randomOrder) {
+		this.randomOrder = randomOrder;
 	}
 	
 	public String getLastDirectory()

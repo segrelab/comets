@@ -1263,4 +1263,5 @@ public class CometsParameters implements CometsConstants
 	{
 		activateRate = r;
 	}
+
 }
