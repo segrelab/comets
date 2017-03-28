@@ -94,6 +94,7 @@ public class Comets implements CometsConstants,
 	 * by each cell just runs through a diffusion routine.
 	 */
 	public static boolean DIFFUSION_TEST_MODE = false;
+	public static boolean EXIT_AFTER_SCRIPT = true;
 	private String versionString = "2.3.4, 09 March 2017";
 
 	// The setup pane 
@@ -219,7 +220,9 @@ public class Comets implements CometsConstants,
 		{
 			cParams.showGraphics(false);
 			runScript(scriptFileName);
-			exitProgram();
+			if (EXIT_AFTER_SCRIPT){
+				exitProgram();
+			}
 		}
 
 		else 

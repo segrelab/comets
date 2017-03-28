@@ -2,7 +2,7 @@
 	activateRate = 0.001
 	allowCellOverlap = true
 	deathRate = 0
-	maxCycles = 1
+	maxCycles = 0
 	maxSpaceBiomass = 2.0002
 	minSpaceBiomass = 2.5e-11
 	pauseOnStep = false
