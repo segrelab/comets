@@ -31,6 +31,7 @@ public class IntTestExternalReactions {
 	 * 
 	 * Questions:
 	 * -rate equation for rxns where two reactants are consumed, there is no enzyme
+	 * -format of input file
 	 * 
 	 * Considerations to keep in mind:
 	 * -scale turnover rates to match the length of Timesteps
