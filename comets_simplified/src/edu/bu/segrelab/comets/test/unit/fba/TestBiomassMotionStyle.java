@@ -1,7 +1,7 @@
 /**
  * 
  */
-package edu.bu.segrelab.comets.test.unit;
+package edu.bu.segrelab.comets.test.unit.fba;
 
 import static org.junit.Assert.*;
 

@@ -47,7 +47,6 @@ import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.exception.ParameterFileException;
 import edu.bu.segrelab.comets.fba.ui.LayoutSavePanel;
 import edu.bu.segrelab.comets.util.Circle;
-import edu.bu.segrelab.comets.util.PairIntDouble;
 import edu.bu.segrelab.comets.util.Utility;
 import edu.bu.segrelab.comets.util.Point3d;
 
@@ -66,7 +65,7 @@ CometsConstants
 	private FBAModel[] models;
 	private List<Cell> cellList;
 	private String mediaFileName;
-	private FBAParameters pParams;   // 'pParams' keeps inline with PackageParameters
+	protected FBAParameters pParams;   // 'pParams' keeps inline with PackageParameters
 	private LayoutSavePanel layoutSavePanel = null;
 	private boolean useGui;
 	private Comets c;
@@ -80,6 +79,11 @@ CometsConstants
 	private int[][] substrateLayout;
 	private double[][] specificMedia;
 	private double[][] substrateFrictionConsts;
+	protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
+	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
+									//depending on if the reaction is enzymatic (determined by rxn having a value in exRxnKcats)
+	protected double[][] exRxnKcats; //same dims as exRxnStoich. Kcat of the corresponding media element acting as a non-consumed catalyst/enzyme
+	
 	private static final String MODEL_FILE = "model_file",
 			MODEL_WORLD = "model_world",
 			GRID_SIZE = "grid_size",
@@ -235,12 +239,6 @@ CometsConstants
 			Set<Point3d> barrier3D = new HashSet<Point3d>();
 			Map<Point, double[]> specMedia = new HashMap<Point, double[]>();
 			Map<Integer, Double> diffConsts = new HashMap<Integer, Double>();
-
-			//The Key is the reaction ID, the Value is a 2-Tuple holding the metabolite/media index and the kinetic parameter
-			Map<Integer, PairIntDouble> exReactantKinetics = new HashMap<Integer, PairIntDouble>();
-			//^stores the reaction order, stoichiometry, or Michaelis constant (Km) of substrates
-			Map<Integer, PairIntDouble> exEnzymeKcats = new HashMap<Integer, PairIntDouble>();
-			Map<Integer, PairIntDouble> exProductStoichs = new HashMap<Integer, PairIntDouble>();
 
 			List<int[]> noBiomassOut = new ArrayList<int[]>();
 			List<int[]> noBiomassIn = new ArrayList<int[]>();
@@ -420,11 +418,12 @@ CometsConstants
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseMediaDiffusionConstantsBlock(lines, diffConsts);
 						}
+						
 						/****************** MODEL-FREE REACTIONS ********************/
 						else if (worldParsed[0].equalsIgnoreCase(REACTIONS))
 						{
 							List<String> lines = collectLayoutFileBlock(reader);
-							state = parseReactionsBlock(lines, exReactantKinetics, exEnzymeKcats, exProductStoichs);
+							state = parseReactionsBlock(lines);
 						}
 
 						/****************** DIFFUSION CONSTANTS BY SUBSTRATE ********************/
@@ -1340,12 +1339,24 @@ CometsConstants
 
 	}
 
-	private LoaderState parseReactionsBlock(List<String> lines, Map<Integer, PairIntDouble> exReactantKinetics, Map<Integer, PairIntDouble> exEnzymeKcats, 
-			Map<Integer, PairIntDouble>  exProductStoichs) throws LayoutFileException, NumberFormatException
+	/**The format for this block looks like this:
+	 * 	REACTANTS [defaultKm=1]
+	 *	rxnIdx metIdx order/|stoich|   //simple rxn
+	 *	rxnIdx metIdx km               //catalyzed
+	 *	ENZYMES [defaultKcat]
+	 *	rxnIdx metIdx kcat
+	 *	PRODUCTS 
+	 *	rxnIdx metIdx stoich
+	 *	//
+	 * 
+	 * @param lines
+	 * @return
+	 * @throws LayoutFileException
+	 * @throws NumberFormatException
+	 * @author mquintin
+	 */
+	protected LoaderState parseReactionsBlock(List<String> lines) throws LayoutFileException, NumberFormatException
 	{
-		//TODO 4/7: REWORK THE LISTS. IT CURRENTLY DOESN'T ALLOW YOU TO HAVE TWO REACTANTS IN THE SAME REACTION.
-		//Try having the Key be a <rxn,met> tuple instead of having the Value be the pair.
-		
 		/* The format for this block looks like this:
 		 * 	REACTANTS [defaultKm=1]
 				rxnIdx metIdx order/|stoich|   //simple rxn
@@ -1357,18 +1368,76 @@ CometsConstants
 			//
 		 */
 		
-		String mode = REACTIONS;
+		String mode = null;
 		double defaultKcat = pParams.getDefaultVmax(); //TODO? replace with a proper defaultKcat param
 		double defaultKm = pParams.getDefaultKm(); //TODO? replace with a param that's separate from the ones used by the exchange style
 		double defaultOrder = 1;
 
-		//TODO: Include a check that a given metabolite only appears for one role in a reaction, and that it's not being set twice
-		Map<Integer,Integer> uniquenessMap = new HashMap<Integer,Integer>(); //<RxnId,MetId>. used to check that a metabolite only appears once per reaction
-		Map<Integer,Integer> defaultKineticsMap = new HashMap<Integer,Integer>(); //<RxnId,MetId>. 
-				//used to store indexes that may need to be converted to enzymatic reactions after this block is done being processed.
+		//Find out how many reactions and media components there are
+		//The first value is always either a reaction index or a header
+		//If the first value is a reaction index, the second is a media index
+		Integer nrxns = 0;
+		Integer nmedia = 0;
+		for (String line : lines){
+			if (line.length() == 0)
+				continue;
+			String[] parsed = line.split("\\s+");
+			//check that the first value is an integer
+			if (parsed[0].matches("[0-9]+")){
+				Integer rxn = Integer.valueOf(parsed[0]);
+				if ( rxn > nrxns) nrxns = rxn;
+				Integer med = Integer.valueOf(parsed[1]);
+				if ( med > nmedia) nmedia = med;
+			}
+		}
 		
-		for (String line : lines)
-		{
+		//initialize the arrays
+		exRxnStoich = new double[nrxns][nmedia];
+		exRxnParams = new double[nrxns][nmedia];
+		exRxnKcats = new double[nrxns][nmedia];
+		
+		//Include a check that a given metabolite only appears for one role in a reaction, and that it's not being set twice
+		boolean[][] uniquenessCheck = new boolean[nrxns][nmedia];
+		
+		//Parse the lines
+		//First process the ENZYMES block, since that will affect how we process reactants
+		for (String line : lines){
+			if (line.length() == 0)
+				continue;
+
+			String[] parsed = line.split("\\s+");
+			
+			switch (parsed[0].toLowerCase()){
+			case REACTIONS_REACTANTS: //ignore for now
+				mode = REACTIONS_REACTANTS;
+				break;
+			case REACTIONS_PRODUCTS: //ignore for now
+				mode = REACTIONS_PRODUCTS;
+				break;
+			case REACTIONS_ENZYMES:
+				mode = REACTIONS_ENZYMES;
+				if (parsed.length > 1) defaultKcat = Double.parseDouble(parsed[1]);
+				break;
+			default:
+				if (REACTIONS_ENZYMES.equals(mode)){ //we're reading an Enzyme definition line
+					//values are rxnIdx, metaboliteIdx, kcat
+					Integer rxnIdx = Integer.parseInt(parsed[0]) -1; //TODO: Test case for when this isn't an integer
+					if (parsed.length == 1){
+						throw new LayoutFileException("Each line in the " + mode + " block must include at least two values: "+
+					"A reaction number, and the index of a metabolite in the world_media list",lineCount);
+					}
+					Integer metIdx = Integer.parseInt(parsed[1]) -1;
+					double k = defaultKcat;
+					if (parsed.length >= 3){
+						k = Double.valueOf(parsed[2]);
+					}					
+					exRxnKcats[rxnIdx][metIdx] = k;
+				}
+			}
+		}
+		
+		//now process the REACTANTS and PRODUCTS blocks
+		for (String line : lines){
 			lineCount++;
 			if (line.length() == 0)
 				continue;
@@ -1382,8 +1451,7 @@ CometsConstants
 				break;
 
 			case REACTIONS_ENZYMES:
-				mode = REACTIONS_ENZYMES;
-				if (parsed.length > 1) defaultKcat = Double.parseDouble(parsed[1]);
+				mode = REACTIONS_ENZYMES; //skip this block since it's been done
 				break;
 
 			case REACTIONS_PRODUCTS:
@@ -1391,51 +1459,54 @@ CometsConstants
 				break;
 
 			default: //The first value should be a reaction index. Process it according to the most recent header seen
-				Integer rxnIdx = Integer.parseInt(parsed[0]); //TODO: Test case for when this isn't an integer
+				Integer rxnIdx = Integer.parseInt(parsed[0]) -1; //TODO: Test case for when this isn't an integer
 				
 				if (parsed.length == 1){
 					throw new LayoutFileException("Each line in the " + mode + " block must include at least two values: A reaction number,"+
 				     "and the index of a metabolite in the world_media list",lineCount);
 				}
-				Integer metIdx = Integer.parseInt(parsed[1]);
+				Integer metIdx = Integer.parseInt(parsed[1]) -1;
 				
 				//Check that this metabolite hasn't already been used in this reaction
-				if (uniquenessMap.get(rxnIdx) == metIdx){
+				if (uniquenessCheck[rxnIdx][metIdx]){
 					throw new LayoutFileException("A metabolite should only appear once per reaction.",lineCount);
 				}
-				uniquenessMap.put(rxnIdx, metIdx);
+				else (uniquenessCheck[rxnIdx][metIdx]) = true;
 								
 				switch (mode){
-				case REACTIONS_REACTANTS: //rxnIdx metIdx order/|stoich|/Km
-					Double val = 0.0; //0 will be replaced with default values after this loop, based on if the reaction has an enzyme
-					if (parsed.length >= 3){
-						val = Double.valueOf(parsed[2]);
-						defaultKineticsMap.put(rxnIdx,metIdx);
+				case REACTIONS_REACTANTS: //rxnIdx metIdx order/stoich/Km
+					//determine if this reaction has an enzyme. If so, it has a kcat
+					boolean hasEnz = Utility.hasNonzeroValue(exRxnKcats[rxnIdx]);
+					
+					if (hasEnz){
+						exRxnStoich[rxnIdx][metIdx] = -1.0;
+						double km = defaultKm;
+						if (parsed.length >= 3){
+							km = Double.valueOf(parsed[2]);
+						}
+						exRxnParams[rxnIdx][metIdx] = km;
 					}
-					PairIntDouble pid = new PairIntDouble(metIdx,val);
-					exReactantKinetics.put(rxnIdx, pid);
-					break;
-
-				case REACTIONS_ENZYMES: //rxnIdx metIdx kcat
-					val = defaultKcat;
-					if (parsed.length >= 3){
-						val = Double.valueOf(parsed[2]);
+					else{
+						double order = defaultOrder;
+						if (parsed.length >= 3){
+							order = Double.valueOf(parsed[2]);
+						}
+						exRxnStoich[rxnIdx][metIdx] = -order;
+						exRxnParams[rxnIdx][metIdx] = order;
 					}
-					pid = new PairIntDouble(metIdx,val);
-					exEnzymeKcats.put(rxnIdx, pid);
 					break;
 
 				case REACTIONS_PRODUCTS://rxnIdx metIdx stoich
-					val = 1.0;
+					double stoich = 1.0;
 					if (parsed.length >= 3){
-						val = Double.valueOf(parsed[2]);
+						stoich = Double.valueOf(parsed[2]);
 					}
-					pid = new PairIntDouble(metIdx,val);
-					exProductStoichs.put(rxnIdx, pid);
+					exRxnStoich[rxnIdx][metIdx] = stoich;
 					break;
 
 				default:
-					throw new LayoutFileException("The first line after opening the REACTIONS block should begin with " +
+					if (REACTIONS_ENZYMES.equals(mode)) break;
+					else throw new LayoutFileException("The first line after opening the REACTIONS block should begin with " +
 				 REACTIONS_REACTANTS.toUpperCase() + ", " + REACTIONS_ENZYMES.toUpperCase() + ", or " + REACTIONS_PRODUCTS.toUpperCase() +
 				 ". Subsequent lines should have a reaction ID, a metabolite index corresponding to the world_media block, and an optional" +
 				 " kinetic parameter.",lineCount);
@@ -1443,15 +1514,6 @@ CometsConstants
 				break;
 			}
 		}
-		
-		//set the kinetic parameter in exReactantKinetics based on whether there is an enzyme present
-		for (Integer i : defaultKineticsMap.keySet()){ //TODO 4/7: THIS BLOCK IS WRONG 
-			if (exEnzymeKcats.keySet().contains(i)){
-				PairIntDouble pid = new PairIntDouble(i,defaultKm);
-				exReactantKinetics.put(i, pid);
-			}
-		}
-		
 		return LoaderState.OK;
 	}
 
