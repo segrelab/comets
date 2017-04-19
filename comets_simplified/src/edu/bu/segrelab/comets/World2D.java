@@ -1091,4 +1091,8 @@ public abstract class World2D implements CometsConstants
 			}
 		}
 	}
+	
+	public Comets getComets(){
+		return c;
+	}
 }

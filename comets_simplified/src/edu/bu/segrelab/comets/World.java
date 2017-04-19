@@ -1082,5 +1082,6 @@ public abstract class World implements CometsConstants
 		else
 			return BOUNDS_ERROR;
 	}
+	
 
 }

@@ -71,6 +71,12 @@ public class FBAWorld extends World2D
 	private double[][][] diffusionRHS2;
 	private int threadLock;						// while threaded FBA is running, this = number of cells remaining
 
+	protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
+	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
+									//depending on if the reaction is enzymatic
+	protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
+	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
+	
 	private FBAParameters pParams;
 	private CometsParameters cParams;
 	
@@ -1838,6 +1844,13 @@ public class FBAWorld extends World2D
 		else
 		{
 			int[] order = Utility.randomOrder(numModels);
+			try{ if (!pParams.getRandomOrder()){ //don't randomize the order
+				for (int i = 0; 1 < numModels; i++){
+					order[i] = i;
+					}
+				}
+			} catch (NullPointerException e){}
+			
 			for (int k=0; k<order.length; k++)
 			{
 				int curModel = order[k];
@@ -3771,5 +3784,37 @@ public class FBAWorld extends World2D
 				}
 			}
 		}
+	}
+
+	public double[][] getExRxnStoich() {
+		return exRxnStoich;
+	}
+
+	public void setExRxnStoich(double[][] exRxnStoich) {
+		this.exRxnStoich = exRxnStoich;
+	}
+
+	public double[][] getExRxnParams() {
+		return exRxnParams;
+	}
+
+	public void setExRxnParams(double[][] exRxnParams) {
+		this.exRxnParams = exRxnParams;
+	}
+
+	public double[] getExRxnRateConstants() {
+		return exRxnRateConstants;
+	}
+
+	public void setExRxnRateConstants(double[] exRxnRateConstants) {
+		this.exRxnRateConstants = exRxnRateConstants;
+	}
+
+	public int[] getExRxnEnzymes() {
+		return exRxnEnzymes;
+	}
+
+	public void setExRxnEnzymes(int[] exRxnEnzymes) {
+		this.exRxnEnzymes = exRxnEnzymes;
 	}
 }

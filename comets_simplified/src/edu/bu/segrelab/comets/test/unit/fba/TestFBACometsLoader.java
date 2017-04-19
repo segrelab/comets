@@ -38,6 +38,8 @@ public class TestFBACometsLoader{
 	}
 	
 	@Test
+	//TODO: test adding the forward reaction rate as 
+	//the 4th argument for a reactant in a simple reaction
 	public void testParseReactionsBlock(){
 		String[] lines = 
 			{"REACTANTS .05",

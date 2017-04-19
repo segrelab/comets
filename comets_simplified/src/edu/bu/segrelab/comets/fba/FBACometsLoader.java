@@ -81,8 +81,9 @@ CometsConstants
 	private double[][] substrateFrictionConsts;
 	protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
 	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
-									//depending on if the reaction is enzymatic (determined by rxn having a value in exRxnKcats)
-	protected double[][] exRxnKcats; //same dims as exRxnStoich. Kcat of the corresponding media element acting as a non-consumed catalyst/enzyme
+									//depending on if the reaction is enzymatic
+	protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
+	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
 	
 	private static final String MODEL_FILE = "model_file",
 			MODEL_WORLD = "model_world",
@@ -735,6 +736,13 @@ CometsConstants
 						{
 							world.setSubstrateFriction(substrateFrictionConsts);
 						}
+						
+						//set global External Reactions
+						world.setExRxnEnzymes(exRxnEnzymes);
+						world.setExRxnParams(exRxnParams);
+						world.setExRxnRateConstants(exRxnRateConstants);
+						world.setExRxnStoich(exRxnStoich);
+						
 						System.out.println("Done!");
 					}
 					else if(c.getParameters().getNumLayers()>1)
@@ -871,6 +879,13 @@ CometsConstants
 							}
 						}
 						world3D.setDiffusionConstants(diffusionConsts);
+
+						//set global External Reactions
+						world3D.setExRxnEnzymes(exRxnEnzymes);
+						world3D.setExRxnParams(exRxnParams);
+						world3D.setExRxnRateConstants(exRxnRateConstants);
+						world3D.setExRxnStoich(exRxnStoich);
+						
 						System.out.println("Done!");
 					}
 				}
@@ -1359,7 +1374,7 @@ CometsConstants
 	{
 		/* The format for this block looks like this:
 		 * 	REACTANTS [defaultKm=1]
-				rxnIdx metIdx order/|stoich|   //simple rxn
+				rxnIdx metIdx order/|stoich| k+   //simple rxn
 				rxnIdx metIdx km               //catalyzed
 				ENZYMES [defaultKcat]
 				rxnIdx metIdx kcat
@@ -1372,6 +1387,7 @@ CometsConstants
 		double defaultKcat = pParams.getDefaultVmax(); //TODO? replace with a proper defaultKcat param
 		double defaultKm = pParams.getDefaultKm(); //TODO? replace with a param that's separate from the ones used by the exchange style
 		double defaultOrder = 1;
+		double defaultK = defaultKcat; //rate constant for simple reactions. TODO: parameterize
 
 		//Find out how many reactions and media components there are
 		//The first value is always either a reaction index or a header
@@ -1394,7 +1410,9 @@ CometsConstants
 		//initialize the arrays
 		exRxnStoich = new double[nrxns][nmedia];
 		exRxnParams = new double[nrxns][nmedia];
-		exRxnKcats = new double[nrxns][nmedia];
+		exRxnRateConstants = new double[nrxns];
+		exRxnEnzymes = new int[nrxns];
+		for (int i = 0; i < exRxnEnzymes.length; i++){ exRxnEnzymes[i] = -1;}
 		
 		//Include a check that a given metabolite only appears for one role in a reaction, and that it's not being set twice
 		boolean[][] uniquenessCheck = new boolean[nrxns][nmedia];
@@ -1426,12 +1444,15 @@ CometsConstants
 						throw new LayoutFileException("Each line in the " + mode + " block must include at least two values: "+
 					"A reaction number, and the index of a metabolite in the world_media list",lineCount);
 					}
+					
 					Integer metIdx = Integer.parseInt(parsed[1]) -1;
+					exRxnEnzymes[rxnIdx] = metIdx;
+					
 					double k = defaultKcat;
 					if (parsed.length >= 3){
 						k = Double.valueOf(parsed[2]);
 					}					
-					exRxnKcats[rxnIdx][metIdx] = k;
+					exRxnRateConstants[rxnIdx] = k;
 				}
 			}
 		}
@@ -1475,8 +1496,8 @@ CometsConstants
 								
 				switch (mode){
 				case REACTIONS_REACTANTS: //rxnIdx metIdx order/stoich/Km
-					//determine if this reaction has an enzyme. If so, it has a kcat
-					boolean hasEnz = Utility.hasNonzeroValue(exRxnKcats[rxnIdx]);
+					//determine if this reaction has an enzyme
+					boolean hasEnz = exRxnEnzymes[rxnIdx] >= 0;
 					
 					if (hasEnz){
 						exRxnStoich[rxnIdx][metIdx] = -1.0;
@@ -1493,6 +1514,12 @@ CometsConstants
 						}
 						exRxnStoich[rxnIdx][metIdx] = -order;
 						exRxnParams[rxnIdx][metIdx] = order;
+
+						double k = defaultK;
+						if (parsed.length >= 4){
+							k = Double.valueOf(parsed[3]); 
+						}
+						exRxnRateConstants[rxnIdx] = k;
 					}
 					break;
 
