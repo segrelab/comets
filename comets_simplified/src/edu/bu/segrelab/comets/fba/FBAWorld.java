@@ -38,6 +38,7 @@ import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 
 import edu.bu.segrelab.comets.fba.FBAParameters;
+import edu.bu.segrelab.comets.reaction.RK4Runner;
 import edu.bu.segrelab.comets.CometsParameters;
 
 import java.io.*;
@@ -2349,6 +2350,21 @@ public class FBAWorld extends World2D
 //
 //		return diff;
 //	}
+	
+	protected void executeExternalReactions(){
+		//get new media concentrations in the form double[x][y][z][mediaIdx]
+		//Since this is the 2d version of the world, always use z=0
+		RK4Runner rk4 = new RK4Runner(this.c);
+		rk4.run();
+		double[][][][] newMedia = rk4.result;
+		
+		//cut out the Z dimension and apply the new media amounts
+		for (int x = 0; x < newMedia.length; x++){
+			for (int y = 0; y < newMedia[0].length; y++){
+				media[x][y] = newMedia[x][y][0];
+			}
+		}
+	}
 
 	/**
 	 * Runs one cycle of the simulation on this <code>FBAWorld</code>. The simulation flow
@@ -2418,8 +2434,11 @@ public class FBAWorld extends World2D
 			}
 			deadCells.clear();
 		}
+		
+		// 3. Run any extracellular reactions
+		executeExternalReactions();
 
-		// 3. diffuse media and biomass
+		// 4. diffuse media and biomass
 		//for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
 		//{
 			if (diffuseContext)
@@ -2451,10 +2470,10 @@ public class FBAWorld extends World2D
 			}
 		//}
 
-		// 4. set static media
+		// 5. set static media
 		applyStaticMedia();
 		
-		// 5. refresh media, if we're supposed to.
+		// 6. refresh media, if we're supposed to.
 		refreshMedia();
 		
 		if (!cParams.isCommandLineOnly())

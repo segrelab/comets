@@ -1370,7 +1370,7 @@ CometsConstants
 	 * @throws NumberFormatException
 	 * @author mquintin
 	 */
-	protected LoaderState parseReactionsBlock(List<String> lines) throws LayoutFileException, NumberFormatException
+	public LoaderState parseReactionsBlock(List<String> lines) throws LayoutFileException, NumberFormatException
 	{
 		/* The format for this block looks like this:
 		 * 	REACTANTS [defaultKm=1]
@@ -1514,12 +1514,15 @@ CometsConstants
 						}
 						exRxnStoich[rxnIdx][metIdx] = -order;
 						exRxnParams[rxnIdx][metIdx] = order;
-
-						double k = defaultK;
-						if (parsed.length >= 4){
-							k = Double.valueOf(parsed[3]); 
+						
+						//only set the rate constant for this reaction once
+						if (exRxnRateConstants[rxnIdx] == 0.0 || exRxnRateConstants[rxnIdx] == defaultK){
+							double k = defaultK;
+							if (parsed.length >= 4){
+								k = Double.valueOf(parsed[3]); 
+							}
+							exRxnRateConstants[rxnIdx] = k;
 						}
-						exRxnRateConstants[rxnIdx] = k;
 					}
 					break;
 
@@ -2834,6 +2837,22 @@ CometsConstants
 	public PackageParameterBatch getParameterBatch(Comets c)
 	{
 		return new FBAParameterBatch(c);
+	}
+
+	public double[][] getExRxnStoich() {
+		return exRxnStoich;
+	}
+
+	public double[][] getExRxnParams() {
+		return exRxnParams;
+	}
+
+	public double[] getExRxnRateConstants() {
+		return exRxnRateConstants;
+	}
+
+	public int[] getExRxnEnzymes() {
+		return exRxnEnzymes;
 	}
 
 }

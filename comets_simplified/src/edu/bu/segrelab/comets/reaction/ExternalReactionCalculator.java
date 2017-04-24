@@ -28,7 +28,7 @@ public class ExternalReactionCalculator{
 	//Factory method to make it simpler to create one of these from an FBA cell
 	public static ExternalReactionCalculator createCalculator(FBACell cell){
 		double[] concentrations = cell.getMedia(); //assumes that the media array in the World is *concentration*, not amount
-		double timestep_seconds = (double) cell.getComets().getParameters().getTimeStep() / (60 * 60);
+		double timestep_seconds = (double) cell.getComets().getParameters().getTimeStep() * 60 * 60;
 		int[] exRxnEnzymes = null;
 		double[] exRxnRateConstants = null;
 		double[][] stoich = null;
@@ -112,7 +112,7 @@ public class ExternalReactionCalculator{
 	//Implement Runge-Kutta algorithm to solve ODEs
 	
 	/**Implement the Runge-Kutta algorithm to solve the ODE system and return the concentrations 
-	 * after the given number of timesteps
+	 * after the set number of timesteps
 	 * 
 	 * @return
 	 */

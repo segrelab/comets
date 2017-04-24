@@ -18,7 +18,7 @@ import edu.bu.segrelab.comets.fba.FBAParameters;
 
 public class TestFBACometsLoader{
 
-	SubFBACometsLoader loader;
+	FBACometsLoader loader;
 	
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -30,7 +30,8 @@ public class TestFBACometsLoader{
 
 	@Before
 	public void setUp() throws Exception {
-		loader = new SubFBACometsLoader();
+		loader = new FBACometsLoader();
+		loader.getPackageParameters(null);//creates a new FBAParameters
 	}
 
 	@After
@@ -43,7 +44,7 @@ public class TestFBACometsLoader{
 	public void testParseReactionsBlock(){
 		String[] lines = 
 			{"REACTANTS .05",
-				"1 1 2",
+				"1 1 2 0.075",
 				"1 2 ",
 				"2 1 ",
 				"3 2 .1",
@@ -58,38 +59,23 @@ public class TestFBACometsLoader{
 				{2.0, 1.0, 0.0, 0.0, 0.0, 0.0},
 				{0.05, 0.0, 0.0, 0.0, 0.0, 0.0},
 				{0.0, 0.1, 0.0, 0.0, 0.0, 0.0}};
-		double[][] expectKcats = {
-				{0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
-				{0.0, 0.0, 2.0, 0.0, 0.0, 0.0},
-				{0.0, 0.0, 0.0, 5.0, 0.0, 0.0}};
 		double[][] expectStoich = {
 				{-2.0, -1.0, 0.0, 0.0, 1.0, 0.0},
 				{-1.0, 0.0, 0.0, 0.0, 0.0, 1.0},
 				{0.0, -1.0, 0.0, 0.0, 0.0, 2.0}};
+		int[] expectEnz = {-1, 2, 3};
+		double[] expectRateConstants = {0.075, 2.0, 5.0};
 		
-		try {loader.executeParseReactionsBlock(Arrays.asList(lines));}
+		try {loader.parseReactionsBlock(Arrays.asList(lines));}
 		catch (NumberFormatException e) {	e.printStackTrace();}
 		catch (LayoutFileException e) { e.printStackTrace();}
 		
-		assertArrayEquals(expectKcats,loader.getExRxnKcats());
 		assertArrayEquals(expectStoich,loader.getExRxnStoich());
 		assertArrayEquals(expectParams,loader.getExRxnParams());
+		assertArrayEquals(expectEnz,loader.getExRxnEnzymes());
+		assertArrayEquals(expectRateConstants,loader.getExRxnRateConstants(),0);
 		
 		int x =1;//this line is just here to hold a breakpoint
-	}
-	
-	//private subclass to expose protected methods
-	private class SubFBACometsLoader extends FBACometsLoader{	
-		public SubFBACometsLoader(){
-			super();
-			this.pParams = new FBAParameters((Comets) null);
-		}
-		protected final void executeParseReactionsBlock(List<String> lines) throws LayoutFileException, NumberFormatException{
-			parseReactionsBlock(lines);
-		}
-		protected final double[][] getExRxnStoich() {return exRxnStoich;}
-		protected final double[][] getExRxnKcats() {return exRxnKcats;}
-		protected final double[][] getExRxnParams() {return exRxnParams;}
 	}
 
 }
