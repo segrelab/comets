@@ -11,7 +11,7 @@ package edu.bu.segrelab.comets;
  */
 public interface CometsConstants
 {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	
 	public static final int PARAMS_ERROR = 0;
 	public static final int PARAMS_OK = 1;

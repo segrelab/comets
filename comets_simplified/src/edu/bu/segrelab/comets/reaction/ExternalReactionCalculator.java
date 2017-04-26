@@ -189,7 +189,7 @@ public class ExternalReactionCalculator{
 		
 		return yf;
 	}
-	
+		
 	/**Return the concentrations of each media component after running for
 	 * the given amount of time at the initial reaction velocity
 	 * 

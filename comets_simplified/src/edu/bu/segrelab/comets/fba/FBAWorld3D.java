@@ -2163,7 +2163,7 @@ implements CometsConstants
 
 
 		// 3. Run any extracellular reactions
-		executeExternalReactions();
+		if (exRxnStoich != null) executeExternalReactions();
 
 		// 4. diffuse media and biomass
 		diffuseMediaFick();

@@ -5,10 +5,16 @@ package edu.bu.segrelab.comets.test.integration;
 
 import static org.junit.Assert.*;
 
+import java.net.URL;
+
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import edu.bu.segrelab.comets.Comets;
+import edu.bu.segrelab.comets.fba.FBACometsLoader;
+import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
 
 /**Integration test class for features introduced in the External Reactions project.
  * 
@@ -62,8 +68,13 @@ public class IntTestExternalReactions {
 	}
 
 	@Test
-	public void test() {
-		fail("Not yet implemented");
+	public void testSampleRxnLayout() {
+		Comets.EXIT_AFTER_SCRIPT = false;
+		//Load layout and models
+		URL scriptURL = TestKineticParameters.class.getResource("../resources/sampleRxnLayout.txt");
+		Comets comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
+				"-script", scriptURL.getPath()});
+		int x = 1; //landing pad for breakpoint
 	}
 
 }

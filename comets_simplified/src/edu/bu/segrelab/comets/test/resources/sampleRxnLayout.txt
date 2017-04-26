@@ -1,0 +1,81 @@
+model_file model_CSP_biomass.txt
+	model_world
+		grid_size 1 1
+		world_media
+		mediaA 1
+		mediaB 2
+		mediaC 1
+		mediaD 1
+		enzyme .001
+		product1 0
+		product2 0
+		product3 0
+	//
+	media
+	//
+	initial_pop
+	0 0 1 1
+	//
+	reactions
+		reactants
+		1 1 1 0.02
+		1 2
+		2 3 2 0.02
+		3 4 0.5
+		enzymes
+		3 5 0.25
+		products
+		1 6
+		2 7
+		3 8
+	//
+//
+	parameters
+	maxCycles = 20
+	pauseOnStep = false
+	timeStep = 0.01
+	deathRate = 0
+	spaceWidth = 0.01
+	maxSpaceBiomass = 2.0002
+	minSpaceBiomass = 2.5e-11
+	allowCellOverlap = true
+	simulateActivation = false
+	activateRate = 0.001
+	toroidalWorld = false
+	randomOrder = false
+	pixelScale = 5
+	showCycleTime = true
+	showCycleCount = true
+	colorRelative = true
+	displayLayer = 0
+	saveslideshow = false
+	slideshowExt = png
+	slideshowColorRelative = true
+	slideshowRate = 1
+	slideshowLayer = 0
+	slideshowName = ./res.png
+	numDiffPerStep = 10
+	numRunThreads = 1
+	growthDiffRate = 0
+	flowDiffRate = 0
+	biomassMotionStyle = Diffusion (Eight Point)
+	exchangeStyle = Monod Style
+	defaultKm = 0.01
+	defaultHill = 2
+	defaultVmax = 10
+	defaultAlpha = 1
+	defaultW = 10
+	writeFluxLog = false
+	FluxLogName = log_flux.m
+	FluxLogRate = 1
+	writeMediaLog = true
+	MediaLogName = log_media.m
+	MediaLogRate = 1
+	writeBiomassLog = false
+	BiomassLogName = log_biomass.m
+	BiomassLogRate = 1
+	writeTotalBiomassLog = false
+	totalBiomassLogRate = 1
+	TotalbiomassLogName = ./total_biomass.m
+	useLogNameTimeStamp = false
+//
