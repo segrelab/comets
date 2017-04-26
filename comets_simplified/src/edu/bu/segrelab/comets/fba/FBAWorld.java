@@ -1452,6 +1452,10 @@ public class FBAWorld extends World2D
 		else
 			return BOUNDS_ERROR;
 	}
+	
+	public synchronized int changeMediaByName(int x, int y, String[] names, double[] newMedia){
+		//TODO
+	}
 
 	@Override
 	/**
