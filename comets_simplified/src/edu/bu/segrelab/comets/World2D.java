@@ -23,7 +23,7 @@ import edu.bu.segrelab.comets.util.Utility;
  * 
  * @author Bill Riehl briehl@bu.edu
  */
-public abstract class World2D implements CometsConstants
+public abstract class World2D implements CometsConstants, IWorld
 {
 	public static final int EMPTY_SPACE = 1,
 							FILLED_SPACE = 2,
@@ -250,6 +250,14 @@ public abstract class World2D implements CometsConstants
 			return null;
 	}
 	
+	public double[] getMediaAt(int x, int y, int z){
+		if (z > 0){
+			throw new IllegalArgumentException("Attempted to lookup media in a position where z (" + 
+					Integer.valueOf(z).toString() + ") > 0, but the world is 2D.");
+		}
+		return getMediaAt(x,y);
+	}
+	
 	/**
 	 * @return A <code>String</code> array of names for each nutrient in the media. This
 	 * will be in the same order at the other various media access methods.
@@ -412,7 +420,12 @@ public abstract class World2D implements CometsConstants
 		}
 		else
 			return BOUNDS_ERROR;
-
+	}
+	
+	public int setMedia(int x, int y, int z, double[] delta){
+		if (z > 0)
+			return BOUNDS_ERROR;
+		else return setMedia(x,y,delta);
 	}
 	
 	/**
@@ -1094,5 +1107,9 @@ public abstract class World2D implements CometsConstants
 	
 	public Comets getComets(){
 		return c;
+	}
+	
+	public int[] getDims(){
+		return new int[]{numCols, numRows, 1};
 	}
 }

@@ -3,6 +3,7 @@ package edu.bu.segrelab.comets.reaction;
 import javax.swing.JComponent;
 
 import edu.bu.segrelab.comets.CometsConstants;
+import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.World3D;
@@ -22,14 +23,18 @@ public class ReactionModel extends Model implements CometsConstants {
 	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
 	//depending on if the reaction is enzymatic
 
-	protected World world;
-	protected World3D world3D;
-	protected boolean worldIs3D = false;
-	protected int x,y,z;
+	protected IWorld world;
+	//protected boolean worldIs3D = false;
+	//protected int x,y,z;
 	
-	
+	//A ReactionModel is created via this constructor during instantiation of a class
+	//implementing the IWorld interface
 	public ReactionModel() {
 		// TODO Auto-generated constructor stub
+	}
+	
+	public void setWorld(IWorld world){
+		this.world = world;
 	}
 
 	@Override

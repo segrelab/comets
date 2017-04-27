@@ -8,7 +8,7 @@ import javax.swing.JComponent;
 
 import edu.bu.segrelab.comets.util.Utility;
 
-public abstract class World3D implements CometsConstants
+public abstract class World3D implements CometsConstants, IWorld
 {
 	public static final int EMPTY_SPACE = 1,
 							FILLED_SPACE = 2,
@@ -378,7 +378,7 @@ public abstract class World3D implements CometsConstants
 	public abstract void setBiomass(int x, int y, int z, double[] biomassDelta);
 	
 	/**
-	 * Sets the media values at (x, y) to the values in delta. Note that this <b>sets</b> the
+	 * Sets the media values at (x, y, z) to the values in delta. Note that this <b>sets</b> the
 	 * values, it doesn't add or subtract them. 
 	 * @param x
 	 * @param y
@@ -1101,6 +1101,10 @@ public abstract class World3D implements CometsConstants
 		}
 		else
 			return BOUNDS_ERROR;
+	}
+	
+	public int[] getDims(){
+		return new int[]{numCols, numRows, numLayers};
 	}
 
 }
