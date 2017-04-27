@@ -3,6 +3,7 @@ package edu.bu.segrelab.comets.reaction;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.fba.FBACell;
 import edu.bu.segrelab.comets.fba.FBAWorld;
 import edu.bu.segrelab.comets.fba.FBAWorld3D;
@@ -36,10 +37,10 @@ public class ExternalReactionCalculator{
 		
 		if(cell.getComets().getParameters().getNumLayers() == 1){ //2d World
 			FBAWorld world = (FBAWorld) cell.getComets().getWorld();
-			exRxnEnzymes = world.getExRxnEnzymes();
-			exRxnRateConstants = world.getExRxnRateConstants();
-			stoich = world.getExRxnStoich();
-			params = world.getExRxnParams();
+			exRxnEnzymes = IWorld.reactionModel.getExRxnEnzymes();
+			exRxnRateConstants = IWorld.reactionModel.getExRxnRateConstants();
+			stoich = IWorld.reactionModel.getExRxnStoich();
+			params = IWorld.reactionModel.getExRxnParams();
 		}
 		else if (cell.getComets().getParameters().getNumLayers() > 1){ //3D world
 			FBAWorld3D world = (FBAWorld3D) cell.getComets().getWorld3D();

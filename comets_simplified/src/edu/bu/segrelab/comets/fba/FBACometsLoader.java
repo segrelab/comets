@@ -35,6 +35,7 @@ import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.CometsLoader;
 import edu.bu.segrelab.comets.CometsParameters;
+import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.PackageParameterBatch;
 import edu.bu.segrelab.comets.ParametersFileHandler;
@@ -64,7 +65,7 @@ CometsConstants
 	private FBAWorld world;
 	private FBAWorld3D world3D;
 	private FBAModel[] models;
-	protected ReactionModel reactionModel;
+	//protected ReactionModel reactionModel;
 	private List<Cell> cellList;
 	private String mediaFileName;
 	protected FBAParameters pParams;   // 'pParams' keeps inline with PackageParameters
@@ -81,11 +82,11 @@ CometsConstants
 	private int[][] substrateLayout;
 	private double[][] specificMedia;
 	private double[][] substrateFrictionConsts;
-	//protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
-	//protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
+	protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
+	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
 									//depending on if the reaction is enzymatic
-	//protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
-	//protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
+	protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
+	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
 	
 	private static final String MODEL_FILE = "model_file",
 			MODEL_WORLD = "model_world",
@@ -740,11 +741,12 @@ CometsConstants
 						}
 						
 						//set global External Reactions
-						world.setReactionModel(reactionModel);
-						//world.setExRxnEnzymes(exRxnEnzymes);
-						//world.setExRxnParams(exRxnParams);
-						//world.setExRxnRateConstants(exRxnRateConstants);
-						//world.setExRxnStoich(exRxnStoich);
+						IWorld.reactionModel.setWorld((IWorld) world);
+						IWorld.reactionModel.setExRxnEnzymes(exRxnEnzymes);
+						IWorld.reactionModel.setExRxnParams(exRxnParams);
+						IWorld.reactionModel.setExRxnRateConstants(exRxnRateConstants);
+						IWorld.reactionModel.setExRxnStoich(exRxnStoich);
+						IWorld.reactionModel.setup();
 						
 						System.out.println("Done!");
 					}
@@ -884,11 +886,12 @@ CometsConstants
 						world3D.setDiffusionConstants(diffusionConsts);
 
 						//set global External Reactions
-						world3D.setReactionModel(reactionModel);
-						//world3D.setExRxnEnzymes(exRxnEnzymes);
-						//world3D.setExRxnParams(exRxnParams);
-						//world3D.setExRxnRateConstants(exRxnRateConstants);
-						//world3D.setExRxnStoich(exRxnStoich);
+						IWorld.reactionModel.setWorld((IWorld) world);
+						IWorld.reactionModel.setExRxnEnzymes(exRxnEnzymes);
+						IWorld.reactionModel.setExRxnParams(exRxnParams);
+						IWorld.reactionModel.setExRxnRateConstants(exRxnRateConstants);
+						IWorld.reactionModel.setExRxnStoich(exRxnStoich);
+						IWorld.reactionModel.setup();
 						
 						System.out.println("Done!");
 					}
@@ -1412,10 +1415,10 @@ CometsConstants
 		}
 		
 		//initialize the arrays
-		double[][] exRxnStoich = new double[nrxns][nmedia];
-		double[][] exRxnParams = new double[nrxns][nmedia];
-		double[] exRxnRateConstants = new double[nrxns];
-		int[] exRxnEnzymes = new int[nrxns];
+		exRxnStoich = new double[nrxns][nmedia];
+		exRxnParams = new double[nrxns][nmedia];
+		exRxnRateConstants = new double[nrxns];
+		exRxnEnzymes = new int[nrxns];
 		for (int i = 0; i < exRxnEnzymes.length; i++){ exRxnEnzymes[i] = -1;}
 		
 		//Include a check that a given metabolite only appears for one role in a reaction, and that it's not being set twice

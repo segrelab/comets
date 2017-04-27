@@ -237,17 +237,6 @@ public abstract class World3D implements CometsConstants, IWorld
 	}
 	
 	/**
-	 * @return A <code>String</code> array of names for each nutrient in the media. This
-	 * will be in the same order at the other various media access methods.
-	 * @see #getAllMedia()
-	 * @see #getMediaAt(int, int)
-	 */
-	public String[] getMediaNames()
-	{
-		return mediaNames;
-	}
-	
-	/**
 	 * @return the number of nutrient components in the currently loaded media
 	 */
 	public int getNumMedia()
@@ -1106,5 +1095,26 @@ public abstract class World3D implements CometsConstants, IWorld
 	public int[] getDims(){
 		return new int[]{numCols, numRows, numLayers};
 	}
+	
+	/**
+	 * @return A <code>String</code> array of names for each nutrient in the media. This
+	 * will be in the same order at the other various media access methods.
+	 * @see #getAllMedia()
+	 * @see #getMediaAt(int, int)
+	 */
+	public String[] getMediaNames(){
+		return mediaNames;
+	}
+	
+	public Comets getComets(){
+		return c;
+	}
 
+	public void runExternalReactions(){
+		//if there's nothing to do, just return
+		if (reactionModel.getNrxns() < 1) return;
+		else reactionModel.run(); //the ReactionModel handles updating this world's media
+	}
+
+	
 }

@@ -32,6 +32,7 @@ import javax.swing.JScrollPane;
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
+import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.World3D;
@@ -460,6 +461,11 @@ implements CometsConstants
 				newDiffConsts.put(names[j], diffConsts[j]);
 			}
 		}
+		
+		//preserve metabolites which are involved in extracellular reactions
+		String[] exRxnMets = IWorld.reactionModel.getMediaNames();
+		for (int i = 0; i < exRxnMets.length; i++) mediaNamesMap.put(exRxnMets[i], new Integer(1));
+		
 		if (DEBUG) System.out.println(mediaNamesMap.size() + " total nutrients");
 
 		/*

@@ -40,6 +40,7 @@ import edu.bu.segrelab.comets.util.Utility;
 import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.reaction.RK4Runner;
 import edu.bu.segrelab.comets.CometsParameters;
+import edu.bu.segrelab.comets.IWorld;
 
 import java.io.*;
 
@@ -72,11 +73,11 @@ public class FBAWorld extends World2D
 	private double[][][] diffusionRHS2;
 	private int threadLock;						// while threaded FBA is running, this = number of cells remaining
 
-	protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
-	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
+	//protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
+	//protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
 									//depending on if the reaction is enzymatic
-	protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
-	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
+	//protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
+	//protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
 	
 	private FBAParameters pParams;
 	private CometsParameters cParams;
@@ -777,9 +778,10 @@ public class FBAWorld extends World2D
 				newDiffConsts.put(names[j], diffConsts[j]);
 			}
 		}
+		
 		//preserve metabolites which are involved in extracellular reactions
-		int[] exRxnMets = getExRxnMetIdxs();
-		for (int i = 0; i < exRxnMets.length; i++) mediaNamesMap.put(mediaNames[exRxnMets[i]], new Integer(1));
+		String[] exRxnMets = IWorld.reactionModel.getMediaNames();
+		for (int i = 0; i < exRxnMets.length; i++) mediaNamesMap.put(exRxnMets[i], new Integer(1));
 		
 		if (DEBUG) System.out.println(mediaNamesMap.size() + " total nutrients");
 		
@@ -836,9 +838,9 @@ public class FBAWorld extends World2D
 		double[] newMediaRefresh = new double[newMetabNames.length];
 		double[] newStaticMedia = new double[newMetabNames.length];
 		boolean[] newIsStatic = new boolean[newMetabNames.length];
-		double[][] newExRxnStoich = exRxnStoich; //dimensions are ReactionID by MetID
-		double[][] newExRxnParams = exRxnParams; //same dims as exRxnStoich.
-		int[] newExRxnEnzymes = exRxnEnzymes; //index is the external reaction ID. value is the media index
+		//double[][] newExRxnStoich = exRxnStoich; //dimensions are ReactionID by MetID
+		//double[][] newExRxnParams = exRxnParams; //same dims as exRxnStoich.
+		//int[] newExRxnEnzymes = exRxnEnzymes; //index is the external reaction ID. value is the media index
 
 		// init everything to zeros and true.
 		for (int x = 0; x < numCols; x++)
@@ -937,6 +939,7 @@ public class FBAWorld extends World2D
 			}
 		}
 		
+		/*
 		// Apply the new media indices to the external reaction arrays, if they exist
 		int nExRxns = (exRxnStoich != null) ? exRxnStoich.length : 0;
 		for (int k = 0; k < newMediaIndices.length; k++)
@@ -953,7 +956,7 @@ public class FBAWorld extends World2D
 			if ((exRxnEnzymes[k] != -1) && (newMediaIndices[exRxnEnzymes[k]] != -1)){
 				newExRxnEnzymes[k] = newMediaIndices[exRxnEnzymes[k]];
 			}
-		}
+		}*/
 
 		// Apply the new model orders to the diffusion permissions
 		boolean[][][] newDiffBiomassIn = new boolean[numCols][numRows][newModels.length];
@@ -1010,9 +1013,6 @@ public class FBAWorld extends World2D
 		diffuseBiomassOut = newDiffBiomassOut;
 		numMedia = mediaNames.length;
 		numModels = newModels.length;
-		exRxnStoich = newExRxnStoich;
-		exRxnParams = newExRxnParams;
-		exRxnEnzymes = newExRxnEnzymes;
 
 		synchronizeWithModels();
 	}
@@ -1453,10 +1453,6 @@ public class FBAWorld extends World2D
 			return BOUNDS_ERROR;
 	}
 	
-	public synchronized int changeMediaByName(int x, int y, String[] names, double[] newMedia){
-		//TODO
-	}
-
 	@Override
 	/**
 	 * Updates the world whenever a size (number of columns or rows) occurs. Any new
@@ -2468,7 +2464,7 @@ public class FBAWorld extends World2D
 		}
 		
 		// 3. Run any extracellular reactions
-		if (exRxnStoich != null) executeExternalReactions();
+		reactionModel.run();
 
 		// 4. diffuse media and biomass
 		//for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
@@ -3837,35 +3833,4 @@ public class FBAWorld extends World2D
 		}
 	}
 
-	public double[][] getExRxnStoich() {
-		return exRxnStoich;
-	}
-
-	public void setExRxnStoich(double[][] exRxnStoich) {
-		this.exRxnStoich = exRxnStoich;
-	}
-
-	public double[][] getExRxnParams() {
-		return exRxnParams;
-	}
-
-	public void setExRxnParams(double[][] exRxnParams) {
-		this.exRxnParams = exRxnParams;
-	}
-
-	public double[] getExRxnRateConstants() {
-		return exRxnRateConstants;
-	}
-
-	public void setExRxnRateConstants(double[] exRxnRateConstants) {
-		this.exRxnRateConstants = exRxnRateConstants;
-	}
-
-	public int[] getExRxnEnzymes() {
-		return exRxnEnzymes;
-	}
-
-	public void setExRxnEnzymes(int[] exRxnEnzymes) {
-		this.exRxnEnzymes = exRxnEnzymes;
-	}
 }

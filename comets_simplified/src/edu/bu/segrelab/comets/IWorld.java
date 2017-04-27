@@ -2,13 +2,17 @@ package edu.bu.segrelab.comets;
 
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 
-/**An interface to hold components that are shared between 2D and 3D worlds
+/**An interface to hold components that are shared between 2D and 3D worlds.
+ *
+ * Ideally, all worlds should be 3D worlds but the 2D world implementation exists
+ * as a legacy artifact. In the future, 2D worlds should be eliminated and the code
+ * in this interface should be folded into World3D.
  * 
  * @author mquintin
  */
-public interface IWorld {
+public interface IWorld {	
 	
-	final ReactionModel reactionModel = new ReactionModel();
+	ReactionModel reactionModel = new ReactionModel(); //static. We only need one.
 	
 	abstract double[] getMediaAt(int x, int y, int z);
 	
@@ -33,4 +37,10 @@ public interface IWorld {
 	default boolean is3D(){
 		return getDims()[2] > 1;
 	}
+	
+	abstract void runExternalReactions();
+	
+	abstract Comets getComets();
+	
+	abstract String[] getMediaNames();
 }
