@@ -780,8 +780,10 @@ public class FBAWorld extends World2D
 		}
 		
 		//preserve metabolites which are involved in extracellular reactions
-		String[] exRxnMets = IWorld.reactionModel.getMediaNames();
-		for (int i = 0; i < exRxnMets.length; i++) mediaNamesMap.put(exRxnMets[i], new Integer(1));
+		//String[] exRxnMets = IWorld.reactionModel.getMediaNames();
+		//if (exRxnMets != null){
+		//	for (int i = 0; i < exRxnMets.length; i++) mediaNamesMap.put(exRxnMets[i], new Integer(1));
+		//}
 		
 		if (DEBUG) System.out.println(mediaNamesMap.size() + " total nutrients");
 		
@@ -862,7 +864,7 @@ public class FBAWorld extends World2D
 		 * newMetabNames) and set that layer to be the equal to the old media
 		 * values
 		 */
-		int[] newMediaIndices = new int[newMetabNames.length];
+		int[] newMediaIndices = new int[mediaNames.length];
 		for (int k=0; k<newMetabNames.length; k++)
 			newMediaIndices[k] = -1;
 		for (int k=0; k<mediaNames.length; k++)
@@ -2464,8 +2466,9 @@ public class FBAWorld extends World2D
 		}
 		
 		// 3. Run any extracellular reactions
-		reactionModel.run();
-
+		if (reactionModel.isSetUp()){
+			reactionModel.run();
+		}
 		// 4. diffuse media and biomass
 		//for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
 		//{

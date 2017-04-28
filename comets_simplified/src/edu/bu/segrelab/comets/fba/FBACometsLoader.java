@@ -742,10 +742,12 @@ CometsConstants
 						
 						//set global External Reactions
 						IWorld.reactionModel.setWorld((IWorld) world);
+						IWorld.reactionModel.setMediaNames(mediaNames);
 						IWorld.reactionModel.setExRxnEnzymes(exRxnEnzymes);
 						IWorld.reactionModel.setExRxnParams(exRxnParams);
 						IWorld.reactionModel.setExRxnRateConstants(exRxnRateConstants);
 						IWorld.reactionModel.setExRxnStoich(exRxnStoich);
+						IWorld.reactionModel.saveState();
 						IWorld.reactionModel.setup();
 						
 						System.out.println("Done!");
@@ -887,10 +889,12 @@ CometsConstants
 
 						//set global External Reactions
 						IWorld.reactionModel.setWorld((IWorld) world);
+						IWorld.reactionModel.setMediaNames(mediaNames);
 						IWorld.reactionModel.setExRxnEnzymes(exRxnEnzymes);
 						IWorld.reactionModel.setExRxnParams(exRxnParams);
 						IWorld.reactionModel.setExRxnRateConstants(exRxnRateConstants);
 						IWorld.reactionModel.setExRxnStoich(exRxnStoich);
+						IWorld.reactionModel.saveState();
 						IWorld.reactionModel.setup();
 						
 						System.out.println("Done!");

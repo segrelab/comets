@@ -23,8 +23,17 @@ public class ReactionModel extends Model implements CometsConstants {
 	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
 	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
 	//depending on if the reaction is enzymatic
-	protected boolean isSetUp; //setup() should only be run once
+	protected boolean isSetUp;
 
+	//These store the initial values. Since the model addition/removal process may be called multiple times,
+	//we would otherwise get in trouble if setup() is invoked more than once 
+	protected double[][] initialExRxnStoich; 
+	protected double[] initialExRxnRateConstants; 
+	protected int[] initialExRxnEnzymes; 
+	protected double[][] initialExRxnParams; 
+	protected String[] initialMetNames;
+
+	
 	protected IWorld world;
 	//protected boolean worldIs3D = false;
 	//protected int x,y,z;
@@ -41,6 +50,8 @@ public class ReactionModel extends Model implements CometsConstants {
 
 	@Override
 	public int run() {
+		if (!isSetUp) return 0; //don't do anything if there aren't reactions to run
+		
 		int[] worldIdxs = getMediaIdxs(); //locations of the media in the world's lists
 		//loop over all cells
 		int[] dims = world.getDims();
@@ -169,8 +180,14 @@ public class ReactionModel extends Model implements CometsConstants {
 	 * 
 	 */
 	public void setup() {
-		if (isSetUp) return; //this should only be run once, after setting
-		//raw arrays to the exRxn_ fields
+		if (initialExRxnParams == null || initialExRxnRateConstants == null || initialExRxnStoich == null){
+			if ((exRxnStoich == null ||	exRxnRateConstants == null || exRxnEnzymes == null)){
+				//There isn't enough information to go on. Do nothing
+				return;
+			}
+				else saveState(); //the current arrays will be the new initial state
+		}
+		reset(); //Because setup should only be run when arrays are in their initial state
 		
 		String[] allNames = world.getMediaNames();
 		int totalMedia = allNames.length;
@@ -235,4 +252,32 @@ public class ReactionModel extends Model implements CometsConstants {
 		return null;
 	}
 
+	//lock the current arrays in as the "initial" values.
+	public void saveState(){
+		initialExRxnEnzymes = exRxnEnzymes;
+		initialExRxnParams = exRxnParams;
+		initialExRxnRateConstants = exRxnRateConstants;
+		initialExRxnStoich = exRxnStoich;
+		initialMetNames = metNames;
+	}
+	
+	/**Restore the saved "initial" values. A process which reorders the media
+	*(such as world.changeModelsInWorld() should call this class's setup() function
+	*which organizes arrays based on the input file. So this is how we load the state
+	*after the initial loading process.
+	***/
+	public void reset(){
+		exRxnEnzymes = initialExRxnEnzymes;
+		exRxnParams = initialExRxnParams;
+		exRxnRateConstants = initialExRxnRateConstants;
+		exRxnStoich = initialExRxnStoich;
+		metNames = initialMetNames;
+		isSetUp = false;
+		nmets = 0;
+		nrxns = 0;
+	}
+	
+	public boolean isSetUp(){
+		return isSetUp;
+	}
 }

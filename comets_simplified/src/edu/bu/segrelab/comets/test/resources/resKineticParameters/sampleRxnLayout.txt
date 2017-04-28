@@ -1,4 +1,4 @@
-model_file model_CSP_biomass.txt
+model_file Reset_enze.txt
 	model_world
 		grid_size 1 1
 		world_media
@@ -10,12 +10,29 @@ model_file model_CSP_biomass.txt
 		product1 0
 		product2 0
 		product3 0
+		enz[e] 0
+    	enz_inactive[e] 0
+    	PseudoOrganism_Biomass_Mock 0
+	//
+	diffusion_constants 1.0e-6
+	1 0
+	2 0
+	3 0
+	4 0
+	5 0
+	6 0
+	7 0
+	8 0
+	9 0
+	10 0
+	11 0
 	//
 	media
 	//
+//
 	initial_pop
-	0 0 1 1
-	//
+	0 0 1
+//
 	reactions
 		reactants
 		1 1 1 0.02
@@ -29,7 +46,6 @@ model_file model_CSP_biomass.txt
 		2 7
 		3 8
 	//
-//
 	parameters
 	maxCycles = 20
 	pauseOnStep = false
@@ -58,7 +74,7 @@ model_file model_CSP_biomass.txt
 	numRunThreads = 1
 	growthDiffRate = 0
 	flowDiffRate = 0
-	biomassMotionStyle = Diffusion (Eight Point)
+	biomassMotionStyle = Diffusion 2D(Crank-Nicolson)
 	exchangeStyle = Monod Style
 	defaultKm = 0.01
 	defaultHill = 2
