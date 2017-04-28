@@ -1868,9 +1868,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 					exchVmax = new double[numExch];
 					for (int i=0; i<numExch; i++)
-					{
 						exchVmax[i] = defaultVmax;
-					}
+						
 					String vMaxLine = null;
 					blockOpen = true;
 					while (!(vMaxLine = reader.readLine().trim()).equalsIgnoreCase("//"))

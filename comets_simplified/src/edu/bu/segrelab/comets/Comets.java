@@ -94,7 +94,7 @@ public class Comets implements CometsConstants,
 	 * by each cell just runs through a diffusion routine.
 	 */
 	public static boolean DIFFUSION_TEST_MODE = false;
-	private String versionString = "2.4.0, 07 April 2017";
+	private String versionString = "2.4.1, 1 May 2017";
 
 	// The setup pane 
 	private CometsSimRunner runner;

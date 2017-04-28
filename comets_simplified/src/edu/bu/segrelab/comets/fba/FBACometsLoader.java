@@ -591,7 +591,7 @@ public class FBACometsLoader implements CometsLoader,
 						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
 						if (mediaRefresh != null)
 						{
-							//world.setMediaRefreshAmount(mediaRefresh);
+							world.setMediaRefreshAmount(mediaRefresh);
 							for (RefreshPoint rp : refreshPoints)
 							{
 								world.addMediaRefreshSpace(rp);
@@ -604,7 +604,7 @@ public class FBACometsLoader implements CometsLoader,
 							{
 								world.addStaticMediaSpace(sp);
 							}
-							//world.setGlobalStaticMedia(staticMedia, globalStatic);
+							world.setGlobalStaticMedia(staticMedia, globalStatic);
 						}
 						
 						// set barrier spaces.
@@ -1022,6 +1022,7 @@ public class FBACometsLoader implements CometsLoader,
             models[i].setDefaultVmax(pParams.getDefaultVmax());
             models[i].setDefaultAlpha(pParams.getDefaultAlpha());
             models[i].setDefaultW(pParams.getDefaultW());
+            models[i] = FBAModel.loadModelFromFile(f.getPath());
 			
 			System.out.println("Done!\n Testing default parameters...");
 			int result = models[i].run();
@@ -1634,6 +1635,8 @@ public class FBACometsLoader implements CometsLoader,
 			globalStatic[i/2] = Integer.valueOf(header[i]) == 1;
 			staticMedia[i/2] = Double.valueOf(header[i+1]);
 		}
+		System.out.println("HERE  "+globalStatic[243]);
+		System.out.println("HERE  "+staticMedia[243]);
 
 		for (String line : lines)
 		{
