@@ -954,7 +954,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			fbaModels[i] = (FBAModel)newModels[i];
 	}
 	
-	public void runExternalReactions(){
+	/*public void runExternalReactions(){
 		ReactionModel rm;
 		double[] newMedia;
 		
@@ -977,7 +977,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			world3D.setMedia(x, y, z, newMedia);
 		}
 		
-	}
+	}*/
 	
 	/**Return the full list of media in this cell position
 	 * 

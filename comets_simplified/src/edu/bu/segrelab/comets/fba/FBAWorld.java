@@ -780,10 +780,14 @@ public class FBAWorld extends World2D
 		}
 		
 		//preserve metabolites which are involved in extracellular reactions
+		IWorld.reactionModel.reset();
+		IWorld.reactionModel.setup();
 		//String[] exRxnMets = IWorld.reactionModel.getMediaNames();
-		//if (exRxnMets != null){
-		//	for (int i = 0; i < exRxnMets.length; i++) mediaNamesMap.put(exRxnMets[i], new Integer(1));
-		//}
+		//if (exRxnMets == null || exRxnMets.length < 1) exRxnMets = IWorld.reactionModel.getInitialMetNames();
+		String[] exRxnMets = IWorld.reactionModel.getInitialMetNames();
+		if (exRxnMets != null){
+			for (int i = 0; i < exRxnMets.length; i++) mediaNamesMap.put(exRxnMets[i], new Integer(1));
+		}
 		
 		if (DEBUG) System.out.println(mediaNamesMap.size() + " total nutrients");
 		
@@ -941,25 +945,6 @@ public class FBAWorld extends World2D
 			}
 		}
 		
-		/*
-		// Apply the new media indices to the external reaction arrays, if they exist
-		int nExRxns = (exRxnStoich != null) ? exRxnStoich.length : 0;
-		for (int k = 0; k < newMediaIndices.length; k++)
-		{
-			if (newMediaIndices[k] != -1)
-			{
-				for (int m = 0; m < nExRxns; m++){
-					newExRxnStoich[m][newMediaIndices[k]] = exRxnStoich[m][k];
-					newExRxnParams[m][newMediaIndices[k]] = exRxnParams[m][k];
-				}
-			}
-		}
-		for (int k = 0; k < nExRxns; k++){
-			if ((exRxnEnzymes[k] != -1) && (newMediaIndices[exRxnEnzymes[k]] != -1)){
-				newExRxnEnzymes[k] = newMediaIndices[exRxnEnzymes[k]];
-			}
-		}*/
-
 		// Apply the new model orders to the diffusion permissions
 		boolean[][][] newDiffBiomassIn = new boolean[numCols][numRows][newModels.length];
 		boolean[][][] newDiffBiomassOut = new boolean[numCols][numRows][newModels.length];
@@ -2466,6 +2451,7 @@ public class FBAWorld extends World2D
 		}
 		
 		// 3. Run any extracellular reactions
+		//if (!reactionModel.isSetUp()) reactionModel.setup();
 		if (reactionModel.isSetUp()){
 			reactionModel.run();
 		}

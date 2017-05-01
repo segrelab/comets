@@ -66,8 +66,8 @@ public class ExternalReactionCalculator{
 	//requires that the order of in the 'concentrations' argument corresponds to the order in the second
 	//dimension of the given matrixes
 	public double[] calcRxnRates(double[] concs){
-		double[] rates = new double[concs.length];
-		for (int i = 0; i < concs.length; i++){
+		double[] rates = new double[stoich.length];
+		for (int i = 0; i < stoich.length; i++){
 			//TODO: This method has been changed to no longer return the value for a certain metabolite...   rates[i] = calcRxnRate(stoich,params,kcats,concentrations,i);
 			rates[i] = calcRxnRate(i, concs);
 		}
@@ -91,11 +91,11 @@ public class ExternalReactionCalculator{
 		if (hasEnz){ //enzymatic reaction
 			int eIdx = exRxnEnzymes[rxnIdx]; //enzyme index
 			double eCon = concentrations[eIdx];
-			double km = params[rxnIdx][eIdx];
 			double kcat = exRxnRateConstants[rxnIdx];
 			
 			int subIdx = ((int[]) Utility.findNonzeroValues(params[rxnIdx]))[0]; //substrate index
 			double subCon = concentrations[subIdx];
+			double km = params[rxnIdx][subIdx];
 			
 			rate = (kcat * eCon * subCon) / (km + subCon); //Michaelis-Menten rate
 		}

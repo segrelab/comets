@@ -68,6 +68,7 @@ CometsConstants
 	//protected ReactionModel reactionModel;
 	private List<Cell> cellList;
 	private String mediaFileName;
+	private String[] initialMediaNames;
 	protected FBAParameters pParams;   // 'pParams' keeps inline with PackageParameters
 	private LayoutSavePanel layoutSavePanel = null;
 	private boolean useGui;
@@ -332,6 +333,7 @@ CometsConstants
 							state = parseWorldMediaBlock(lines, media);
 
 							numMedia = media.size();
+							
 						}
 
 						/****************** MEDIA REFRESH **********************/
@@ -421,13 +423,6 @@ CometsConstants
 							pParams.setDefaultDiffusionConstant(Double.parseDouble(worldParsed[1]));
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseMediaDiffusionConstantsBlock(lines, diffConsts);
-						}
-						
-						/****************** MODEL-FREE REACTIONS ********************/
-						else if (worldParsed[0].equalsIgnoreCase(REACTIONS))
-						{
-							List<String> lines = collectLayoutFileBlock(reader);
-							state = parseReactionsBlock(lines);
 						}
 
 						/****************** DIFFUSION CONSTANTS BY SUBSTRATE ********************/
@@ -596,6 +591,7 @@ CometsConstants
 					{
 						world = new FBAWorld(c, mediaNames, mediaConc, models);
 						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
+						if (initialMediaNames != null) world.setInitialMediaNames(initialMediaNames);
 						if (mediaRefresh != null)
 						{
 							//world.setMediaRefreshAmount(mediaRefresh);
@@ -740,16 +736,6 @@ CometsConstants
 							world.setSubstrateFriction(substrateFrictionConsts);
 						}
 						
-						//set global External Reactions
-						IWorld.reactionModel.setWorld((IWorld) world);
-						IWorld.reactionModel.setMediaNames(mediaNames);
-						IWorld.reactionModel.setExRxnEnzymes(exRxnEnzymes);
-						IWorld.reactionModel.setExRxnParams(exRxnParams);
-						IWorld.reactionModel.setExRxnRateConstants(exRxnRateConstants);
-						IWorld.reactionModel.setExRxnStoich(exRxnStoich);
-						IWorld.reactionModel.saveState();
-						IWorld.reactionModel.setup();
-						
 						System.out.println("Done!");
 					}
 					else if(c.getParameters().getNumLayers()>1)
@@ -758,6 +744,7 @@ CometsConstants
 						world3D = new FBAWorld3D(c, mediaNames, mediaConc, models);
 
 						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
+						if (initialMediaNames != null) world.setInitialMediaNames(initialMediaNames);
 						if (mediaRefresh != null)
 						{
 							world3D.setMediaRefreshAmount(mediaRefresh);
@@ -886,19 +873,16 @@ CometsConstants
 							}
 						}
 						world3D.setDiffusionConstants(diffusionConsts);
-
-						//set global External Reactions
-						IWorld.reactionModel.setWorld((IWorld) world);
-						IWorld.reactionModel.setMediaNames(mediaNames);
-						IWorld.reactionModel.setExRxnEnzymes(exRxnEnzymes);
-						IWorld.reactionModel.setExRxnParams(exRxnParams);
-						IWorld.reactionModel.setExRxnRateConstants(exRxnRateConstants);
-						IWorld.reactionModel.setExRxnStoich(exRxnStoich);
-						IWorld.reactionModel.saveState();
-						IWorld.reactionModel.setup();
 						
 						System.out.println("Done!");
 					}
+				}
+				
+				/****************** MODEL-FREE REACTIONS ********************/
+				else if (parsed[0].equalsIgnoreCase(REACTIONS))
+				{
+					List<String> lines = collectLayoutFileBlock(reader);
+					parseReactionsBlock(lines);
 				}
 
 				/**************** INITIAL CELL POPULATION ***************/
@@ -1171,6 +1155,7 @@ CometsConstants
 		 * as what's in the model files. Guess we'll do some checking
 		 * on that in the "assemble FBAWorld section" later on...
 		 */
+		List<String> mediaNames = new ArrayList<String>(); //track the full list of media names in the order they're input
 		int mediaCount = 0;
 		for (String line : lines)
 		{
@@ -1186,9 +1171,15 @@ CometsConstants
 			else
 			{
 				media.put(mediaParsed[0], new Point2D.Double(Double.parseDouble(mediaParsed[1]), mediaCount));
+				mediaNames.add(mediaParsed[0]);
 				mediaCount++;
 			}
 		}
+		
+		initialMediaNames = new String[mediaCount];
+		for (int i = 0; i < mediaCount; i++) initialMediaNames[i] = mediaNames.get(i);
+		IWorld.reactionModel.setInitialMetNames(initialMediaNames);
+		
 		return LoaderState.OK;
 	}
 
@@ -1555,6 +1546,17 @@ CometsConstants
 				break;
 			}
 		}
+		
+		//set global External Reactions
+		IWorld.reactionModel.setWorld((IWorld) world);
+		IWorld.reactionModel.setMediaNames(initialMediaNames);
+		IWorld.reactionModel.setExRxnEnzymes(exRxnEnzymes);
+		IWorld.reactionModel.setExRxnParams(exRxnParams);
+		IWorld.reactionModel.setExRxnRateConstants(exRxnRateConstants);
+		IWorld.reactionModel.setExRxnStoich(exRxnStoich);
+		IWorld.reactionModel.saveState();
+		IWorld.reactionModel.setup();
+		
 		return LoaderState.OK;
 	}
 

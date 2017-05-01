@@ -29,6 +29,7 @@ public abstract class World3D implements CometsConstants, IWorld
 	protected boolean[][][] barrier;			  // true if that space is a barrier
 	protected Model[] models;				  // reference to the list of Models
 	protected String[] mediaNames;			  // list of names of all media, in order
+	protected String[] initialMediaNames;	  // list of names in the order given in the input file
 	protected RefreshPoint[][][] refreshPoints; // grid of RefreshPoints
 	protected double[] mediaRefresh;		  // amount of media to refresh across the World2D
 	
@@ -1115,6 +1116,10 @@ public abstract class World3D implements CometsConstants, IWorld
 		if (reactionModel.getNrxns() < 1) return;
 		else reactionModel.run(); //the ReactionModel handles updating this world's media
 	}
-
 	
+	public void setInitialMediaNames(String[] arr){initialMediaNames = arr;}
+	
+	public String[] getInitialMediaNames(){return initialMediaNames;}
+
+	public boolean is3D(){return true;}
 }

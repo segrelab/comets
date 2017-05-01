@@ -463,10 +463,15 @@ implements CometsConstants
 		}
 		
 		//preserve metabolites which are involved in extracellular reactions
+		//preserve metabolites which are involved in extracellular reactions
+		IWorld.reactionModel.reset();
+		IWorld.reactionModel.setup();
 		//String[] exRxnMets = IWorld.reactionModel.getMediaNames();
-		//if (exRxnMets != null){
-		//	for (int i = 0; i < exRxnMets.length; i++) mediaNamesMap.put(exRxnMets[i], new Integer(1));
-		//}
+		//if (exRxnMets == null || exRxnMets.length < 1) exRxnMets = IWorld.reactionModel.getInitialMetNames();
+		String[] exRxnMets = IWorld.reactionModel.getInitialMetNames();
+		if (exRxnMets != null){
+			for (int i = 0; i < exRxnMets.length; i++) mediaNamesMap.put(exRxnMets[i], new Integer(1));
+		}
 		
 		if (DEBUG) System.out.println(mediaNamesMap.size() + " total nutrients");
 
@@ -2171,6 +2176,7 @@ implements CometsConstants
 
 
 		// 3. Run any extracellular reactions
+		//if (!reactionModel.isSetUp()) reactionModel.setup();
 		if (reactionModel.isSetUp()){
 			if (exRxnStoich != null) executeExternalReactions();
 		}

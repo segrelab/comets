@@ -61,7 +61,7 @@ public class ReactionModel extends Model implements CometsConstants {
 					//pull the concentrations of the media involved in the reactions
 					double[] worldMedia = world.getMediaAt(x, y, z);
 					double[] rxnMedia = new double[worldIdxs.length];
-					for (int i = 0; 0 < worldIdxs.length; i++){
+					for (int i = 0; i < worldIdxs.length; i++){
 						rxnMedia[i] = worldMedia[worldIdxs[i]];
 					}
 					
@@ -70,6 +70,12 @@ public class ReactionModel extends Model implements CometsConstants {
 					ExternalReactionCalculator calc = 
 							new ExternalReactionCalculator(rxnMedia,exRxnEnzymes,exRxnRateConstants,exRxnStoich,exRxnParams,timestep_seconds);
 					double[] result = calc.rk4();
+					
+					if (DEBUG){
+						String resStr = "";
+						for (double d : result) resStr = resStr + " " + String.valueOf(d);
+						System.out.println("Extracellular reaction results: " + resStr);
+					}
 					
 					//apply the changed media to the appropriate position in the full media list
 					for (int i = 0; i < worldIdxs.length; i++){
@@ -189,8 +195,11 @@ public class ReactionModel extends Model implements CometsConstants {
 		}
 		reset(); //Because setup should only be run when arrays are in their initial state
 		
-		String[] allNames = world.getMediaNames();
+		String[] allNames = initialMetNames;
 		int totalMedia = allNames.length;
+		
+		if (totalMedia < 1) return; //there's no media, so nothing to do here.
+		
 		boolean[] used = new boolean[totalMedia];
 		nrxns = exRxnRateConstants.length;
 		for (int rxn = 0; rxn < nrxns; rxn++){
@@ -209,7 +218,7 @@ public class ReactionModel extends Model implements CometsConstants {
 		nmets = count;
 		
 		//build the mapping to new indexes
-		int[] idxmap = new int[count]; //index is the old Idx, value is the new one
+		int[] idxmap = new int[totalMedia]; //index is the old Idx, value is the new one
 		String[] newNames = new String[count]; //get the names while we're here
 		int newIdx = 0;
 		for (int i = 0; i < totalMedia; i++){
@@ -219,7 +228,7 @@ public class ReactionModel extends Model implements CometsConstants {
 				newNames[newIdx] = allNames[i];
 				newIdx++;
 			}
-			else idxmap[i] = -1;
+			else idxmap[i] = -1; //the metabolite is never used
 		}
 		
 		//collapse the arrays
@@ -228,7 +237,9 @@ public class ReactionModel extends Model implements CometsConstants {
 		int[] newEnzymes = new int[nrxns];
 		
 		for (int rxn = 0; rxn < nrxns; rxn++){
-			newEnzymes[rxn] = idxmap[exRxnEnzymes[rxn]]; //exRxnEnzymes values are indexes
+			if (exRxnEnzymes[rxn] == -1){newEnzymes[rxn] = -1;}
+			else {newEnzymes[rxn] = idxmap[exRxnEnzymes[rxn]];} //exRxnEnzymes values are indexes
+			
 			for (int met = 0; met < totalMedia; met++){
 				if (exRxnStoich[rxn][met] != 0){
 					newStoich[rxn][idxmap[met]] = exRxnStoich[rxn][met];
@@ -244,6 +255,8 @@ public class ReactionModel extends Model implements CometsConstants {
 		exRxnStoich = newStoich;
 		exRxnParams = newParams;
 		metNames = newNames;
+		
+		isSetUp = true;
 	}
 
 	@Override
@@ -267,17 +280,43 @@ public class ReactionModel extends Model implements CometsConstants {
 	*after the initial loading process.
 	***/
 	public void reset(){
-		exRxnEnzymes = initialExRxnEnzymes;
-		exRxnParams = initialExRxnParams;
-		exRxnRateConstants = initialExRxnRateConstants;
-		exRxnStoich = initialExRxnStoich;
-		metNames = initialMetNames;
 		isSetUp = false;
+
+		metNames = initialMetNames;
 		nmets = 0;
+		if (metNames != null) nmets = metNames.length;
 		nrxns = 0;
+		if (initialExRxnStoich != null)	nrxns = initialExRxnStoich.length;
+
+		exRxnEnzymes = new int[nrxns];
+		exRxnParams = new double[nrxns][nmets];
+		exRxnRateConstants = new double[nrxns];
+		exRxnStoich = new double[nrxns][nmets];
+		
+		//don't just assign the old arrays to the new ones. Doing it this way
+		//pads the ends of the arrays to all have the proper length of metabolites
+		if (nmets > 0 && nrxns > 0){
+			int initialmets = initialExRxnStoich[1].length;
+			for (int r = 0; r < nrxns; r++){
+				exRxnEnzymes[r] = initialExRxnEnzymes[r];
+				exRxnRateConstants[r] = initialExRxnRateConstants[r];
+				for (int m = 0; m < initialmets; m++){
+					exRxnParams[r][m] = initialExRxnParams[r][m];
+					exRxnStoich[r][m] = initialExRxnStoich[r][m];
+				}
+			}
+		}		
 	}
 	
 	public boolean isSetUp(){
 		return isSetUp;
 	}
+	
+	public void setInitialMetNames(String[] arr){
+		initialMetNames = arr;
+		metNames = arr;
+	}
+
+	public String[] getInitialMetNames() {return initialMetNames;}
+	
 }

@@ -1,5 +1,8 @@
 package edu.bu.segrelab.comets;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 
 /**An interface to hold components that are shared between 2D and 3D worlds.
@@ -13,6 +16,7 @@ import edu.bu.segrelab.comets.reaction.ReactionModel;
 public interface IWorld {	
 	
 	ReactionModel reactionModel = new ReactionModel(); //static. We only need one.
+	//List<String> initialMediaNames = new ArrayList<String>();
 	
 	abstract double[] getMediaAt(int x, int y, int z);
 	
@@ -34,13 +38,16 @@ public interface IWorld {
 	 */
 	abstract int setMedia(int x, int y, int z, double[] delta);
 	
-	default boolean is3D(){
-		return getDims()[2] > 1;
-	}
-	
+	abstract boolean is3D();
+		
 	abstract void runExternalReactions();
 	
 	abstract Comets getComets();
 	
 	abstract String[] getMediaNames();
+	
+	abstract void setInitialMediaNames(String[] arr);
+	
+	abstract String[] getInitialMediaNames();
+
 }
