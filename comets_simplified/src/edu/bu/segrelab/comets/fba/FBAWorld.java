@@ -2658,7 +2658,6 @@ public class FBAWorld extends World2D
 		// 3. diffuse media and biomass
 		//for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
 		//{
-		System.out.println("Vector"+pParams.getDefaultVelocityVector()[1]);
 			if (diffuseContext)
 			{
 				if(pParams.getDefaultVelocityVector()[0]==0.0 && pParams.getDefaultVelocityVector()[1]==0.0)
@@ -2693,7 +2692,7 @@ public class FBAWorld extends World2D
 					diffuseMediaFick();
 				//else
 				//	convectMedia(pParams.getDefaultVelocityVector());
-				System.out.println("Fick");
+				//System.out.println("Fick");
 			}
 			switch (pParams.getBiomassMotionStyle())
 			{

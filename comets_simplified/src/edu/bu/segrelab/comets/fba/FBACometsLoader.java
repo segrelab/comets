@@ -1635,8 +1635,7 @@ public class FBACometsLoader implements CometsLoader,
 			globalStatic[i/2] = Integer.valueOf(header[i]) == 1;
 			staticMedia[i/2] = Double.valueOf(header[i+1]);
 		}
-		System.out.println("HERE  "+globalStatic[243]);
-		System.out.println("HERE  "+staticMedia[243]);
+		
 
 		for (String line : lines)
 		{
