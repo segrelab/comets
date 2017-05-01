@@ -83,7 +83,7 @@ public class FBAParameters implements PackageParameters
 			//Before 3D was introduced, old versions didn't include "2D" in
 			//this style. This check is needed to not break older input files
 			if (name.equalsIgnoreCase("Diffusion (Crank-Nicolson)")){
-				name = "Diffusion 2D(Crank-Nicolson)";
+				return DIFFUSION_CN;
 			}
 			
 			for (BiomassMotionStyle style : BiomassMotionStyle.values())
