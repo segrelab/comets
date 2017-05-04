@@ -1,4 +1,4 @@
-model_file Reset_enze.txt
+model_file React_enze.txt Reset_enze.txt
 	model_world
 		grid_size 1 1
 		world_media
@@ -6,46 +6,56 @@ model_file Reset_enze.txt
 		mediaB 2
 		mediaC 1
 		mediaD 1
-		enzyme .001
+		enzyme .05
 		product1 0
 		product2 0
 		product3 0
-		enz[e] 0
-    	enz_inactive[e] 0
-    	PseudoOrganism_Biomass_Mock 0
+		biomass_pseudo 0
+		glc-D[e] 0
+		cellulase_active[e] 0
+		cellulase_inactive[e] 0
+		cellulose[e] 0
 	//
-	diffusion_constants 1.0e-6
-	1 0
-	2 0
-	3 0
-	4 0
-	5 0
-	6 0
-	7 0
-	8 0
-	9 0
-	10 0
-	11 0
+	diffusion_constants 1.000000e-06
+		1 0
+		2 0
+		3 0
+		4 0
+		5 0
+		6 0
+		7 0
+		8 0
+		9 0
+		10 0
+		11 0
+		12 0
+		13 0
 	//
 	media
 	//
-//
-	initial_pop
-	0 0 1
-//
-	reactions
-		reactants
-		1 1 1 0.02
-		1 2
-		2 3 2 0.02
-		3 4 0.5
-		enzymes
-		3 5 0.25
-		products
-		1 6
-		2 7
-		3 8
+	media_refresh 0 0 0 0 0 0 0 0 0 0 0 0 0
 	//
+	static_media 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+	//
+	barrier
+	//
+//
+initial_pop
+	0 0 1 1
+//	
+reactions
+	reactants
+	1 1 1 0.02
+	1 2
+	2 3 2 0.02
+	3 4 0.5
+	enzymes
+	3 5 0.25
+	products
+	1 6
+	2 7
+	3 8
+//
 	parameters
 	maxCycles = 20
 	pauseOnStep = false
@@ -59,7 +69,7 @@ model_file Reset_enze.txt
 	activateRate = 0.001
 	toroidalWorld = false
 	randomOrder = false
-	pixelScale = 5
+	pixelScale = 10
 	showCycleTime = true
 	showCycleCount = true
 	colorRelative = true
@@ -82,13 +92,13 @@ model_file Reset_enze.txt
 	defaultAlpha = 1
 	defaultW = 10
 	writeFluxLog = false
-	FluxLogName = log_flux.m
+	FluxLogName = C:\sync\biomes\enz\javamod\log_flux.m
 	FluxLogRate = 1
 	writeMediaLog = true
-	MediaLogName = log_media.m
+	MediaLogName = C:\sync\biomes\enz\javamod\log_media.m
 	MediaLogRate = 1
 	writeBiomassLog = false
-	BiomassLogName = log_biomass.m
+	BiomassLogName = C:\sync\biomes\enz\javamod\log_biomass.m
 	BiomassLogRate = 1
 	writeTotalBiomassLog = false
 	totalBiomassLogRate = 1

@@ -24,16 +24,15 @@ import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
  */
 public class IntTestExternalReactions {
 	
-	/* Functions to build:
+	/* Functions to check:
 	 * -load rxns from file
 	 * -calculate d[S]/dt for a given set of reactants
 	 * -apply calculated reactant flux for one (sub)timestep
 	 * 
-	 * Features to build:
+	 * Features to check:
 	 * -store reactive molecules in each reaction
 	 * -store Km and kcat for each reaction
 	 * -differentiate between Substrate and Catalyst role for each reactant in each rxn
-	 * 
 	 * 
 	 * Questions:
 	 * -rate equation for rxns where two reactants are consumed, there is no enzyme
@@ -67,6 +66,7 @@ public class IntTestExternalReactions {
 	public void setUp() throws Exception {
 	}
 
+	/*
 	@Test
 	public void testSampleRxnLayout() {
 		Comets.EXIT_AFTER_SCRIPT = false;
@@ -75,6 +75,17 @@ public class IntTestExternalReactions {
 		Comets comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
 				"-script", scriptURL.getPath()});
 		int x = 1; //landing pad for breakpoint
+	}*/
+	
+	@Test
+	public void testLoadFile(){
+		URL scriptURL = TestKineticParameters.class.getResource("../resources/resKineticParameters/sampleRxnLayout.txt");
+		Comets comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
+				"-script", scriptURL.getPath()});
+		//int x = 1; //landing pad for breakpoint
 	}
+	
+	
+	
 
 }

@@ -786,8 +786,14 @@ public class FBAWorld extends World2D
 		//if (exRxnMets == null || exRxnMets.length < 1) exRxnMets = IWorld.reactionModel.getInitialMetNames();
 		String[] exRxnMets = IWorld.reactionModel.getInitialMetNames();
 		if (exRxnMets != null){
-			for (int i = 0; i < exRxnMets.length; i++) mediaNamesMap.put(exRxnMets[i], new Integer(1));
+			for (int i = 0; i < exRxnMets.length; i++){
+				if (!mediaNamesMap.keySet().contains(exRxnMets[i])){
+				mediaNamesMap.put(exRxnMets[i], new Integer(1));
+				newDiffConsts.putIfAbsent(exRxnMets[i], nutrientDiffConsts[i]);
+				}
+			}
 		}
+		
 		
 		if (DEBUG) System.out.println(mediaNamesMap.size() + " total nutrients");
 		
@@ -844,9 +850,7 @@ public class FBAWorld extends World2D
 		double[] newMediaRefresh = new double[newMetabNames.length];
 		double[] newStaticMedia = new double[newMetabNames.length];
 		boolean[] newIsStatic = new boolean[newMetabNames.length];
-		//double[][] newExRxnStoich = exRxnStoich; //dimensions are ReactionID by MetID
-		//double[][] newExRxnParams = exRxnParams; //same dims as exRxnStoich.
-		//int[] newExRxnEnzymes = exRxnEnzymes; //index is the external reaction ID. value is the media index
+		double[] newNutrientDiffConsts = new double[newMetabNames.length];
 
 		// init everything to zeros and true.
 		for (int x = 0; x < numCols; x++)
@@ -868,7 +872,7 @@ public class FBAWorld extends World2D
 		 * newMetabNames) and set that layer to be the equal to the old media
 		 * values
 		 */
-		int[] newMediaIndices = new int[mediaNames.length];
+		int[] newMediaIndices = new int[newMetabNames.length];
 		for (int k=0; k<newMetabNames.length; k++)
 			newMediaIndices[k] = -1;
 		for (int k=0; k<mediaNames.length; k++)
@@ -901,8 +905,10 @@ public class FBAWorld extends World2D
 					{
 						newMedia[x][y][newMediaIndices[k]] = media[x][y][k];
 						newDiffMediaIn[x][y][newMediaIndices[k]] = diffuseMediaIn[x][y][k];
-						newDiffMediaOut[x][y][newMediaIndices[k]] = diffuseMediaOut[x][y][k];						
+						newDiffMediaOut[x][y][newMediaIndices[k]] = diffuseMediaOut[x][y][k];
+						newNutrientDiffConsts[newMediaIndices[k]] = newDiffConsts.get(newMetabNames[k]);
 					}
+					else newNutrientDiffConsts[k] = newDiffConsts.get(newMetabNames[k]);
 				}
 				if (staticPoints[x][y] != null)
 				{
@@ -1000,6 +1006,7 @@ public class FBAWorld extends World2D
 		diffuseBiomassOut = newDiffBiomassOut;
 		numMedia = mediaNames.length;
 		numModels = newModels.length;
+		nutrientDiffConsts = newNutrientDiffConsts;
 
 		synchronizeWithModels();
 	}
