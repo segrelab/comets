@@ -104,7 +104,7 @@ public class ExternalReactionCalculator{
 			double k = exRxnRateConstants[rxnIdx];
 			rate = k;
 			for (int i = 0; i < subIdxs.length; i ++){
-				rate *= Math.pow(concentrations[subIdxs[i]], params[rxnIdx][i]);
+				rate *= Math.pow(concentrations[subIdxs[i]], params[rxnIdx][subIdxs[i]]);
 			}
 		}
 		return rate;

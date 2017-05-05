@@ -59,7 +59,7 @@ reactions
 	parameters
 	maxCycles = 20
 	pauseOnStep = false
-	timeStep = 0.01
+	timeStep = 2.7778e-04
 	deathRate = 0
 	spaceWidth = 0.01
 	maxSpaceBiomass = 2.0002
