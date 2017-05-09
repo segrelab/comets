@@ -85,8 +85,7 @@ public class CometsSimRunner extends Thread
 				}
 	
 				// Test quit conditions, end simulation if required.
-				if (c.getCells().size() == 0 || 
-					(curCycle > c.getParameters().getMaxCycles() && c.getParameters().getMaxCycles() != UNLIMITED_CYCLES))
+				if (checkCompletion())
 				{
 					if (c.getParameters().getNumLayers()==1)
 						c.getWorld().endSimulation();
@@ -134,5 +133,20 @@ public class CometsSimRunner extends Thread
 			}
 		}
 		c.fireSimulationStateChangeEvent(new SimulationStateChangeEvent(SimulationStateChangeEvent.State.END));
+	}
+	
+	//*asynchronous* check of if we should start a new cycle 
+	public boolean checkCompletion(){
+		boolean complete = false;
+		
+		if (c.getCells().size() == 0 && !IWorld.reactionModel.isSetUp()) {
+			complete = true; //there's nothing left to run
+		}
+		
+		if (curCycle > c.getParameters().getMaxCycles() && c.getParameters().getMaxCycles() != UNLIMITED_CYCLES){
+			complete = true; //time's up
+		}
+		
+		return complete;
 	}
 }
