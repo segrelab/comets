@@ -286,7 +286,11 @@ public class ReactionModel extends Model implements CometsConstants {
 		nmets = 0;
 		if (metNames != null) nmets = metNames.length;
 		nrxns = 0;
-		if (initialExRxnStoich != null)	nrxns = initialExRxnStoich.length;
+		int initialmets = 0;
+		if (initialExRxnStoich != null)	{
+			nrxns = initialExRxnStoich.length;
+			if (initialExRxnStoich.length >= 1)	initialmets = initialExRxnStoich[0].length;
+		}
 
 		exRxnEnzymes = new int[nrxns];
 		exRxnParams = new double[nrxns][nmets];
@@ -296,7 +300,6 @@ public class ReactionModel extends Model implements CometsConstants {
 		//don't just assign the old arrays to the new ones. Doing it this way
 		//pads the ends of the arrays to all have the proper length of metabolites
 		if (nmets > 0 && nrxns > 0){
-			int initialmets = initialExRxnStoich[1].length;
 			for (int r = 0; r < nrxns; r++){
 				exRxnEnzymes[r] = initialExRxnEnzymes[r];
 				exRxnRateConstants[r] = initialExRxnRateConstants[r];
