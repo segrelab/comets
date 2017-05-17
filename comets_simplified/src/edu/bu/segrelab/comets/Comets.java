@@ -435,19 +435,23 @@ public class Comets implements CometsConstants,
 			{
 				line = line.trim();
 				String[] parsed = line.split("\\s+");
-			if (parsed[0].equalsIgnoreCase("load_comets_parameters") || line.startsWith("load_package_parameters"))
+				//edit MQ 5/17/2017: replace using parsed[1] with targetFile to allow
+				//cases where target file path includes spaces
+				String command = parsed[0];
+				String targetFile = line.substring(line.indexOf(parsed[1]));
+			if (command.equalsIgnoreCase("load_comets_parameters") || line.startsWith("load_package_parameters"))
 			{
-				loadParametersFile(parsed[1]);
+				loadParametersFile(targetFile);
 				cParams.setCommandLineOnly(true);
 				cParams.showGraphics(false);
 			}
-			else if (parsed[0].equalsIgnoreCase("load_layout"))
+			else if (command.equalsIgnoreCase("load_layout"))
 			{
 				// load a layout file
-				loadLayoutFile(parsed[1]);
+				loadLayoutFile(targetFile);
 			}
-			else if (parsed[0].equalsIgnoreCase("batch_list_file"))
-				batchListFile = parsed[1];
+			else if (command.equalsIgnoreCase("batch_list_file"))
+				batchListFile = targetFile;
 			else
 			        parameterSet.add(parsed);
 		}
