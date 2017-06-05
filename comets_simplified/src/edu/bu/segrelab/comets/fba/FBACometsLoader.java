@@ -61,6 +61,20 @@ CometsConstants
 		CANCELED,
 		ERROR
 	}
+	
+	private enum ReactionField{
+		REACTANTS,
+		ENZYMES,
+		PRODUCTS,
+		CONTINUE;
+		//awkward way to have a default value
+		public static ReactionField getField(String s){
+			if (s.equals(REACTANTS.name())) return REACTANTS;
+			else if (s.equals(ENZYMES.name())) return ENZYMES;
+			else if (s.equals(PRODUCTS.name())) return PRODUCTS;
+			else return CONTINUE;
+		}
+	}
 
 	private FBAWorld world;
 	private FBAWorld3D world3D;
@@ -102,6 +116,7 @@ CometsConstants
 			//								CIRCLES_POP = "circles",
 			//								FILLED_POP = "filled",
 			//								FILLED_RECT_POP = "filled_rect",
+			REACTIONS = "reactions",
 			BARRIER = "barrier",
 			MEDIA = "media",
 			PARAMETERS = "parameters",
@@ -110,11 +125,7 @@ CometsConstants
 			SUBSTRATE_FRICTION = "substrate_friction",
 			MODEL_DIFFUSIVITY = "model_diffusivity",
 			SUBSTRATE_LAYOUT = "substrate_layout",
-			SPECIFIC_MEDIA = "specific_media",
-			REACTIONS = "reactions",
-			REACTIONS_REACTANTS = "reactants",
-			REACTIONS_ENZYMES = "enzymes",
-			REACTIONS_PRODUCTS = "products";
+			SPECIFIC_MEDIA = "specific_media";
 	/**
 	 * Returns the recently loaded World2D.
 	 */
@@ -1389,7 +1400,7 @@ CometsConstants
 			//
 		 */
 		
-		String mode = null;
+		ReactionField mode = null;
 		double defaultKcat = pParams.getDefaultVmax(); //TODO? replace with a proper defaultKcat param
 		double defaultKm = pParams.getDefaultKm(); //TODO? replace with a param that's separate from the ones used by the exchange style
 		double defaultOrder = 1;
@@ -1431,19 +1442,19 @@ CometsConstants
 
 			String[] parsed = line.split("\\s+");
 			
-			switch (parsed[0].toLowerCase()){
-			case REACTIONS_REACTANTS: //ignore for now
-				mode = REACTIONS_REACTANTS;
+			switch (ReactionField.getField(parsed[0].toUpperCase())){
+			case REACTANTS: //ignore for now
+				mode = ReactionField.REACTANTS;
 				break;
-			case REACTIONS_PRODUCTS: //ignore for now
-				mode = REACTIONS_PRODUCTS;
+			case PRODUCTS: //ignore for now
+				mode = ReactionField.PRODUCTS;
 				break;
-			case REACTIONS_ENZYMES:
-				mode = REACTIONS_ENZYMES;
+			case ENZYMES:
+				mode = ReactionField.ENZYMES;
 				if (parsed.length > 1) defaultKcat = Double.parseDouble(parsed[1]);
 				break;
 			default:
-				if (REACTIONS_ENZYMES.equals(mode)){ //we're reading an Enzyme definition line
+				if (ReactionField.ENZYMES.equals(mode)){ //we're reading an Enzyme definition line
 					//values are rxnIdx, metaboliteIdx, kcat
 					Integer rxnIdx = Integer.parseInt(parsed[0]) -1; //TODO: Test case for when this isn't an integer
 					if (parsed.length == 1){
@@ -1471,18 +1482,18 @@ CometsConstants
 
 			String[] parsed = line.split("\\s+");
 
-			switch (parsed[0].toLowerCase()){
-			case REACTIONS_REACTANTS: 
-				mode = REACTIONS_REACTANTS;
+			switch (ReactionField.getField(parsed[0].toUpperCase())){
+			case REACTANTS: 
+				mode = ReactionField.REACTANTS;
 				if (parsed.length > 1) defaultKm = Double.parseDouble(parsed[1]);
 				break;
 
-			case REACTIONS_ENZYMES:
-				mode = REACTIONS_ENZYMES; //skip this block since it's been done
+			case ENZYMES:
+				mode = ReactionField.ENZYMES; //skip this block since it's been done
 				break;
 
-			case REACTIONS_PRODUCTS:
-				mode = REACTIONS_PRODUCTS;
+			case PRODUCTS:
+				mode = ReactionField.PRODUCTS;
 				break;
 
 			default: //The first value should be a reaction index. Process it according to the most recent header seen
@@ -1501,7 +1512,7 @@ CometsConstants
 				else (uniquenessCheck[rxnIdx][metIdx]) = true;
 								
 				switch (mode){
-				case REACTIONS_REACTANTS: //rxnIdx metIdx order/stoich/Km
+				case REACTANTS: //rxnIdx metIdx order/stoich/Km
 					//determine if this reaction has an enzyme
 					boolean hasEnz = exRxnEnzymes[rxnIdx] >= 0;
 					
@@ -1532,7 +1543,7 @@ CometsConstants
 					}
 					break;
 
-				case REACTIONS_PRODUCTS://rxnIdx metIdx stoich
+				case PRODUCTS://rxnIdx metIdx stoich
 					double stoich = 1.0;
 					if (parsed.length >= 3){
 						stoich = Double.valueOf(parsed[2]);
@@ -1541,9 +1552,9 @@ CometsConstants
 					break;
 
 				default:
-					if (REACTIONS_ENZYMES.equals(mode)) break;
+					if (ReactionField.ENZYMES.equals(mode)) break;
 					else throw new LayoutFileException("The first line after opening the REACTIONS block should begin with " +
-				 REACTIONS_REACTANTS.toUpperCase() + ", " + REACTIONS_ENZYMES.toUpperCase() + ", or " + REACTIONS_PRODUCTS.toUpperCase() +
+				ReactionField.REACTANTS + ", " + ReactionField.ENZYMES + ", or " + ReactionField.PRODUCTS +
 				 ". Subsequent lines should have a reaction ID, a metabolite index corresponding to the world_media block, and an optional" +
 				 " kinetic parameter.",lineCount);
 				}

@@ -159,6 +159,7 @@ public class FBAParameters implements PackageParameters
 				mediaLogRate = 1,
 				biomassLogRate = 1,
 				totalBiomassLogRate = 1,
+				numExRxnSubsteps = 5,
 				matFileRate = 1;
 	
 	private long randomSeed=0;
@@ -317,6 +318,9 @@ public class FBAParameters implements PackageParameters
 		
 		paramValues.put("numdiffperstep", new Integer(numDiffPerStep));
 		paramTypes.put("numdiffperstep", ParameterType.INT);
+		
+		paramValues.put("numexrxnsubsteps", new Integer(numExRxnSubsteps));
+		paramTypes.put("numexrxnsubsteps", ParameterType.INT);
 		
 		paramValues.put("randomseed", new Long(randomSeed));
 		paramTypes.put("randomseed", ParameterType.LONG);
@@ -491,6 +495,17 @@ public class FBAParameters implements PackageParameters
 	{
 		if (n >= 0)
 			numDiffPerStep = n;
+	}
+	
+	public int getNumExRxnSubsteps()
+	{
+		return numExRxnSubsteps; 
+	}
+	
+	public void setNumExRxnSubsteps(int n)
+	{
+		if (n > 1) numExRxnSubsteps = n;
+		else numExRxnSubsteps = 1;
 	}
 	
 	/**

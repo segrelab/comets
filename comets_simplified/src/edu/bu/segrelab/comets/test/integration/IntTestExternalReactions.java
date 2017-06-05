@@ -79,12 +79,22 @@ public class IntTestExternalReactions {
 	
 	@Test
 	public void testLoadFile(){
-		URL scriptURL = TestKineticParameters.class.getResource("../resources/resKineticParameters/sampleRxnLayout.txt");
+		URL scriptURL = TestKineticParameters.class.getResource("../resources/resKineticParameters/comets_script.txt");
 		Comets comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
 				"-script", scriptURL.getPath()});
 		//int x = 1; //landing pad for breakpoint
 	}
 	
+	/* When a metabolite would have its concentration fall below 0, split the timestep into smaller steps to improve accuracy
+	 * 
+	 */
+	@Test
+	public void testDepletionAndSubsteps(){
+		URL scriptURL = TestKineticParameters.class.getResource("../resources/resKineticParameters/comets_script.txt");
+		Comets comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
+				"-script", scriptURL.getPath()});
+		int x = 1; //landing pad for breakpoint
+	}
 	
 	
 

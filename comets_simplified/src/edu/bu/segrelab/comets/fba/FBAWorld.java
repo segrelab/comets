@@ -2373,7 +2373,7 @@ public class FBAWorld extends World2D
 //		return diff;
 //	}
 	
-	protected void executeExternalReactions(){
+	/*protected void executeExternalReactions(){
 		//get new media concentrations in the form double[x][y][z][mediaIdx]
 		//Since this is the 2d version of the world, always use z=0
 		RK4Runner rk4 = new RK4Runner(this.c);
@@ -2386,7 +2386,7 @@ public class FBAWorld extends World2D
 				media[x][y] = newMedia[x][y][0];
 			}
 		}
-	}
+	}*/
 
 	/**
 	 * Runs one cycle of the simulation on this <code>FBAWorld</code>. The simulation flow
