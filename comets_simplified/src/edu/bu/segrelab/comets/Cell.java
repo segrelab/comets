@@ -60,7 +60,7 @@ public abstract class Cell implements CometsConstants
 	 * @return a double array of biomass values.
 	 */
 	public abstract double[] getBiomass();
-
+	
 	/**
 	 * Modify the biomass of the <code>Cell</code> by an array of delta values, where each
 	 * element <i>i</i> corresponds to the <i>i</i>th <code>Model</code> currently loaded. 

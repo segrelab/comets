@@ -33,6 +33,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private double[] convectionRHS2;
 	private double[] deltaBiomass;
 	private double[][] fluxes;
+	private int[] FBAstatus;
 	  
 	private CometsParameters cParams;
 	private FBAParameters pParams;
@@ -84,6 +85,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.y = y;
 		id = getNewCellID();
 		deltaBiomass = new double[biomass.length];
+		FBAstatus = new int[biomass.length];
 		this.fbaModels = fbaModels;
 		this.world = world;
 		this.cParams = cParams;
@@ -137,6 +139,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.z = z;
 		id = getNewCellID();
 		deltaBiomass = new double[biomass.length];
+		FBAstatus = new int[biomass.length];
 		this.fbaModels = fbaModels;
 		this.world3D = world3D;
 		this.cParams = cParams;
@@ -498,6 +501,14 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	}
 	
 	/**
+	 * @return the status of FBA (feasible or infeasible).
+	 */
+	public int[] getFBAstatus()
+	{
+		return FBAstatus;
+	}
+	
+	/**
 	 * @return the fluxes calculated from the most recent FBA run for all species in the cell.
 	 * This is a 2D double array. Each double[i][j] represents flux j from species i.
 	 */
@@ -555,6 +566,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //		if (Comets.DIFFUSION_TEST_MODE)
 //			return CELL_OK;
 		deltaBiomass = new double[models.length];
+		FBAstatus = new int[models.length];
 		
 		double rho = 1.0;
 		
@@ -761,6 +773,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				
 				if (cParams.showGraphics())
 					cellColor = calculateColor();
+				
+				/***************** REPORT IF THERE IS AN INFEASIBLE SOLUTION ****************/
+				
 			}
 			else  //there's an error
 			{

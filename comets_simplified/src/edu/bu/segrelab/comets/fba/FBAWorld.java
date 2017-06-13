@@ -2721,10 +2721,14 @@ public class FBAWorld extends World2D
 			updateInfoPanel();
 
 		double[] totalBiomass = calculateTotalBiomass();
+		//int[] FBAstatus = getFBAstatus();
+		//TODO: Report if a model is infeasible
 		System.out.println ("Total biomass:");
 		for (int i=0; i<totalBiomass.length; i++)
 		{
 			System.out.println("Model " + i + ": " + totalBiomass[i]);
+			//if (FBAstatus[i]==0)
+			//	System.out.println("   Model "+ i + " is infeasible");
 		}
 
 		currentTimePoint++;

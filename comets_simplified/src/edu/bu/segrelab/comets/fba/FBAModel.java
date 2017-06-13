@@ -978,6 +978,15 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		 */
 		return fbaOptimizer.getObjectiveFluxSolution(biomassReaction);
 	}
+	
+	/**
+	 * Returns the status of FBA (feasible or infeasible).
+	 * @return
+	 */
+	public int getFBAstatus()
+	{
+		return fbaOptimizer.getFBAstatus();
+	}
 
 	/**
 	 * New and improved (hopefully) file loader.

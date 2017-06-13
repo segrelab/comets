@@ -30,6 +30,8 @@ public abstract class FBAOptimizer  implements edu.bu.segrelab.comets.CometsCons
 	
 	public abstract double getObjectiveFluxSolution(int objReaction);
 	
+	public abstract int getFBAstatus();
+	
 	public abstract int setObjectiveUpperBound(int objReaction, double ub);
 	
 	public abstract int setObjectiveLowerBound(int objReaction, double lb);
