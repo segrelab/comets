@@ -95,7 +95,7 @@ public class Comets implements CometsConstants,
 	 */
 	public static boolean DIFFUSION_TEST_MODE = false;
 	public static boolean EXIT_AFTER_SCRIPT = true;
-	private String versionString = "2.3.5, 16 May 2017";
+	private String versionString = "2.3.6, 20 June 2017";
 
 	// The setup pane 
 	private CometsSimRunner runner;
