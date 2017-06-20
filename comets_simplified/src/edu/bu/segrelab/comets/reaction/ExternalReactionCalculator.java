@@ -1,6 +1,7 @@
 package edu.bu.segrelab.comets.reaction;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import edu.bu.segrelab.comets.IWorld;
@@ -77,11 +78,11 @@ public class ExternalReactionCalculator{
 		return calcRxnRates(concentrations);
 	}
 		
-	/**Calculate the rate of a single reaction
+	/**Calculate the rate of a single reaction per timestep
 	 * 
-	 * Dimensions for the first three arguments are RxnIdx by MetaboliteIdx
+	 * The upper bound of the reaction rate is capped at consuming all of its substrate
 	 * 
-	 * @param idx Index of the reaction of interest in the first dimension of the matrixes
+	 * @param idx Index of the reaction of interest 
 	 * @return 
 	 */
 	public double calcRxnRate(int rxnIdx, double[] concentrations){
@@ -92,20 +93,56 @@ public class ExternalReactionCalculator{
 			int eIdx = exRxnEnzymes[rxnIdx]; //enzyme index
 			double eCon = concentrations[eIdx];
 			double kcat = exRxnRateConstants[rxnIdx];
+
+			//these parameters are used if km==0, then the substrate concentration doesn't matter
+			//and v = kcat*eCon
+			double subCon = 1.0;
+			double km = 0.0;
 			
-			int subIdx = ((int[]) Utility.findNonzeroValues(params[rxnIdx]))[0]; //substrate index
-			double subCon = concentrations[subIdx];
-			double km = params[rxnIdx][subIdx];
+			int[] subIdxArr = Utility.findNonzeroValues(params[rxnIdx]);
+			if (subIdxArr.length > 0){
+				int subIdx = subIdxArr[0]; //should only be one
+				subCon = concentrations[subIdx];
+				km = params[rxnIdx][subIdx];
+			}
 			
-			rate = (kcat * eCon * subCon) / (km + subCon); //Michaelis-Menten rate
+			double denom = km + subCon;
+			if (denom == 0.0){ rate = kcat * eCon;}
+			else{
+				rate = (kcat * eCon * subCon) / (km + subCon); //Michaelis-Menten rate
+			}
+
+			if (subIdxArr.length == 0){ //for the edge case/hack where km = 0
+				//find the substrate by the stoichiometry table instead
+				subIdxArr = Utility.findNonzeroValues(stoich[rxnIdx]);
+			}
+			if (subIdxArr.length > 0){
+				for (int i = 0; i < subIdxArr.length; i++){
+					//one of these will be the substrate. The rest are products
+					int idx = subIdxArr[i];
+					double s = stoich[rxnIdx][idx];
+					if (s < 0){
+						subCon = concentrations[idx];
+						double v = subCon / -s;
+						rate = Math.min(rate, v);
+						rate = Math.max(rate, 0); //TODO: Fix the calculation so we can remove this line
+					}
+				}
+			}
+			
 		}
 		else { //Simple reaction. r = k * [A]^a * [B]^b ...
 			int[] subIdxs = Utility.findNonzeroValues(params[rxnIdx]);
 			double k = exRxnRateConstants[rxnIdx];
 			rate = k;
+			double maxrate = -1;
 			for (int i = 0; i < subIdxs.length; i ++){
-				rate *= Math.pow(concentrations[subIdxs[i]], params[rxnIdx][subIdxs[i]]);
+				double irate = Math.pow(concentrations[subIdxs[i]], params[rxnIdx][subIdxs[i]]);
+				rate *= irate;
+				if (maxrate<0 || irate < maxrate) maxrate = irate;
 			}
+			if (maxrate < 0) maxrate = rate; //If for some reason there are no substrates, but this isn't where the breakage should be
+			rate = Math.min(rate, maxrate);
 		}
 		return rate;
 	}

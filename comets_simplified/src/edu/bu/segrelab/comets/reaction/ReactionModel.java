@@ -90,6 +90,13 @@ public class ReactionModel extends Model implements CometsConstants {
 						
 					}
 					
+					//TODO: Fix runSubstep so this isn't necessary. We should never get negative concentrations
+					for (int i = 0; i < result.length; i++){
+						if (result[i] < 0){
+							result[i] = 0;
+						}
+					}
+					
 					//apply the changed media to the appropriate position in the full media list
 					for (int i = 0; i < worldIdxs.length; i++){
 						worldMedia[worldIdxs[i]] = result[i];
@@ -123,6 +130,7 @@ public class ReactionModel extends Model implements CometsConstants {
 		}
 		if (depleted){
 			res1 = runSubstep(initMedia, res1, calc, iteration +1);
+			calc.timestep = ts/2;
 		}
 		
 		for (int i = 0; i < res1.length; i++){
@@ -144,6 +152,7 @@ public class ReactionModel extends Model implements CometsConstants {
 		}
 		if (depleted){
 			res2 = runSubstep(res1, res2, calc, iteration +1);
+			calc.timestep = ts/2;
 		}
 		
 		for (int i = 0; i < res2.length; i++){

@@ -1393,9 +1393,9 @@ CometsConstants
 		 * 	REACTANTS [defaultKm=1]
 				rxnIdx metIdx order/|stoich| k+   //simple rxn
 				rxnIdx metIdx km               //catalyzed
-				ENZYMES [defaultKcat]
+			ENZYMES [defaultKcat]
 				rxnIdx metIdx kcat
-				PRODUCTS 
+			PRODUCTS 
 				rxnIdx metIdx stoich
 			//
 		 */
