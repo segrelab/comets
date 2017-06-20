@@ -68,7 +68,7 @@ public class CometsParameters implements CometsConstants
 				   minSpaceBiomass = 1e-10,		// grams
 				   spaceWidth = 0.1,			// cm
 				   slideshowColorValue = 10,	
-				   spaceVolume = 1;				// ml
+				   spaceVolume = 0.001;				// ml (1 mL = 1 cm^3)
 	
 	private boolean isCommandLine = false,
 					showGraphics = true,

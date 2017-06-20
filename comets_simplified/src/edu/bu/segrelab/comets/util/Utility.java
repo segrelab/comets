@@ -945,6 +945,31 @@ public class Utility implements CometsConstants
 	}
 	
 	/**
+	 * Returns the right hand side of the 2D convection equation; includes diffusive term, plus a constant flow term.
+	 * @param biomass
+	 * @return
+	 */
+	public static double[][] getDiffusionFlowRHS(double[][] biomassDensity,double[][] convDiffConstField,boolean[][] barrier,double dX, double[] flowVelocityVector)
+	{   
+				
+        double[][] diffusionRHS=new double[biomassDensity.length][biomassDensity[0].length];
+        //double[][] diffusion=diffusionGradDGradRho(biomassDensity,convDiffConstField,barrier,dX,advection)+diffusionDLaplaceRho(biomassDensity,convDiffConstField,barrier,dX,advection);
+        double[][] diffusion=diffusionDLaplacianRho2Flow(biomassDensity,convDiffConstField,barrier,dX,flowVelocityVector);
+        for(int i=0;i<biomassDensity.length;i++)
+		{
+			for(int j=0;j<biomassDensity[0].length;j++)
+			{
+				diffusionRHS[i][j]=0.0;
+				if(!barrier[i][j])
+				{
+					diffusionRHS[i][j]+=diffusion[i][j];
+				}
+			}
+		}		
+		return diffusionRHS;
+	}
+	
+	/**
 	 * Returns the right hand side of the 3D convection equation; includes both advective and diffusive terms.
 	 * @param biomass
 	 * @return
@@ -1487,6 +1512,85 @@ public class Utility implements CometsConstants
 		}
 		return diffusion;
 	}
+	
+	public static double[][] diffusionDLaplacianRho2Flow(double[][] biomassDensity,double[][] convDiffConstField, boolean[][] barrier,double dX, double[] flowVelocityVector)
+	{
+		int numCols=biomassDensity.length;
+		int numRows=biomassDensity[0].length;
+		double[][] diffusion=new double[numCols][numRows];
+		System.out.println("HERE");
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				diffusion[i][j]=0.0;
+				//Do x direction first
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]) || convDiffConstField[i][j] == 0)
+				{
+					diffusion[i][j]+=0.0;
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					if(convDiffConstField[i+1][j] != 0){
+						diffusion[i][j]+=(convDiffConstField[i+1][j]+convDiffConstField[i][j])*0.5*(biomassDensity[i+1][j]-biomassDensity[i][j])/(dX*dX);
+					}
+					diffusion[i][j]-=flowVelocityVector[0]*(biomassDensity[i+1][j]-biomassDensity[i][j])/dX;
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					if(convDiffConstField[i-1][j] != 0){
+						diffusion[i][j]+=(convDiffConstField[i-1][j]+convDiffConstField[i][j])*0.5*(biomassDensity[i-1][j]-biomassDensity[i][j])/(dX*dX);
+					}
+					diffusion[i][j]-=flowVelocityVector[0]*(biomassDensity[i][j]-biomassDensity[i-1][j])/dX;
+				}	
+				else
+				{
+					if(convDiffConstField[i+1][j] != 0){
+						diffusion[i][j]+=(convDiffConstField[i+1][j]+convDiffConstField[i][j])*0.5*(biomassDensity[i+1][j]-biomassDensity[i][j])/(dX*dX);
+					}
+					if(convDiffConstField[i-1][j] != 0){
+						diffusion[i][j]+=(convDiffConstField[i-1][j]+convDiffConstField[i][j])*0.5*(biomassDensity[i-1][j]-biomassDensity[i][j])/(dX*dX);
+					}
+					//Flow term here
+					diffusion[i][j]-=flowVelocityVector[0]*0.5*(biomassDensity[i+1][j]-biomassDensity[i-1][j])/dX;
+				}
+				
+				//Then do y direction
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) ||(j!=0 && j!=(numCols-1) && barrier[i][j-1] && barrier[i][j+1])|| convDiffConstField[i][j] == 0)
+				{
+					diffusion[i][j]+=0.0;
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					if(convDiffConstField[i][j+1] != 0){
+						diffusion[i][j]+=(convDiffConstField[i][j+1]+convDiffConstField[i][j])*0.5*(biomassDensity[i][j+1]-biomassDensity[i][j])/(dX*dX);
+					}
+					diffusion[i][j]-=flowVelocityVector[1]*(biomassDensity[i][j+1]-biomassDensity[i][j])/dX;
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					if(convDiffConstField[i][j-1] != 0){
+						diffusion[i][j]+=(convDiffConstField[i][j-1]+convDiffConstField[i][j])*0.5*(biomassDensity[i][j-1]-biomassDensity[i][j])/(dX*dX);
+					}
+					diffusion[i][j]-=flowVelocityVector[1]*(biomassDensity[i][j]-biomassDensity[i][j-1])/dX;
+				}
+				else
+				{
+					if(convDiffConstField[i][j+1] != 0){
+						diffusion[i][j]+=(convDiffConstField[i][j+1]+convDiffConstField[i][j])*0.5*(biomassDensity[i][j+1]-biomassDensity[i][j])/(dX*dX);
+					}
+					if(convDiffConstField[i][j-1] != 0){
+						diffusion[i][j]+=(convDiffConstField[i][j-1]+convDiffConstField[i][j])*0.5*(biomassDensity[i][j-1]-biomassDensity[i][j])/(dX*dX);
+					}
+					//Flow term here
+					diffusion[i][j]-=flowVelocityVector[1]*0.5*(biomassDensity[i][j+1]-biomassDensity[i][j-1])/dX;					
+				}
+				//System.out.println("advection"+i+","+j+"    "+advection[i][j]);
+			}
+		}
+		return diffusion;
+	}
+	
 	
 	public static double[][] diffusionDLaplacianRho3(double[][] biomassDensity,double[][] convDiffConstField, boolean[][] barrier,double dX)
 	{

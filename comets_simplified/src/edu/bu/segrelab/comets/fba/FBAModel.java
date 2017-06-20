@@ -978,6 +978,15 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		 */
 		return fbaOptimizer.getObjectiveFluxSolution(biomassReaction);
 	}
+	
+	/**
+	 * Returns the status of FBA (feasible or infeasible).
+	 * @return
+	 */
+	public int getFBAstatus()
+	{
+		return fbaOptimizer.getFBAstatus();
+	}
 
 	/**
 	 * New and improved (hopefully) file loader.
@@ -1868,9 +1877,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 					exchVmax = new double[numExch];
 					for (int i=0; i<numExch; i++)
-					{
 						exchVmax[i] = defaultVmax;
-					}
+						
 					String vMaxLine = null;
 					blockOpen = true;
 					while (!(vMaxLine = reader.readLine().trim()).equalsIgnoreCase("//"))

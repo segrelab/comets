@@ -180,6 +180,8 @@ public class FBAParameters implements PackageParameters
 				   defaultAlpha = 1,
 				   defaultW = 10,
 				   defaultDiffConst = 1e-5;
+	private double[] defaultVelocityVector={0.0,0.0,0.0};
+					
 	
 	private Map<String, ParametersPanel> parametersPanels;
 	
@@ -471,6 +473,11 @@ public class FBAParameters implements PackageParameters
 		return defaultDiffConst;
 	}
 	
+	public double[] getDefaultVelocityVector()
+	{
+		return defaultVelocityVector;
+	}
+	
 	public void setDefaultDiffusionConstant(double d)
 	{
 		if (d < 0)
@@ -484,6 +491,13 @@ public class FBAParameters implements PackageParameters
 //		}
 		if (c.getWorld() != null)
 			((FBAWorld)c.getWorld()).setDefaultMediaDiffusionConstant(d);
+	}
+	
+	public void setDefaultVelocityVector(double Vx, double Vy, double Vz)
+	{
+		defaultVelocityVector[0] = Vx;
+		defaultVelocityVector[1] = Vy;
+		defaultVelocityVector[2] = Vz;
 	}
 	
 	public int getNumDiffusionsPerStep()
