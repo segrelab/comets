@@ -104,7 +104,6 @@ CometsConstants
 	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
 	
 	private static final String MODEL_FILE = "model_file",
-<<<<<<< HEAD
 			MODEL_WORLD = "model_world",
 			GRID_SIZE = "grid_size",
 			WORLD_MEDIA = "world_media",
@@ -126,31 +125,8 @@ CometsConstants
 			SUBSTRATE_FRICTION = "substrate_friction",
 			MODEL_DIFFUSIVITY = "model_diffusivity",
 			SUBSTRATE_LAYOUT = "substrate_layout",
-			SPECIFIC_MEDIA = "specific_media";
-=======
-								MODEL_WORLD = "model_world",
-								GRID_SIZE = "grid_size",
-								WORLD_MEDIA = "world_media",
-								MEDIA_REFRESH = "media_refresh",
-								STATIC_MEDIA = "static_media",
-								INITIAL_POP = "initial_pop",
-//								RANDOM_POP = "random",
-//								RANDOM_RECT_POP = "random_rect",
-//								SQUARE_POP = "square",
-//								CIRCLES_POP = "circles",
-//								FILLED_POP = "filled",
-//								FILLED_RECT_POP = "filled_rect",
-								BARRIER = "barrier",
-								MEDIA = "media",
-								PARAMETERS = "parameters",
-								DIFFUSION_CONST = "diffusion_constants",
-								SUBSTRATE_DIFFUSIVITY = "substrate_diffusivity",
-								SUBSTRATE_FRICTION = "substrate_friction",
-								MODEL_DIFFUSIVITY = "model_diffusivity",
-								SUBSTRATE_LAYOUT = "substrate_layout",
-								SPECIFIC_MEDIA = "specific_media",
-								VELOCITY_VECTORS = "velocity_vectors";
->>>>>>> branch 'master' of ssh://mquintin@crosstalk/fs/home04/segrelab/repositories/comets_simplified.git
+			SPECIFIC_MEDIA = "specific_media",
+			VELOCITY_VECTORS = "velocity_vectors";;
 	/**
 	 * Returns the recently loaded World2D.
 	 */
@@ -460,10 +436,7 @@ CometsConstants
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseMediaDiffusionConstantsBlock(lines, diffConsts);
 						}
-<<<<<<< HEAD
 
-=======
-						
 						/****************** VELOCITY CONSTANTS ********************/
 						
 						else if (worldParsed[0].equalsIgnoreCase(VELOCITY_VECTORS))
@@ -477,7 +450,6 @@ CometsConstants
 							//state = parseVelocityVectorsBlock(lines, velocityVectors);
 						}
 						
->>>>>>> branch 'master' of ssh://mquintin@crosstalk/fs/home04/segrelab/repositories/comets_simplified.git
 						/****************** DIFFUSION CONSTANTS BY SUBSTRATE ********************/
 
 						else if (worldParsed[0].equalsIgnoreCase(SUBSTRATE_DIFFUSIVITY))
@@ -1088,20 +1060,12 @@ CometsConstants
 			models[i].setFlowDiffusionConstant(pParams.getFlowDiffRate());
 			models[i].setGrowthDiffusionConstant(pParams.getGrowthDiffRate());
 			models[i].setDefaultHill(pParams.getDefaultHill());
-<<<<<<< HEAD
-			models[i].setDefaultKm(pParams.getDefaultKm());
-			models[i].setDefaultVmax(pParams.getDefaultVmax());
-			models[i].setDefaultAlpha(pParams.getDefaultAlpha());
-			models[i].setDefaultW(pParams.getDefaultW());
-
-=======
             models[i].setDefaultKm(pParams.getDefaultKm());
             models[i].setDefaultVmax(pParams.getDefaultVmax());
             models[i].setDefaultAlpha(pParams.getDefaultAlpha());
             models[i].setDefaultW(pParams.getDefaultW());
             models[i] = FBAModel.loadModelFromFile(f.getPath());
 			
->>>>>>> branch 'master' of ssh://mquintin@crosstalk/fs/home04/segrelab/repositories/comets_simplified.git
 			System.out.println("Done!\n Testing default parameters...");
 			int result = models[i].run();
 			System.out.print("Done!\nOptimizer status code = " + result + " ");

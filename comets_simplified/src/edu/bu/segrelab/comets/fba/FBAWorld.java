@@ -73,12 +73,6 @@ public class FBAWorld extends World2D
 	private double[][][] diffusionRHS2;
 	private int threadLock;						// while threaded FBA is running, this = number of cells remaining
 
-	//protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
-	//protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
-									//depending on if the reaction is enzymatic
-	//protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
-	//protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
-	
 	private FBAParameters pParams;
 	private CometsParameters cParams;
 	
@@ -2622,20 +2616,7 @@ public class FBAWorld extends World2D
 //		return diff;
 //	}
 	
-	/*protected void executeExternalReactions(){
-		//get new media concentrations in the form double[x][y][z][mediaIdx]
-		//Since this is the 2d version of the world, always use z=0
-		RK4Runner rk4 = new RK4Runner(this.c);
-		rk4.run();
-		double[][][][] newMedia = rk4.result;
-		
-		//cut out the Z dimension and apply the new media amounts
-		for (int x = 0; x < newMedia.length; x++){
-			for (int y = 0; y < newMedia[0].length; y++){
-				media[x][y] = newMedia[x][y][0];
-			}
-		}
-	}*/
+
 
 	/**
 	 * Runs one cycle of the simulation on this <code>FBAWorld</code>. The simulation flow

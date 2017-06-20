@@ -969,31 +969,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			fbaModels[i] = (FBAModel)newModels[i];
 	}
 	
-	/*public void runExternalReactions(){
-		ReactionModel rm;
-		double[] newMedia;
-		
-		if (world != null) {
-			rm = world.getReactionModel();
-		}
-		else if (world3D != null) {
-			rm = world3D.getReactionModel();
-		}
-		if (rm != null){ //run the algorithm
-			rm.setPos(x,y,z);
-			int status = rm.run();
-			newMedia = rm.media;
-		}
-		//apply the update
-		if (world != null){
-			world.setMedia(x, y, newMedia);
-		}
-		else if (world3D != null){
-			world3D.setMedia(x, y, z, newMedia);
-		}
-		
-	}*/
-	
 	/**Return the full list of media in this cell position
 	 * 
 	 * @return
