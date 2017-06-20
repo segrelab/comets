@@ -440,11 +440,19 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 					model.update();
 					model.optimize();
 					rxnFluxes=model.getVars();
-					
-					for(int i=0;i<rxnFluxes.length;i++){
-						fluxesModel[i]=rxnFluxes[i].get(GRB.DoubleAttr.X);
-					}
-					ret=0;
+					// check to see if optimal
+					int optimstatus = model.get(GRB.IntAttr.Status);
+					if (optimstatus == GRB.Status.OPTIMAL) {
+				    	for(int i=0;i<rxnFluxes.length;i++){
+							fluxesModel[i]=rxnFluxes[i].get(GRB.DoubleAttr.X);
+						}
+				    	ret=0;
+				    } else {
+				    	System.out.println("   Model is not feasible");
+				    	for(int i=0;i<rxnFluxes.length;i++){
+							fluxesModel[i]=0;
+						}
+				    }
 				}
 				catch(GRBException e){
 					System.out.println("Error code: " + e.getErrorCode() + ". " +
@@ -456,36 +464,60 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 					GRBLinExpr objective=new GRBLinExpr();
 					objective.addTerm(1.0, rxnFluxes[objReaction-1]);
 					model.setObjective(objective, GRB.MAXIMIZE);
+					model.update();
 					model.optimize();
 
 					rxnFluxes=model.getVars();
-					
-                    //Now do the minimization of the sum of absolute values.	
-					//Define new model for variables vPlus=(v+|v|)/2 and vMinus=(|v|-v)/2
-					//minimize Sum|v|=Sum(vPlus+vMinus) 
-					GRBLinExpr rxnExpressionAbsObj=new GRBLinExpr();
-					rxnExpressionAbsObj.addTerm(1, rxnFluxesPlus[objReaction-1]);
-					rxnExpressionAbsObj.addTerm(-1, rxnFluxesMinus[objReaction-1]);
-					char senseAbsObj=GRB.EQUAL;
-					double rhsValueAbsObj=rxnFluxes[objReaction-1].get(GRB.DoubleAttr.X);
-					modelAbs.addConstr( rxnExpressionAbsObj, senseAbsObj, rhsValueAbsObj, null);
-					GRBLinExpr objectiveAbs=new GRBLinExpr();
-					for(int k=0;k<rxnFluxesPlus.length;k++){
-						objectiveAbs.addTerm(1.0, rxnFluxesPlus[k]);
-						objectiveAbs.addTerm(1.0, rxnFluxesMinus[k]);
+					// check to see if optimal
+					int optimstatus = model.get(GRB.IntAttr.Status);
+					if (optimstatus == GRB.Status.OPTIMAL) {
+						//Now do the minimization of the sum of absolute values.	
+						//Define new model for variables vPlus=(v+|v|)/2 and vMinus=(|v|-v)/2
+						//minimize Sum|v|=Sum(vPlus+vMinus)
+						
+						// Fix the objective function value from the initial maximization
+						// 1*pos_obj_val - 1*neg_obj_val = obj_val
+						GRBLinExpr rxnExpressionAbsObj=new GRBLinExpr();
+						rxnExpressionAbsObj.addTerm(1, rxnFluxesPlus[objReaction-1]);
+						rxnExpressionAbsObj.addTerm(-1, rxnFluxesMinus[objReaction-1]);
+						char senseAbsObj=GRB.EQUAL;
+						double rhsValueAbsObj=rxnFluxes[objReaction-1].get(GRB.DoubleAttr.X);
+						modelAbs.addConstr( rxnExpressionAbsObj, senseAbsObj, rhsValueAbsObj, null);
+						// Minimize the sum of absolute fluxes
+						// min(1*pos_flux + 1*neg_flux)
+						GRBLinExpr objectiveAbs=new GRBLinExpr();
+						for(int k=0;k<rxnFluxesPlus.length;k++){
+							objectiveAbs.addTerm(1.0, rxnFluxesPlus[k]);
+							objectiveAbs.addTerm(1.0, rxnFluxesMinus[k]);
+						}
+						modelAbs.setObjective(objectiveAbs,GRB.MINIMIZE);
+						modelAbs.update();
+						modelAbs.optimize();
+						
+						rxnFluxesAbs=modelAbs.getVars();
+						// check to see if optimal
+						int optimstatusAbs = modelAbs.get(GRB.IntAttr.Status);
+						if (optimstatusAbs == GRB.Status.OPTIMAL) {
+							for(int k=0;k<rxnFluxesPlus.length;k++){
+								rxnFluxesPlus[k]=rxnFluxesAbs[k];
+								rxnFluxesMinus[k]=rxnFluxesAbs[rxnFluxesPlus.length+k];
+								
+								//Finally set the fluxes to a set that minimizes the sum of absolute values
+								fluxesModel[k]=rxnFluxesPlus[k].get(GRB.DoubleAttr.X)-rxnFluxesMinus[k].get(GRB.DoubleAttr.X);
+							}
+							ret=0;
+						} else {
+							System.out.println("   Model is not feasible in second optimization");
+							for(int i=0;i<rxnFluxes.length;i++){
+								fluxesModel[i]=0;
+							}
+						}
+					} else {
+						System.out.println("   Model is not feasible");
+						for(int i=0;i<rxnFluxes.length;i++){
+							fluxesModel[i]=0;
+						}
 					}
-					modelAbs.setObjective(objectiveAbs,GRB.MINIMIZE);
-					modelAbs.optimize();
-					
-					rxnFluxesAbs=modelAbs.getVars();
-					for(int k=0;k<rxnFluxesPlus.length;k++){
-						rxnFluxesPlus[k]=rxnFluxesAbs[k];
-						rxnFluxesMinus[k]=rxnFluxesAbs[rxnFluxesPlus.length+k];
-
-						//Finally set the fluxes to a set that minimizes the sum of absolute values
-						fluxesModel[k]=rxnFluxesPlus[k].get(GRB.DoubleAttr.X)-rxnFluxesMinus[k].get(GRB.DoubleAttr.X);
-					}
-					ret=0;
 					
 				}
 				catch(GRBException e){
@@ -609,6 +641,18 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		}
 		return -Double.MAX_VALUE;
 	}
+	
+	/**
+	 * Returns the status of FBA (feasible or infeasible).
+	 * @return
+	 */
+	public int getFBAstatus()
+	{
+		if (runSuccess)
+			return 1; // feasible
+		else
+			return 0; // not feasible
+	}
 
 
 
@@ -638,6 +682,34 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		
 		return PARAMS_OK;
 	}
+	
+	/**
+	 * Sets the lower bound on the objective reaction. 
+	 * @param objreact
+	 * @param lb
+	 * @return PARAMS_OK 
+	 */
+	
+	public int setObjectiveLowerBound(int objreact, double lb)
+	{
+		GRBVar[] objFlux=new GRBVar[1];
+		double[] lbarray=new double[1];
+		try{
+			rxnFluxes[objreact-1].set(GRB.DoubleAttr.LB, lb);
+			objFlux[0]=rxnFluxes[objreact-1];
+			lbarray[0]=lb;
+			model.set(GRB.DoubleAttr.LB,objFlux,lbarray);
+			model.update();
+		}
+		catch(GRBException e)
+		{
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+                    e.getMessage());
+		}
+		
+		return PARAMS_OK;
+	}
+	
 	
 	/**
 	 * Produces a clone of this <code>FBAOptimizerGurobi</code> with all parameters intact.

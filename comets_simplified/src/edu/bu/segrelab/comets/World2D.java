@@ -23,7 +23,7 @@ import edu.bu.segrelab.comets.util.Utility;
  * 
  * @author Bill Riehl briehl@bu.edu
  */
-public abstract class World2D implements CometsConstants
+public abstract class World2D implements CometsConstants, IWorld
 {
 	public static final int EMPTY_SPACE = 1,
 							FILLED_SPACE = 2,
@@ -43,6 +43,7 @@ public abstract class World2D implements CometsConstants
 	protected boolean[][] barrier;			  // true if that space is a barrier
 	protected Model[] models;				  // reference to the list of Models
 	protected String[] mediaNames;			  // list of names of all media, in order
+	protected String[] initialMediaNames;	  // list of names in the order given in the input file
 	protected RefreshPoint[][] refreshPoints; // grid of RefreshPoints
 	protected double[] mediaRefresh;		  // amount of media to refresh across the World2D
 	
@@ -250,15 +251,12 @@ public abstract class World2D implements CometsConstants
 			return null;
 	}
 	
-	/**
-	 * @return A <code>String</code> array of names for each nutrient in the media. This
-	 * will be in the same order at the other various media access methods.
-	 * @see #getAllMedia()
-	 * @see #getMediaAt(int, int)
-	 */
-	public String[] getMediaNames()
-	{
-		return mediaNames;
+	public double[] getMediaAt(int x, int y, int z){
+		if (z > 0){
+			throw new IllegalArgumentException("Attempted to lookup media in a position where z (" + 
+					Integer.valueOf(z).toString() + ") > 0, but the world is 2D.");
+		}
+		return getMediaAt(x,y);
 	}
 	
 	/**
@@ -412,7 +410,12 @@ public abstract class World2D implements CometsConstants
 		}
 		else
 			return BOUNDS_ERROR;
-
+	}
+	
+	public int setMedia(int x, int y, int z, double[] delta){
+		if (z > 0)
+			return BOUNDS_ERROR;
+		else return setMedia(x,y,delta);
 	}
 	
 	/**
@@ -1091,4 +1094,34 @@ public abstract class World2D implements CometsConstants
 			}
 		}
 	}
+	
+	public int[] getDims(){
+		return new int[]{numCols, numRows, 1};
+	}
+	
+	/**
+	 * @return A <code>String</code> array of names for each nutrient in the media. This
+	 * will be in the same order at the other various media access methods.
+	 * @see #getAllMedia()
+	 * @see #getMediaAt(int, int)
+	 */
+	public String[] getMediaNames(){
+		return mediaNames;
+	}
+	
+	public Comets getComets(){
+		return c;
+	}
+	
+	public void runExternalReactions(){
+		//if there's nothing to do, just return
+		if (reactionModel.getNrxns() < 1) return;
+		else reactionModel.run(); //the ReactionModel handles updating this world's media
+	}
+
+	public void setInitialMediaNames(String[] arr){initialMediaNames = arr;}
+	
+	public String[] getInitialMediaNames(){return initialMediaNames;}
+
+	public boolean is3D(){return false;}
 }

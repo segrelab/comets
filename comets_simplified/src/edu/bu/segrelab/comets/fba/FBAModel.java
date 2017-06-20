@@ -978,6 +978,15 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		 */
 		return fbaOptimizer.getObjectiveFluxSolution(biomassReaction);
 	}
+	
+	/**
+	 * Returns the status of FBA (feasible or infeasible).
+	 * @return
+	 */
+	public int getFBAstatus()
+	{
+		return fbaOptimizer.getFBAstatus();
+	}
 
 	/**
 	 * New and improved (hopefully) file loader.
@@ -1868,9 +1877,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 					exchVmax = new double[numExch];
 					for (int i=0; i<numExch; i++)
-					{
 						exchVmax[i] = defaultVmax;
-					}
+						
 					String vMaxLine = null;
 					blockOpen = true;
 					while (!(vMaxLine = reader.readLine().trim()).equalsIgnoreCase("//"))
@@ -2221,6 +2229,27 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	public int setObjectiveUpperBound(double ub)
 	{
 		return fbaOptimizer.setObjectiveUpperBound(objReaction, ub);
+	}
+	
+	/**
+	 * Sets the upper bound on the biomass reaction. 
+	 * @param ub
+	 * @return PARAMS_ERROR if ub < the current lb for the objective, PARAMS_OK otherwise
+	 */
+	public int setBiomassUpperBound(double ub)
+	{
+		return fbaOptimizer.setObjectiveUpperBound(biomassReaction, ub);
+	}
+	
+	/**
+	 * Sets the lower bound on the objective reaction. 
+	 * @param ulb
+	 * @return PARAMS_ERROR if lb > the current ub for the objective, PARAMS_OK otherwise
+	 */
+	
+	public int setObjectiveLowerBound(double lb)
+	{
+		return fbaOptimizer.setObjectiveLowerBound(objReaction, lb);
 	}
 	
 	/**

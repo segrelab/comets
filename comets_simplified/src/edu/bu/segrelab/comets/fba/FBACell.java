@@ -1,10 +1,13 @@
 package edu.bu.segrelab.comets.fba;
 
 import edu.bu.segrelab.comets.Cell;
+import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.Model;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.World3D;
+import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Utility;
 
 /**
@@ -33,6 +36,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private double[] convectionRHS2;
 	private double[] deltaBiomass;
 	private double[][] fluxes;
+	private int[] FBAstatus;
 	  
 	private CometsParameters cParams;
 	private FBAParameters pParams;
@@ -84,6 +88,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.y = y;
 		id = getNewCellID();
 		deltaBiomass = new double[biomass.length];
+		FBAstatus = new int[biomass.length];
 		this.fbaModels = fbaModels;
 		this.world = world;
 		this.cParams = cParams;
@@ -137,6 +142,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.z = z;
 		id = getNewCellID();
 		deltaBiomass = new double[biomass.length];
+		FBAstatus = new int[biomass.length];
 		this.fbaModels = fbaModels;
 		this.world3D = world3D;
 		this.cParams = cParams;
@@ -498,6 +504,14 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	}
 	
 	/**
+	 * @return the status of FBA (feasible or infeasible).
+	 */
+	public int[] getFBAstatus()
+	{
+		return FBAstatus;
+	}
+	
+	/**
 	 * @return the fluxes calculated from the most recent FBA run for all species in the cell.
 	 * This is a 2D double array. Each double[i][j] represents flux j from species i.
 	 */
@@ -555,21 +569,23 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //		if (Comets.DIFFUSION_TEST_MODE)
 //			return CELL_OK;
 		deltaBiomass = new double[models.length];
+		FBAstatus = new int[models.length];
 		
 		double rho = 1.0;
 		
 		// If we have multiple concurrent models in the cell, we want to update
 		// them all in random order.
 		int[] updateOrder = Utility.randomOrder(models.length);
-		//Commenting the above line and uncommenting below takes out 
-		//the randomization of the order in which the models are updated
-		//I.Dukovski 
-		//TODO: Parameterize this switch to give users the option
-		//int[] updateOrder = new int[models.length];
-		//for (int a=0; a<models.length; a++)
-		//{
-		//	updateOrder[a]=a;
-		//}
+		//unless cParams.randomOrder is false, 
+		//in which case we run each model in the same order every time
+		if (!pParams.getRandomOrder()){ 
+			updateOrder = new int[models.length];
+			for (int a=0; a<models.length; a++)
+			{
+				updateOrder[a]=a;
+			}
+		}
+		
 		for (int a=0; a<updateOrder.length; a++)
 		{
 			// i = the current model index to run.
@@ -591,131 +607,24 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				media = world.getModelMediaAt(x, y, i);
 			else if (cParams.getNumLayers() > 1)
 				media = world3D.getModelMediaAt(x, y, z, i);
-			double[] lb = ((FBAModel)models[i]).getBaseExchLowerBounds();
-			double[] ub = ((FBAModel)models[i]).getBaseExchUpperBounds();
-//			String[] exchNames = ((FBAModel)models[i]).getExchangeReactionNames();
-			if (DEBUG)
-				System.out.println("Exchange reaction bounds:");
-
-			double[] rates = new double[lb.length];
 			
-			switch (pParams.getExchangeStyle())
-			{
-				case MONOD :
-					double[] kmArr = ((FBAModel)models[i]).getExchangeKm();
-					double[] vMaxArr = ((FBAModel)models[i]).getExchangeVmax();
-					double[] hillCoeffArr = ((FBAModel)models[i]).getExchangeHillCoefficients();
-
-//					double[] vTilde = new double[hillCoeffArr.length];
-
-					for (int j=0; j<lb.length; j++)
-					{
-						double km = pParams.getDefaultKm();
-						if (kmArr != null && kmArr.length > j && kmArr[j] > 0)
-							km = kmArr[j];
-						double vMax = pParams.getDefaultVmax();
-						if (vMaxArr != null && vMaxArr.length > j && vMaxArr[j] > 0)
-							vMax = vMaxArr[j];
-						double hill = pParams.getDefaultHill();
-						if (hillCoeffArr != null && hillCoeffArr.length > j && hillCoeffArr[j] > 0)
-							hill = hillCoeffArr[j];
-
-						// Start of modified code corrected lb 9/19/13 Ilija D.
-						if(media[j]/(cParams.getTimeStep()*biomass[i])<calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill))
-						{
-							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(media[j]/(cParams.getTimeStep()*biomass[i])));
-						}
-						else
-						{
-							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
-						}
-							// End of modified code
-
-//						vTilde[j] = (vMax * Math.pow(media[j]/cParams.getSpaceVolume(), hill))/(km + Math.pow(media[j]/cParams.getSpaceVolume(), hill));
-//
-//						vTilde[j] = (vMax * cParams.getSpaceVolume() / biomass[i] * media[j]/cParams.getSpaceVolume()) / ((vMax * cParams.getSpaceVolume() / km) + media[j]/cParams.getSpaceVolume()); 
-//						vTilde[j] = (vMax * cParams.getSpaceVolume() / biomass[i] * Math.pow(media[j], hill) / ((vMax * cParams.getSpaceVolume() / km) + Math.pow(media[j], hill))); 
-						
-//						vTilde[j] = (vMax * (media[j]/cParams.getSpaceVolume())) / ((km + (media[j]/cParams.getSpaceVolume())*biomass[i]));
-//						lb[j] = -1 * vTilde[j]; // * cParams.getSpaceVolume() / (biomass[i]) * 3600;
-					}
-//					System.out.print("media");
-//					for (int j=0; j<lb.length; j++)
-//						System.out.print("\t" + media[j]);
-//					System.out.print("\nLB");
-//					for (int j=0; j<lb.length; j++)
-//						System.out.print("\t" + lb[j]);
-//					System.out.print("\nVT");
-//					for (int j=0; j<lb.length; j++)
-//						System.out.print("\t" + vTilde[j]);
-//					System.out.println();
-					break;
-					
-					
-				case PSEUDO_MONOD :
-					double[] alphaArr = ((FBAModel)models[i]).getExchangeAlphaCoefficients();
-					double[] wArr = ((FBAModel)models[i]).getExchangeWCoefficients();
-					
-					for (int j=0; j<lb.length; j++)
-					{
-						double alpha = pParams.getDefaultAlpha();
-						if (alphaArr != null && alphaArr.length > j && alphaArr[j] > 0)
-							alpha = alphaArr[j];
-						
-						double w = pParams.getDefaultW();
-						if (wArr != null && wArr.length > j && wArr[j] > 0)
-							w = wArr[j];
-						
-						rates[j] = Math.min(Math.abs(lb[j]),
-											Math.abs(calcPseudoMonodRate(media[j]/cParams.getSpaceVolume(), alpha, w)));
-
-//						lb[j] = -1 * Math.min(alpha * media[j], w * cParams.getSpaceVolume()) / biomass[i];
-					}
-					break;
-					
-					
-				default :  // STANDARD_EXCHANGE
-					for (int j=0; j<lb.length; j++)
-					{
-//						lb[j] = -1 * Math.abs(media[j] / (biomass[i] * cParams.getTimeStep()));
-
-//						lb[j] = -1 * Math.min(Math.abs(lb[j] / (biomass[i] * cParams.getTimeStep())),
-//											  Math.abs(media[j] / (biomass[i] * cParams.getTimeStep())));
-						
-						rates[j] = Math.min(Math.abs(lb[j]),
-											Math.abs(calcStandardExchange(media[j]/cParams.getSpaceVolume())));
-					}	
-					break;
-			}
-
-			for (int j=0; j<lb.length; j++)
-			{
-				lb[j] = -1 * rates[j]/rho;
-			}
-			if (DEBUG)
-			{
-				System.out.println("LOWER BOUNDS");
-				for (int j=0; j<lb.length; j++) 
-				{
-					System.out.println(lb[j]);
-				}
-				System.out.println("//");
-			}
-			((FBAModel)models[i]).setExchLowerBounds(lb);
+			double modelBiomass = biomass[i];
 			
-
+		    double[] lb = calculateMaxExchangeFluxes((FBAModel)models[i], media, modelBiomass, rho);
+		    
+		    ((FBAModel)models[i]).setExchLowerBounds(lb);
+		    
 			/************************* SET MAX BIOMASS *****************************/
-			((FBAModel)models[i]).setObjectiveUpperBound((cParams.getMaxSpaceBiomass() - (Utility.sum(biomass) + Utility.sum(deltaBiomass))) / (biomass[i] * cParams.getTimeStep()));
-//			((FBAModel)models[i]).setObjectiveUpperBound((cParams.getMaxSpaceBiomass() - (Utility.sum(biomass) + Utility.sum(deltaBiomass))));
+			((FBAModel)models[i]).setBiomassUpperBound((cParams.getMaxSpaceBiomass() - (Utility.sum(biomass) + Utility.sum(deltaBiomass))) / (biomass[i] * cParams.getTimeStep()));
 			
 			if (DEBUG)
 			{
 				System.out.println("ALL FLUX BOUNDS");
-				lb = ((FBAModel)models[i]).getLowerBounds();
-				ub = ((FBAModel)models[i]).getUpperBounds();
+				double[] debug_lb = ((FBAModel)models[i]).getLowerBounds();
+				double[] debug_ub = ((FBAModel)models[i]).getUpperBounds();
 				for (int j=0; j<lb.length; j++)
 				{
-					System.out.println(lb[j] + "\t" + ub[j]);
+					System.out.println(debug_lb[j] + "\t" + debug_ub[j]);
 				}
 			}
 			
@@ -761,6 +670,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				
 				if (cParams.showGraphics())
 					cellColor = calculateColor();
+				
+				/***************** REPORT IF THERE IS AN INFEASIBLE SOLUTION ****************/
+				
 			}
 			else  //there's an error
 			{
@@ -775,6 +687,107 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		}
 
 		return updateCellData(deltaBiomass, fluxes);
+	}
+	
+	/**Returns the maximum exchange flux (lower bound) based on the set ExchangeStyle
+	 * 
+	 * @param model
+	 * @param media the model-relevant media in the current cell as evaluated by 
+	 * FBAWorld.getModelMediaAt(), *Not* the complete list of media
+	 * @param modelBiomass the biomass of the model in the current cell
+	 * @param rho
+	 * @return
+	 */
+	private double[] calculateMaxExchangeFluxes(FBAModel model, double[] media, double modelBiomass, double rho){
+
+		double[] lb = model.getBaseExchLowerBounds();
+		//double[] ub = model.getBaseExchUpperBounds();
+		
+		if (DEBUG)
+			System.out.println("Exchange reaction bounds:");
+
+		double[] rates = new double[lb.length];
+		
+		switch (pParams.getExchangeStyle())
+		{
+			case MONOD :
+				double[] kmArr = model.getExchangeKm();
+				double[] vMaxArr = model.getExchangeVmax();
+				double[] hillCoeffArr = model.getExchangeHillCoefficients();
+
+//				double[] vTilde = new double[hillCoeffArr.length];
+
+				for (int j=0; j<lb.length; j++)
+				{
+					double km = pParams.getDefaultKm();
+					if (kmArr != null && kmArr.length > j && kmArr[j] > 0)
+						km = kmArr[j];
+					double vMax = pParams.getDefaultVmax();
+					if (vMaxArr != null && vMaxArr.length > j && vMaxArr[j] > 0)
+						vMax = vMaxArr[j];
+					double hill = pParams.getDefaultHill();
+					if (hillCoeffArr != null && hillCoeffArr.length > j && hillCoeffArr[j] > 0)
+						hill = hillCoeffArr[j];
+
+					// Start of modified code corrected lb 9/19/13 Ilija D.
+					if(media[j]/(cParams.getTimeStep()*modelBiomass)<calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill))
+					{
+						rates[j] = Math.min(Math.abs(lb[j]),Math.abs(media[j]/(cParams.getTimeStep()*modelBiomass)));
+					}
+					else
+					{
+						rates[j] = Math.min(Math.abs(lb[j]),Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
+					}
+				}
+
+				break;
+				
+				
+			case PSEUDO_MONOD :
+				double[] alphaArr = model.getExchangeAlphaCoefficients();
+				double[] wArr = model.getExchangeWCoefficients();
+				
+				for (int j=0; j<lb.length; j++)
+				{
+					double alpha = pParams.getDefaultAlpha();
+					if (alphaArr != null && alphaArr.length > j && alphaArr[j] > 0)
+						alpha = alphaArr[j];
+					
+					double w = pParams.getDefaultW();
+					if (wArr != null && wArr.length > j && wArr[j] > 0)
+						w = wArr[j];
+					
+					rates[j] = Math.min(Math.abs(lb[j]),
+										Math.abs(calcPseudoMonodRate(media[j]/cParams.getSpaceVolume(), alpha, w)));
+				}
+				break;
+				
+				
+			default :  // STANDARD_EXCHANGE
+				for (int j=0; j<lb.length; j++)
+				{
+					rates[j] = Math.min(Math.abs(lb[j]),
+										Math.abs(calcStandardExchange(media[j]/cParams.getSpaceVolume())));
+				}	
+				break;
+		}
+
+		for (int j=0; j<lb.length; j++)
+		{
+			lb[j] = -1 * rates[j]/rho;
+		}
+		
+		if (DEBUG)
+		{
+			System.out.println("LOWER BOUNDS");
+			for (int j=0; j<lb.length; j++) 
+			{
+				System.out.println(lb[j]);
+			}
+			System.out.println("//");
+		}
+		
+		return lb;
 	}
 	
 	private double calcMichaelisMentenRate(double mediaConc, double km, double vMax, double hill)
@@ -954,5 +967,25 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		fbaModels = new FBAModel[newModels.length];
 		for (int i=0; i<newModels.length; i++)
 			fbaModels[i] = (FBAModel)newModels[i];
+	}
+	
+	/**Return the full list of media in this cell position
+	 * 
+	 * @return
+	 */
+	public double[] getMedia(){
+		if(cParams.getNumLayers() == 1) //2d World
+			return world.getMediaAt(x,y);
+		else if (cParams.getNumLayers() > 1) //3D world
+			return world3D.getMediaAt(x, y, z);
+		return null;
+	}
+	
+	public Comets getComets(){
+		if(cParams.getNumLayers() == 1) //2d World
+			return world.getComets();
+		else if (cParams.getNumLayers() > 1) //3D world
+			return world3D.getComets();
+		return null;
 	}
 }

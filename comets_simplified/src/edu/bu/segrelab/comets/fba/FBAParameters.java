@@ -80,6 +80,12 @@ public class FBAParameters implements PackageParameters
 
 		public static BiomassMotionStyle findByName(String name)
 		{
+			//Before 3D was introduced, old versions didn't include "2D" in
+			//this style. This check is needed to not break older input files
+			if (name.equalsIgnoreCase("Diffusion (Crank-Nicolson)")){
+				return DIFFUSION_CN;
+			}
+			
 			for (BiomassMotionStyle style : BiomassMotionStyle.values())
 			{
 				if (style.toString().equalsIgnoreCase(name))
@@ -135,7 +141,8 @@ public class FBAParameters implements PackageParameters
 					writeBiomassLog,
 					writeTotalBiomassLog,
 					writeMatFile,
-					useLogNameTimeStamp;
+					useLogNameTimeStamp,
+					randomOrder = true; //shuffle the order each model in a cell is run
 	
 	private String fluxLogName,
 				   mediaLogName,
@@ -152,6 +159,7 @@ public class FBAParameters implements PackageParameters
 				mediaLogRate = 1,
 				biomassLogRate = 1,
 				totalBiomassLogRate = 1,
+				numExRxnSubsteps = 5,
 				matFileRate = 1;
 	
 	private long randomSeed=0;
@@ -172,6 +180,8 @@ public class FBAParameters implements PackageParameters
 				   defaultAlpha = 1,
 				   defaultW = 10,
 				   defaultDiffConst = 1e-5;
+	private double[] defaultVelocityVector={0.0,0.0,0.0};
+					
 	
 	private Map<String, ParametersPanel> parametersPanels;
 	
@@ -311,8 +321,14 @@ public class FBAParameters implements PackageParameters
 		paramValues.put("numdiffperstep", new Integer(numDiffPerStep));
 		paramTypes.put("numdiffperstep", ParameterType.INT);
 		
+		paramValues.put("numexrxnsubsteps", new Integer(numExRxnSubsteps));
+		paramTypes.put("numexrxnsubsteps", ParameterType.INT);
+		
 		paramValues.put("randomseed", new Long(randomSeed));
 		paramTypes.put("randomseed", ParameterType.LONG);
+		
+		paramValues.put("randomorder", new Boolean(randomOrder));
+		paramTypes.put("randomorder", ParameterType.BOOLEAN);
 	}
 	
 	public void loadParameterState()
@@ -328,6 +344,7 @@ public class FBAParameters implements PackageParameters
 		setBiomassLogName((String)paramValues.get("biomasslogname"));
 		setTotalBiomassLogName((String)paramValues.get("totalbiomasslogname"));
 		setMatFileName((String)paramValues.get("matfilename"));
+		setRandomOrder(((Boolean)paramValues.get("randomorder")).booleanValue());
 		
 		if(paramValues.get("fluxlogformat") instanceof String)
 			setFluxLogFormat(LogFormat.findByName((String)paramValues.get("fluxlogformat")));
@@ -456,6 +473,11 @@ public class FBAParameters implements PackageParameters
 		return defaultDiffConst;
 	}
 	
+	public double[] getDefaultVelocityVector()
+	{
+		return defaultVelocityVector;
+	}
+	
 	public void setDefaultDiffusionConstant(double d)
 	{
 		if (d < 0)
@@ -471,6 +493,13 @@ public class FBAParameters implements PackageParameters
 			((FBAWorld)c.getWorld()).setDefaultMediaDiffusionConstant(d);
 	}
 	
+	public void setDefaultVelocityVector(double Vx, double Vy, double Vz)
+	{
+		defaultVelocityVector[0] = Vx;
+		defaultVelocityVector[1] = Vy;
+		defaultVelocityVector[2] = Vz;
+	}
+	
 	public int getNumDiffusionsPerStep()
 	{
 		return numDiffPerStep;
@@ -480,6 +509,17 @@ public class FBAParameters implements PackageParameters
 	{
 		if (n >= 0)
 			numDiffPerStep = n;
+	}
+	
+	public int getNumExRxnSubsteps()
+	{
+		return numExRxnSubsteps; 
+	}
+	
+	public void setNumExRxnSubsteps(int n)
+	{
+		if (n > 1) numExRxnSubsteps = n;
+		else numExRxnSubsteps = 1;
 	}
 	
 	/**
@@ -1095,6 +1135,20 @@ public class FBAParameters implements PackageParameters
 	public void setRandomSeed(long seed)
 	{
 		randomSeed=seed;
+	}
+	
+	/** Should the models in a cell be run in a random order?
+	 * @return the randomOrder
+	 */
+	public boolean getRandomOrder() {
+		return randomOrder;
+	}
+
+	/** Should the models in a cell be run in a random order?
+	 * @param randomOrder the randomOrder to set
+	 */
+	public void setRandomOrder(boolean randomOrder) {
+		this.randomOrder = randomOrder;
 	}
 	
 	public String getLastDirectory()

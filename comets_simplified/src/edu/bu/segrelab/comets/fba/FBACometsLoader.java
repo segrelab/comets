@@ -35,6 +35,7 @@ import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.CometsLoader;
 import edu.bu.segrelab.comets.CometsParameters;
+import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.PackageParameterBatch;
 import edu.bu.segrelab.comets.ParametersFileHandler;
@@ -46,12 +47,13 @@ import edu.bu.segrelab.comets.exception.LayoutFileException;
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.exception.ParameterFileException;
 import edu.bu.segrelab.comets.fba.ui.LayoutSavePanel;
+import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 import edu.bu.segrelab.comets.util.Point3d;
 
 public class FBACometsLoader implements CometsLoader, 
-							 			CometsConstants
+CometsConstants
 {
 	private enum LoaderState
 	{
@@ -60,12 +62,28 @@ public class FBACometsLoader implements CometsLoader,
 		ERROR
 	}
 	
+	private enum ReactionField{
+		REACTANTS,
+		ENZYMES,
+		PRODUCTS,
+		CONTINUE;
+		//awkward way to have a default value
+		public static ReactionField getField(String s){
+			if (s.equals(REACTANTS.name())) return REACTANTS;
+			else if (s.equals(ENZYMES.name())) return ENZYMES;
+			else if (s.equals(PRODUCTS.name())) return PRODUCTS;
+			else return CONTINUE;
+		}
+	}
+
 	private FBAWorld world;
 	private FBAWorld3D world3D;
 	private FBAModel[] models;
+	//protected ReactionModel reactionModel;
 	private List<Cell> cellList;
 	private String mediaFileName;
-	private FBAParameters pParams;   // 'pParams' keeps inline with PackageParameters
+	private String[] initialMediaNames;
+	protected FBAParameters pParams;   // 'pParams' keeps inline with PackageParameters
 	private LayoutSavePanel layoutSavePanel = null;
 	private boolean useGui;
 	private Comets c;
@@ -79,28 +97,36 @@ public class FBACometsLoader implements CometsLoader,
 	private int[][] substrateLayout;
 	private double[][] specificMedia;
 	private double[][] substrateFrictionConsts;
+	protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
+	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
+									//depending on if the reaction is enzymatic
+	protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
+	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
+	
 	private static final String MODEL_FILE = "model_file",
-								MODEL_WORLD = "model_world",
-								GRID_SIZE = "grid_size",
-								WORLD_MEDIA = "world_media",
-								MEDIA_REFRESH = "media_refresh",
-								STATIC_MEDIA = "static_media",
-								INITIAL_POP = "initial_pop",
-//								RANDOM_POP = "random",
-//								RANDOM_RECT_POP = "random_rect",
-//								SQUARE_POP = "square",
-//								CIRCLES_POP = "circles",
-//								FILLED_POP = "filled",
-//								FILLED_RECT_POP = "filled_rect",
-								BARRIER = "barrier",
-								MEDIA = "media",
-								PARAMETERS = "parameters",
-								DIFFUSION_CONST = "diffusion_constants",
-								SUBSTRATE_DIFFUSIVITY = "substrate_diffusivity",
-								SUBSTRATE_FRICTION = "substrate_friction",
-								MODEL_DIFFUSIVITY = "model_diffusivity",
-								SUBSTRATE_LAYOUT = "substrate_layout",
-								SPECIFIC_MEDIA = "specific_media";
+			MODEL_WORLD = "model_world",
+			GRID_SIZE = "grid_size",
+			WORLD_MEDIA = "world_media",
+			MEDIA_REFRESH = "media_refresh",
+			STATIC_MEDIA = "static_media",
+			INITIAL_POP = "initial_pop",
+			//								RANDOM_POP = "random",
+			//								RANDOM_RECT_POP = "random_rect",
+			//								SQUARE_POP = "square",
+			//								CIRCLES_POP = "circles",
+			//								FILLED_POP = "filled",
+			//								FILLED_RECT_POP = "filled_rect",
+			REACTIONS = "reactions",
+			BARRIER = "barrier",
+			MEDIA = "media",
+			PARAMETERS = "parameters",
+			DIFFUSION_CONST = "diffusion_constants",
+			SUBSTRATE_DIFFUSIVITY = "substrate_diffusivity",
+			SUBSTRATE_FRICTION = "substrate_friction",
+			MODEL_DIFFUSIVITY = "model_diffusivity",
+			SUBSTRATE_LAYOUT = "substrate_layout",
+			SPECIFIC_MEDIA = "specific_media",
+			VELOCITY_VECTORS = "velocity_vectors";;
 	/**
 	 * Returns the recently loaded World2D.
 	 */
@@ -108,7 +134,7 @@ public class FBACometsLoader implements CometsLoader,
 	{ 
 		return world; 
 	}
-	
+
 	/**
 	 * Returns the recently loaded World3D.
 	 */
@@ -123,7 +149,7 @@ public class FBACometsLoader implements CometsLoader,
 	{ 
 		return models; 
 	}
-	
+
 	/**
 	 * Returns the recently loaded <code>List&lt;Cell&gt;</code> of cells (or an
 	 * empty list if there's none initialized.
@@ -132,7 +158,7 @@ public class FBACometsLoader implements CometsLoader,
 	{ 
 		return cellList; 
 	}
-	
+
 	/**
 	 * Returns the <code>PackageParameters</code> currently known by this loader. If
 	 * none has been created/loaded, this initializes a new one.
@@ -144,7 +170,7 @@ public class FBACometsLoader implements CometsLoader,
 			pParams = new FBAParameters(c);
 		return pParams;
 	}
-	
+
 	/**
 	 * Loads the layout file given by <code>filename</code> (must include
 	 * complete file path).
@@ -181,10 +207,10 @@ public class FBACometsLoader implements CometsLoader,
 		this.useGui = useGui;
 		this.c = c;
 		lineCount = 0;
-		
+
 		if (pParams == null)
 			getPackageParameters(c);
-		
+
 		System.out.println("Loading layout file '" + filename + "'...");
 		// get the path to that file.
 		/* First, we get the path to the file.
@@ -223,13 +249,14 @@ public class FBACometsLoader implements CometsLoader,
 
 			int numMedia;
 			double[] mediaRefresh = null,
-					 staticMedia = null;
+					staticMedia = null;
 			boolean[] globalStatic = null;
 
 			Set<Point> barrier = new HashSet<Point>();
 			Set<Point3d> barrier3D = new HashSet<Point3d>();
 			Map<Point, double[]> specMedia = new HashMap<Point, double[]>();
 			Map<Integer, Double> diffConsts = new HashMap<Integer, Double>();
+
 			List<int[]> noBiomassOut = new ArrayList<int[]>();
 			List<int[]> noBiomassIn = new ArrayList<int[]>();
 			List<int[]> noMediaOut = new ArrayList<int[]>();
@@ -245,7 +272,7 @@ public class FBACometsLoader implements CometsLoader,
 				// ignore empty lines.
 				if (line.length() == 0)
 					continue;
-				
+
 				String[] parsed = line.split("\\s+");
 				/*
 				 * Each line (or opening line for a block) starts with an
@@ -278,7 +305,7 @@ public class FBACometsLoader implements CometsLoader,
 					 */
 
 					models = new FBAModel[parsed.length-1];
-					
+
 					LoaderState state = parseModelFileLine(path, parsed, models);
 					if (state == LoaderState.CANCELED)
 						throw new LayoutFileException("Layout file loading canceled", lineCount);
@@ -289,7 +316,7 @@ public class FBACometsLoader implements CometsLoader,
 					LoaderState state = parseModelWorldLine(path, parsed, media);
 					if (state == LoaderState.CANCELED)
 						throw new LayoutFileException("Layout file loading canceled", lineCount);
-					
+
 					numMedia = media.size();
 
 					/* There's lots of sub-stuff in this block. Sub-blocks, even.
@@ -305,21 +332,22 @@ public class FBACometsLoader implements CometsLoader,
 						// ignore empty lines.
 						if (worldLine.length() == 0)
 							continue;
-						
-						
+
+
 						/****************** WORLD MEDIA **********************/
 
 						if (worldParsed[0].equalsIgnoreCase(WORLD_MEDIA))
 						{
 							/* slurp all lines into a list and pass it to parseWorldMedia */
-							
+
 							List<String> lines = collectLayoutFileBlock(reader);
 							media = new HashMap<String, Point2D.Double>();
 							state = parseWorldMediaBlock(lines, media);
-							
+
 							numMedia = media.size();
+							
 						}
-						
+
 						/****************** MEDIA REFRESH **********************/
 
 						else if (worldParsed[0].equalsIgnoreCase(MEDIA_REFRESH))
@@ -327,8 +355,8 @@ public class FBACometsLoader implements CometsLoader,
 							if (worldParsed.length != numMedia + 1)
 							{
 								throw new IOException("the 'media_refresh' tag must be followed by one number for each of \n     " + 
-													  "the " + numMedia + " medium components defined by the models. The are\n     " +
-										              (worldParsed.length-1) + " of " + numMedia + " media components present.");
+										"the " + numMedia + " medium components defined by the models. The are\n     " +
+										(worldParsed.length-1) + " of " + numMedia + " media components present.");
 							}
 							List<String> lines = collectLayoutFileBlock(reader);
 							mediaRefresh = new double[numMedia];
@@ -346,7 +374,7 @@ public class FBACometsLoader implements CometsLoader,
 							{
 								throw new IOException("the 'static_media' tag must be followed by a pair of numbers for each of \n     the " + numMedia + " medium components. The first should be a 1 if that component is set to be\n     static, or a 0 if not, followed by the concentration to remain static.");
 							}
-							
+
 							List<String> lines = collectLayoutFileBlock(reader);
 							staticMedia = new double[numMedia];
 							globalStatic = new boolean[numMedia];
@@ -354,11 +382,11 @@ public class FBACometsLoader implements CometsLoader,
 								state = parseStaticMediaBlock(worldParsed, lines, staticMedia, globalStatic, staticPoints);
 							else if(c.getParameters().getNumLayers()>1)
 								state = parseStaticMediaBlock3D(worldParsed, lines, staticMedia, globalStatic, staticPoints);
-							
+
 						}
-						
+
 						/****************** GRID SIZE ************************/
-						
+
 						else if (worldParsed[0].equalsIgnoreCase(GRID_SIZE))
 						{
 							// needs to be a total of 3 elements in the array
@@ -371,18 +399,18 @@ public class FBACometsLoader implements CometsLoader,
 							c.getParameters().setNumCols(Integer.valueOf(worldParsed[1]));
 							c.getParameters().setNumRows(Integer.valueOf(worldParsed[2]));
 							if (worldParsed.length == 4)
-							    c.getParameters().setNumLayers(Integer.valueOf(worldParsed[3]));
+								c.getParameters().setNumLayers(Integer.valueOf(worldParsed[3]));
 							else if(worldParsed.length == 3)
 								c.getParameters().setNumLayers(Integer.valueOf(1));
-							
+
 							//if (Integer.valueOf(worldParsed[3])==1)
 							//{
 							//	throw new IOException("In a 3D simulation the number of layers along the 3rd coordinate must be larger than 1.");
 							//}	
 						}
-					
+
 						/****************** BARRIER *************************/
-						
+
 						else if (worldParsed[0].equalsIgnoreCase(BARRIER))
 						{
 							List<String> lines = collectLayoutFileBlock(reader);
@@ -395,9 +423,9 @@ public class FBACometsLoader implements CometsLoader,
 								state = parseBarrierBlock3D(lines, barrier3D);
 							}
 						}
-						
+
 						/****************** DIFFUSION CONSTANTS ********************/
-						
+
 						else if (worldParsed[0].equalsIgnoreCase(DIFFUSION_CONST))
 						{
 							if (worldParsed.length != 2)
@@ -408,8 +436,22 @@ public class FBACometsLoader implements CometsLoader,
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseMediaDiffusionConstantsBlock(lines, diffConsts);
 						}
-						/****************** DIFFUSION CONSTANTS BY SUBSTRATE ********************/
+
+						/****************** VELOCITY CONSTANTS ********************/
 						
+						else if (worldParsed[0].equalsIgnoreCase(VELOCITY_VECTORS))
+						{
+							if (worldParsed.length != 4)
+							{
+								throw new IOException("the 'velocity_vectors' tag must be followed by the default 3D velocity vector");
+							}
+							pParams.setDefaultVelocityVector(Double.parseDouble(worldParsed[1]),Double.parseDouble(worldParsed[2]),Double.parseDouble(worldParsed[3]));
+							//List<String> lines = collectLayoutFileBlock(reader);
+							//state = parseVelocityVectorsBlock(lines, velocityVectors);
+						}
+						
+						/****************** DIFFUSION CONSTANTS BY SUBSTRATE ********************/
+
 						else if (worldParsed[0].equalsIgnoreCase(SUBSTRATE_DIFFUSIVITY))
 						{
 							substrate = true;
@@ -417,7 +459,7 @@ public class FBACometsLoader implements CometsLoader,
 							state = parseSubstrateDiffusionConstantsBlock(lines,numMedia);
 						}
 						/****************** FRICTION CONSTANTS BY SUBSTRATE ********************/
-						
+
 						else if (worldParsed[0].equalsIgnoreCase(SUBSTRATE_FRICTION))
 						{
 							friction = true;
@@ -425,39 +467,39 @@ public class FBACometsLoader implements CometsLoader,
 							state = parseSubstrateFrictionConstantsBlock(lines);
 						}
 						/****************** DIFFUSION CONSTANTS BY MODEL ********************/
-						
+
 						else if (worldParsed[0].equalsIgnoreCase(MODEL_DIFFUSIVITY))
 						{
 							modelDiffusion = true;
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseModelDiffusionConstantsBlock(lines,numMedia);
 						}
-						
+
 						/****************** SUBSTRATE LAYOUT ********************/
-						
+
 						else if (worldParsed[0].equalsIgnoreCase(SUBSTRATE_LAYOUT))
 						{
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseSubstrateLayoutBlock(lines,c.getParameters().getNumCols(),c.getParameters().getNumRows());
 						}
-						
+
 						/****************** SPECIFIC MEDIA ********************/
-						
+
 						else if (worldParsed[0].equalsIgnoreCase(SPECIFIC_MEDIA))
 						{
 							specific = true;
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseSpecificMediaBlock(lines);
 						}
-						
+
 						/****************** MEDIA ***********************/
-						
+
 						else if (worldParsed[0].equalsIgnoreCase(MEDIA))
 						{
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseSpecialMediaBlock(lines, numMedia, specMedia);
 						}
-						
+
 						else if (worldParsed[0].equalsIgnoreCase("prevent_biomass_out"))
 						{
 							String bioOutLine;
@@ -552,9 +594,9 @@ public class FBACometsLoader implements CometsLoader,
 						}
 					}
 					System.out.println("Constructing world...");
-					
+
 					/******************** assemble the FBAWorld object here. **********************/
-					
+
 					if (numMedia == -1 || media == null) // media hasn't been initialized...
 					{
 						throw new IOException("The medium is uninitialized! Either link a medium file to the 'model_world' tag, or include a 'world_media' block.");
@@ -574,6 +616,7 @@ public class FBACometsLoader implements CometsLoader,
 					{
 						world = new FBAWorld(c, mediaNames, mediaConc, models);
 						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
+						if (initialMediaNames != null) world.setInitialMediaNames(initialMediaNames);
 						if (mediaRefresh != null)
 						{
 							world.setMediaRefreshAmount(mediaRefresh);
@@ -582,7 +625,7 @@ public class FBACometsLoader implements CometsLoader,
 								world.addMediaRefreshSpace(rp);
 							}
 						}
-						
+
 						if (staticMedia != null && globalStatic != null)
 						{
 							for (StaticPoint sp : staticPoints)
@@ -591,19 +634,19 @@ public class FBACometsLoader implements CometsLoader,
 							}
 							world.setGlobalStaticMedia(staticMedia, globalStatic);
 						}
-						
+
 						// set barrier spaces.
 						for (Point p : barrier)
 						{
 							world.setBarrier((int)p.getX(), (int)p.getY(), true);
 						}
-						
+
 						// set specifically determined media in given spaces
 						for (Point p : specMedia.keySet())
 						{
 							world.setMedia((int)p.getX(), (int)p.getY(), specMedia.get(p));
 						}
-						
+
 						// set spaces where biomass isn't allowed to diffuse out
 						Iterator<int[]> itNoBioOut = noBiomassOut.iterator();
 						while (itNoBioOut.hasNext())
@@ -692,7 +735,7 @@ public class FBACometsLoader implements CometsLoader,
 						double defaultDiffConst = pParams.getDefaultDiffusionConstant();
 						for (int i=0; i<numMedia; i++)
 							diffusionConsts[i] = defaultDiffConst;
-					
+
 						for (int index : diffConsts.keySet())
 						{
 							if (index >= 0 && index < numMedia)
@@ -717,14 +760,18 @@ public class FBACometsLoader implements CometsLoader,
 						{
 							world.setSubstrateFriction(substrateFrictionConsts);
 						}
+						
+						IWorld.reactionModel.setWorld(world);
+						
 						System.out.println("Done!");
 					}
 					else if(c.getParameters().getNumLayers()>1)
 					{
-						
+
 						world3D = new FBAWorld3D(c, mediaNames, mediaConc, models);
-						
+
 						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
+						if (initialMediaNames != null) world.setInitialMediaNames(initialMediaNames);
 						if (mediaRefresh != null)
 						{
 							world3D.setMediaRefreshAmount(mediaRefresh);
@@ -733,7 +780,7 @@ public class FBACometsLoader implements CometsLoader,
 								world3D.addMediaRefreshSpace(rp);
 							}
 						}
-						
+
 						if (staticMedia != null && globalStatic != null)
 						{
 							for (StaticPoint sp : staticPoints)
@@ -748,13 +795,13 @@ public class FBACometsLoader implements CometsLoader,
 						{
 							world3D.setBarrier((int)p.getX(), (int)p.getY(), (int)p.getZ(), true);
 						}
-						
+
 						// set specifically determined media in given spaces
 						for (Point p : specMedia.keySet())
 						{
-//							world3D.setMedia((int)p.getX(), (int)p.getY(), specMedia.get(p));
+							//							world3D.setMedia((int)p.getX(), (int)p.getY(), specMedia.get(p));
 						}
-						
+
 						// set spaces where biomass isn't allowed to diffuse out
 						Iterator<int[]> itNoBioOut = noBiomassOut.iterator();
 						while (itNoBioOut.hasNext())
@@ -775,7 +822,7 @@ public class FBACometsLoader implements CometsLoader,
 								}
 							}
 						}
-						
+
 						// set spaces where biomass isn't allowed to diffuse in
 						Iterator<int[]> itNoBioIn = noBiomassIn.iterator();
 						while (itNoBioIn.hasNext())
@@ -796,7 +843,7 @@ public class FBACometsLoader implements CometsLoader,
 								}
 							}
 						}
-						
+
 						// set spaces where media isn't allowed to diffuse out
 						Iterator<int[]> itNoMediaOut = noMediaOut.iterator();
 						while (itNoMediaOut.hasNext())
@@ -838,13 +885,13 @@ public class FBACometsLoader implements CometsLoader,
 								}
 							}
 						}
-						
+
 						// Set diffusion constants 
 						double[] diffusionConsts = new double[numMedia];
 						double defaultDiffConst = pParams.getDefaultDiffusionConstant();
 						for (int i=0; i<numMedia; i++)
 							diffusionConsts[i] = defaultDiffConst;
-						
+
 						for (int index : diffConsts.keySet())
 						{
 							if (index >= 0 && index < numMedia)
@@ -853,10 +900,20 @@ public class FBACometsLoader implements CometsLoader,
 							}
 						}
 						world3D.setDiffusionConstants(diffusionConsts);
+						
+						IWorld.reactionModel.setWorld(world3D);
+						
 						System.out.println("Done!");
 					}
 				}
 				
+				/****************** MODEL-FREE REACTIONS ********************/
+				else if (parsed[0].equalsIgnoreCase(REACTIONS))
+				{
+					List<String> lines = collectLayoutFileBlock(reader);
+					parseReactionsBlock(lines);
+				}
+
 				/**************** INITIAL CELL POPULATION ***************/
 				else if (parsed[0].equalsIgnoreCase(INITIAL_POP))
 				{
@@ -878,7 +935,7 @@ public class FBACometsLoader implements CometsLoader,
 					List<String> lines = collectLayoutFileBlock(reader);
 					parseInitialPopBlock(parsed, lines);
 				}
-				
+
 				/*************** PARAMETERS ******************/
 				else if (parsed[0].equalsIgnoreCase(PARAMETERS))
 				{
@@ -890,19 +947,19 @@ public class FBACometsLoader implements CometsLoader,
 		catch(IOException e)
 		{
 			showGuiLoadError("Unable to load layout file!\nFile error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
-						     "File Error!");
+					"File Error!");
 			throw new IOException("File error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(NumberFormatException e)
 		{
 			showGuiLoadError("Unable to load layout file!\nNumber format error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
-						  "Numerical Error!");
+					"Numerical Error!");
 			throw new IOException("Number format error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(ModelFileException e)
 		{
 			showGuiLoadError("Unable to load layout file!\nModel file error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
-						  "Model File Loading Error!");
+					"Model File Loading Error!");
 			throw new IOException("Model file error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(LayoutFileException e)
@@ -928,19 +985,19 @@ public class FBACometsLoader implements CometsLoader,
 		if (useGui)
 			JOptionPane.showMessageDialog(c.getFrame(), error, title, JOptionPane.ERROR_MESSAGE);
 	}
-	
+
 	private List<String> collectLayoutFileBlock(BufferedReader reader) throws IOException
 	{
 		List<String> lines = new ArrayList<String>();
 		String line;
 		while (!(line = reader.readLine().trim()).equals("//"))
 			lines.add(line);
-		
+
 		return lines;
 	}
 
 	private LoaderState parseModelFileLine(String path, String[] tokens, FBAModel[] models) throws LayoutFileException,
-																		       		   			   ModelFileException
+	ModelFileException
 	{
 		System.out.println("Found " + (tokens.length-1) + " model files!");
 		for (int i=0; i<tokens.length-1; i++)
@@ -968,7 +1025,7 @@ public class FBACometsLoader implements CometsLoader,
 			{
 				System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
 			}		
-			
+
 			// if STILL not found, prompt the user
 			while (!f.isFile())
 			{
@@ -998,7 +1055,7 @@ public class FBACometsLoader implements CometsLoader,
 					throw new LayoutFileException("Unable to load model file '" + tokens[i+1] + "' -- canceling layout file load.", 0);
 				}
 			}
-			
+
 			models[i] = FBAModel.loadModelFromFile(f.getPath());
 			models[i].setFlowDiffusionConstant(pParams.getFlowDiffRate());
 			models[i].setGrowthDiffusionConstant(pParams.getGrowthDiffRate());
@@ -1007,6 +1064,7 @@ public class FBACometsLoader implements CometsLoader,
             models[i].setDefaultVmax(pParams.getDefaultVmax());
             models[i].setDefaultAlpha(pParams.getDefaultAlpha());
             models[i].setDefaultW(pParams.getDefaultW());
+            models[i] = FBAModel.loadModelFromFile(f.getPath());
 			
 			System.out.println("Done!\n Testing default parameters...");
 			int result = models[i].run();
@@ -1018,12 +1076,12 @@ public class FBACometsLoader implements CometsLoader,
 			System.out.println("objective solution = " + models[i].getObjectiveSolution());
 			System.out.flush();
 		}
-		
+
 		return LoaderState.OK;
 	}
-	
+
 	private LoaderState parseModelWorldLine(String path, String[] tokens, Map<String, Point2D.Double> media) throws LayoutFileException,
-																													IOException
+	IOException
 	{
 		if (tokens.length > 2)
 		{
@@ -1073,17 +1131,17 @@ public class FBACometsLoader implements CometsLoader,
 					throw new LayoutFileException("Unable to find nutrient file '" + tokens[1] + "' -- canceling layout file load.", 0);
 				}
 			}
-			
+
 			// load model world, and lots of stuff enclosed in here.
 			// can make new FBAWorld at the end of this part.
-			
+
 			// remember:
 			// media.get("media name") = (concentration, file order)
 			media = loadMediaFile(f.getPath());
 		}
 		return LoaderState.OK;
 	}
-	
+
 	private LoaderState parseSpecialMediaBlock(List<String> lines, int numMedia, Map<Point, double[]> specMedia) throws LayoutFileException, NumberFormatException
 	{
 		for (String line : lines)
@@ -1108,9 +1166,9 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return LoaderState.OK;
 	}
-	
+
 	private LoaderState parseWorldMediaBlock(List<String> lines, Map<String, Point2D.Double> media) throws LayoutFileException,
-																									NumberFormatException
+	NumberFormatException
 	{
 		/* the 'world_media' block is the same format as a 
 		 * media file, just embedded into the layout.
@@ -1127,13 +1185,14 @@ public class FBACometsLoader implements CometsLoader,
 		 * as what's in the model files. Guess we'll do some checking
 		 * on that in the "assemble FBAWorld section" later on...
 		 */
+		List<String> mediaNames = new ArrayList<String>(); //track the full list of media names in the order they're input
 		int mediaCount = 0;
 		for (String line : lines)
 		{
 			lineCount++;
 			if (line.length() == 0)
 				continue;
-			
+
 			String[] mediaParsed = line.split("\\s+");
 			if (mediaParsed.length != 2)
 			{
@@ -1142,14 +1201,20 @@ public class FBACometsLoader implements CometsLoader,
 			else
 			{
 				media.put(mediaParsed[0], new Point2D.Double(Double.parseDouble(mediaParsed[1]), mediaCount));
+				mediaNames.add(mediaParsed[0]);
 				mediaCount++;
 			}
 		}
+		
+		initialMediaNames = new String[mediaCount];
+		for (int i = 0; i < mediaCount; i++) initialMediaNames[i] = mediaNames.get(i);
+		IWorld.reactionModel.setInitialMetNames(initialMediaNames);
+		
 		return LoaderState.OK;
 	}
-	
+
 	private LoaderState parseMediaDiffusionConstantsBlock(List<String> lines, Map<Integer, Double> diffConsts) throws LayoutFileException,
-																																   NumberFormatException
+	NumberFormatException
 	{
 		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
 		 * 
@@ -1163,22 +1228,22 @@ public class FBACometsLoader implements CometsLoader,
 			lineCount++;
 			if (line.length() == 0)
 				continue;
-			
+
 			String[] diffConstParsed = line.split("\\s+");
 			if (diffConstParsed.length != 2)
 				throw new LayoutFileException("Each line of the 'diffusion_constants' block should have two tokens.\n The first should be the index of the medium component, followed by its (non-default) diffusion constant.", lineCount);
-			
+
 			else
 			{
 				diffConsts.put(Integer.parseInt(diffConstParsed[0]), Double.parseDouble(diffConstParsed[1]));
 			}
 		}
 		return LoaderState.OK;
-		
+
 	}
-	
+
 	private LoaderState parseSubstrateDiffusionConstantsBlock(List<String> lines, int numMedia) throws LayoutFileException,
-	   NumberFormatException
+	NumberFormatException
 	{
 		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
 		 * 
@@ -1211,9 +1276,9 @@ public class FBACometsLoader implements CometsLoader,
 		return LoaderState.OK;
 
 	}
-	
+
 	private LoaderState parseSubstrateFrictionConstantsBlock(List<String> lines) throws LayoutFileException,
-	   NumberFormatException
+	NumberFormatException
 	{
 		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
 		 * 
@@ -1246,8 +1311,47 @@ public class FBACometsLoader implements CometsLoader,
 		return LoaderState.OK;
 
 	}
-	private LoaderState parseModelDiffusionConstantsBlock(List<String> lines, int numMedia) throws LayoutFileException,
+	
+	private LoaderState parseSubstrateVelocityVectorsBlock(List<String> lines, int numMedia) throws LayoutFileException,
 	   NumberFormatException
+	{
+		/* the 'velocity_vectors' block looks like this:
+		 * 
+		 * velocity_vectorss  <default> 1.0 2.0 0.0
+		 * 		<medium number> <diff_const>
+		 * 		<medium number> <diff_const>
+		 * //
+		 */
+		/*
+		Integer i = 0;
+		substrateVelocityVectors = new double[lines.size()][numMedia];
+		for (String line : lines)
+		{
+			lineCount++;
+			if (line.length() == 0)
+				continue;
+
+			String[] diffConstParsed = line.split("\\s+");
+			if (diffConstParsed.length != numMedia)
+				throw new LayoutFileException("Each line of the 'diffusion_constants' block should have two tokens.\n The first should be the index of the medium component, followed by its (non-default) diffusion constant.", lineCount);
+			
+			else
+			{				
+				for(int j = 0;j<numMedia;j++)
+				{
+					substrateDiffConsts[i][j] = Double.parseDouble(diffConstParsed[j]);
+				}
+				i++;
+			}
+		}
+		*/
+		return LoaderState.OK;
+
+	}
+	
+	
+	private LoaderState parseModelDiffusionConstantsBlock(List<String> lines, int numMedia) throws LayoutFileException,
+	NumberFormatException
 	{
 		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
 		 * 
@@ -1280,9 +1384,9 @@ public class FBACometsLoader implements CometsLoader,
 		return LoaderState.OK;
 
 	}
-	
+
 	private LoaderState parseSubstrateLayoutBlock(List<String> lines,int cols,int rows) throws LayoutFileException,
-	   NumberFormatException
+	NumberFormatException
 	{
 		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
 		 * 
@@ -1317,12 +1421,216 @@ public class FBACometsLoader implements CometsLoader,
 				}
 			}
 		}
-			return LoaderState.OK;
+		return LoaderState.OK;
 
 	}
-	
+
+	/**The format for this block looks like this:
+	 * 	REACTANTS [defaultKm=1]
+	 *	rxnIdx metIdx order/|stoich|   //simple rxn
+	 *	rxnIdx metIdx km               //catalyzed
+	 *	ENZYMES [defaultKcat]
+	 *	rxnIdx metIdx kcat
+	 *	PRODUCTS 
+	 *	rxnIdx metIdx stoich
+	 *	//
+	 * 
+	 * @param lines
+	 * @return
+	 * @throws LayoutFileException
+	 * @throws NumberFormatException
+	 * @author mquintin
+	 */
+	public LoaderState parseReactionsBlock(List<String> lines) throws LayoutFileException, NumberFormatException
+	{
+		/* The format for this block looks like this:
+		 * 	REACTANTS [defaultKm=1]
+				rxnIdx metIdx order/|stoich| k+   //simple rxn
+				rxnIdx metIdx km               //catalyzed
+			ENZYMES [defaultKcat]
+				rxnIdx metIdx kcat
+			PRODUCTS 
+				rxnIdx metIdx stoich
+			//
+		 */
+		
+		ReactionField mode = null;
+		double defaultKcat = pParams.getDefaultVmax(); //TODO? replace with a proper defaultKcat param
+		double defaultKm = pParams.getDefaultKm(); //TODO? replace with a param that's separate from the ones used by the exchange style
+		double defaultOrder = 1;
+		double defaultK = defaultKcat; //rate constant for simple reactions. TODO: parameterize
+
+		//Find out how many reactions and media components there are
+		//The first value is always either a reaction index or a header
+		//If the first value is a reaction index, the second is a media index
+		Integer nrxns = 0;
+		Integer nmedia = 0;
+		for (String line : lines){
+			if (line.length() == 0)
+				continue;
+			String[] parsed = line.split("\\s+");
+			//check that the first value is an integer
+			if (parsed[0].matches("[0-9]+")){
+				Integer rxn = Integer.valueOf(parsed[0]);
+				if ( rxn > nrxns) nrxns = rxn;
+				Integer med = Integer.valueOf(parsed[1]);
+				if ( med > nmedia) nmedia = med;
+			}
+		}
+		
+		//initialize the arrays
+		exRxnStoich = new double[nrxns][nmedia];
+		exRxnParams = new double[nrxns][nmedia];
+		exRxnRateConstants = new double[nrxns];
+		exRxnEnzymes = new int[nrxns];
+		for (int i = 0; i < exRxnEnzymes.length; i++){ exRxnEnzymes[i] = -1;}
+		
+		//Include a check that a given metabolite only appears for one role in a reaction, and that it's not being set twice
+		boolean[][] uniquenessCheck = new boolean[nrxns][nmedia];
+		
+		//Parse the lines
+		//First process the ENZYMES block, since that will affect how we process reactants
+		for (String line : lines){
+			if (line.length() == 0)
+				continue;
+
+			String[] parsed = line.split("\\s+");
+			
+			switch (ReactionField.getField(parsed[0].toUpperCase())){
+			case REACTANTS: //ignore for now
+				mode = ReactionField.REACTANTS;
+				break;
+			case PRODUCTS: //ignore for now
+				mode = ReactionField.PRODUCTS;
+				break;
+			case ENZYMES:
+				mode = ReactionField.ENZYMES;
+				if (parsed.length > 1) defaultKcat = Double.parseDouble(parsed[1]);
+				break;
+			default:
+				if (ReactionField.ENZYMES.equals(mode)){ //we're reading an Enzyme definition line
+					//values are rxnIdx, metaboliteIdx, kcat
+					Integer rxnIdx = Integer.parseInt(parsed[0]) -1; //TODO: Test case for when this isn't an integer
+					if (parsed.length == 1){
+						throw new LayoutFileException("Each line in the " + mode + " block must include at least two values: "+
+					"A reaction number, and the index of a metabolite in the world_media list",lineCount);
+					}
+					
+					Integer metIdx = Integer.parseInt(parsed[1]) -1;
+					exRxnEnzymes[rxnIdx] = metIdx;
+					
+					double k = defaultKcat;
+					if (parsed.length >= 3){
+						k = Double.valueOf(parsed[2]);
+					}					
+					exRxnRateConstants[rxnIdx] = k;
+				}
+			}
+		}
+		
+		//now process the REACTANTS and PRODUCTS blocks
+		for (String line : lines){
+			lineCount++;
+			if (line.length() == 0)
+				continue;
+
+			String[] parsed = line.split("\\s+");
+
+			switch (ReactionField.getField(parsed[0].toUpperCase())){
+			case REACTANTS: 
+				mode = ReactionField.REACTANTS;
+				if (parsed.length > 1) defaultKm = Double.parseDouble(parsed[1]);
+				break;
+
+			case ENZYMES:
+				mode = ReactionField.ENZYMES; //skip this block since it's been done
+				break;
+
+			case PRODUCTS:
+				mode = ReactionField.PRODUCTS;
+				break;
+
+			default: //The first value should be a reaction index. Process it according to the most recent header seen
+				Integer rxnIdx = Integer.parseInt(parsed[0]) -1; //TODO: Test case for when this isn't an integer
+				
+				if (parsed.length == 1){
+					throw new LayoutFileException("Each line in the " + mode + " block must include at least two values: A reaction number,"+
+				     "and the index of a metabolite in the world_media list",lineCount);
+				}
+				Integer metIdx = Integer.parseInt(parsed[1]) -1;
+				
+				//Check that this metabolite hasn't already been used in this reaction
+				if (uniquenessCheck[rxnIdx][metIdx]){
+					throw new LayoutFileException("A metabolite should only appear once per reaction.",lineCount);
+				}
+				else (uniquenessCheck[rxnIdx][metIdx]) = true;
+								
+				switch (mode){
+				case REACTANTS: //rxnIdx metIdx order/stoich/Km
+					//determine if this reaction has an enzyme
+					boolean hasEnz = exRxnEnzymes[rxnIdx] >= 0;
+					
+					if (hasEnz){
+						exRxnStoich[rxnIdx][metIdx] = -1.0;
+						double km = defaultKm;
+						if (parsed.length >= 3){
+							km = Double.valueOf(parsed[2]);
+						}
+						exRxnParams[rxnIdx][metIdx] = km;
+					}
+					else{
+						double order = defaultOrder;
+						if (parsed.length >= 3){
+							order = Double.valueOf(parsed[2]);
+						}
+						exRxnStoich[rxnIdx][metIdx] = -order;
+						exRxnParams[rxnIdx][metIdx] = order;
+						
+						//only set the rate constant for this reaction once
+						if (exRxnRateConstants[rxnIdx] == 0.0 || exRxnRateConstants[rxnIdx] == defaultK){
+							double k = defaultK;
+							if (parsed.length >= 4){
+								k = Double.valueOf(parsed[3]); 
+							}
+							exRxnRateConstants[rxnIdx] = k;
+						}
+					}
+					break;
+
+				case PRODUCTS://rxnIdx metIdx stoich
+					double stoich = 1.0;
+					if (parsed.length >= 3){
+						stoich = Double.valueOf(parsed[2]);
+					}
+					exRxnStoich[rxnIdx][metIdx] = stoich;
+					break;
+
+				default:
+					if (ReactionField.ENZYMES.equals(mode)) break;
+					else throw new LayoutFileException("The first line after opening the REACTIONS block should begin with " +
+				ReactionField.REACTANTS + ", " + ReactionField.ENZYMES + ", or " + ReactionField.PRODUCTS +
+				 ". Subsequent lines should have a reaction ID, a metabolite index corresponding to the world_media block, and an optional" +
+				 " kinetic parameter.",lineCount);
+				}
+				break;
+			}
+		}
+		
+		//set global External Reactions
+		IWorld.reactionModel.setWorld((IWorld) world);
+		IWorld.reactionModel.setMediaNames(initialMediaNames);
+		IWorld.reactionModel.setExRxnEnzymes(exRxnEnzymes);
+		IWorld.reactionModel.setExRxnParams(exRxnParams);
+		IWorld.reactionModel.setExRxnRateConstants(exRxnRateConstants);
+		IWorld.reactionModel.setExRxnStoich(exRxnStoich);
+		IWorld.reactionModel.saveState();
+		IWorld.reactionModel.setup();
+		
+		return LoaderState.OK;
+	}
+
 	private LoaderState parseSpecificMediaBlock(List<String> lines) throws LayoutFileException,
-	   NumberFormatException
+	NumberFormatException
 	{
 		/* the 'diffusion_constants' block is taken from the way of doing it in the Model files, so it looks like this:
 		 * 
@@ -1338,7 +1646,7 @@ public class FBACometsLoader implements CometsLoader,
 			lineCount++;
 			if (line.length() == 0)
 				continue;
-				
+
 			String[] sMediaParsed = line.split("\\s+");
 			if (sMediaParsed.length != 4)
 				throw new LayoutFileException("Each line of the 'specific_media' block should have two tokens.\n The first should be the index of the medium component, followed by its (non-default) diffusion constant.", lineCount);
@@ -1354,11 +1662,11 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return LoaderState.OK;
 	}
-	
+
 	private LoaderState parseInitialPopBlock(String[] header, List<String> lines) throws LayoutFileException,
-																						 NumberFormatException
+	NumberFormatException
 	{
-		
+
 		/* First case: there's more than two tokens on the 'initial_pop' line
 		 */
 		if (header.length > 2)
@@ -1368,7 +1676,7 @@ public class FBACometsLoader implements CometsLoader,
 				throw new LayoutFileException(result, lineCount);
 			return LoaderState.OK;
 		}
-		
+
 		/* Second case: there's exactly two tokens (check that the last one
 		 * is 'circles').
 		 */
@@ -1376,11 +1684,11 @@ public class FBACometsLoader implements CometsLoader,
 		{
 			if (!header[1].equalsIgnoreCase("circles"))
 				throw new LayoutFileException("Unknown tag '" + header[1] + "' following initial_pop tag", lineCount);
-			
+
 			// This hash will get filled with what will eventually become Cells.
 			Map<Point, double[]> pointHash = new HashMap<Point,double[]>();
 			Set<Circle> circleSet = new HashSet<Circle>();
-			
+
 			for (String line : lines)
 			{
 				lineCount++;
@@ -1396,14 +1704,14 @@ public class FBACometsLoader implements CometsLoader,
 				int x = Integer.valueOf(circleInfo[0]);
 				int y = Integer.valueOf(circleInfo[1]);
 				int r = Integer.valueOf(circleInfo[2]);
-				
+
 				// parse out the starting biomass list and insert into an array
 				double[] startingBiomass = new double[models.length];
 				for (int i=0; i<startingBiomass.length; i++)
 				{
 					startingBiomass[i] = Double.valueOf(circleInfo[i+3]);
 				}
-				
+
 				// build the set of points to fill in with biomass
 				Set<Point> pointSet = Utility.getCirclePoints(x, y, r);
 				Circle circle = new Circle((double)x, (double)y, (double)r);
@@ -1416,8 +1724,8 @@ public class FBACometsLoader implements CometsLoader,
 			for (Point p : pointHash.keySet())
 			{
 				if (world.isOnGrid((int)p.getX(), (int)p.getY()) && 
-					!world.isBarrier((int)p.getX(), (int)p.getY()))
-				cellList.add(new FBACell((int)p.getX(), (int)p.getY(), pointHash.get(p), world, models, c.getParameters(), pParams));
+						!world.isBarrier((int)p.getX(), (int)p.getY()))
+					cellList.add(new FBACell((int)p.getX(), (int)p.getY(), pointHash.get(p), world, models, c.getParameters(), pParams));
 			}
 			world.setCircles(circleSet);
 		}
@@ -1473,9 +1781,9 @@ public class FBACometsLoader implements CometsLoader,
 		return LoaderState.OK;
 
 	}
-	
+
 	private LoaderState parseRefreshMediaBlock(String[] header, List<String> lines, double[] mediaRefresh, Set<RefreshPoint> refreshPoints) throws LayoutFileException,
-																																			NumberFormatException
+	NumberFormatException
 	{
 		/* this block is like this:
 		 * media_refresh	<nutrient1>	<nutrient2>	<nutrient3> ...
@@ -1516,10 +1824,10 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return LoaderState.OK;
 	}
-	
+
 	private LoaderState parseRefreshMediaBlock3D(String[] header, List<String> lines, double[] mediaRefresh, Set<RefreshPoint> refreshPoints) throws LayoutFileException,
-																																					NumberFormatException
-    {
+	NumberFormatException
+	{
 		/* this block is like this:
 		 * media_refresh	<nutrient1>	<nutrient2>	<nutrient3> ...
 		 * 		<x>	<y>	<z> <nut1>	<nut2>	...
@@ -1559,9 +1867,9 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return LoaderState.OK;
 	}
-	
+
 	private LoaderState parseStaticMediaBlock(String[] header, List<String> lines, double[] staticMedia, boolean[] globalStatic, Set<StaticPoint> staticPoints) throws LayoutFileException,
-																																							  NumberFormatException
+	NumberFormatException
 	{
 		/* this block is like this:
 		 * static_media		<stat1> <conc1>	<stat2>	<conc2> ...
@@ -1580,6 +1888,7 @@ public class FBACometsLoader implements CometsLoader,
 			globalStatic[i/2] = Integer.valueOf(header[i]) == 1;
 			staticMedia[i/2] = Double.valueOf(header[i+1]);
 		}
+		
 
 		for (String line : lines)
 		{
@@ -1604,10 +1913,10 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return LoaderState.OK;
 	}
-	
+
 	private LoaderState parseStaticMediaBlock3D(String[] header, List<String> lines, double[] staticMedia, boolean[] globalStatic, Set<StaticPoint> staticPoints) throws LayoutFileException,
-																																										NumberFormatException
-    {
+	NumberFormatException
+	{
 		/* this block is like this:
 		 * static_media		<stat1> <conc1>	<stat2>	<conc2> ...
 		 * 		<x>	<y>	<z> <stat1> <conc1> <stat2> <conc2>	...
@@ -1648,11 +1957,11 @@ public class FBACometsLoader implements CometsLoader,
 			staticPoints.add(new StaticPoint(Integer.valueOf(staticParsed[0]), Integer.valueOf(staticParsed[1]), Integer.valueOf(staticParsed[2]),staticConc, isStatic));
 		}
 		return LoaderState.OK;
-    }
+	}
 
-	
+
 	private LoaderState parseBarrierBlock(List<String> lines, Set<Point> barrier) throws LayoutFileException, 
-																			      NumberFormatException
+	NumberFormatException
 	{
 		for (String line : lines)
 		{
@@ -1670,7 +1979,7 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return LoaderState.OK;
 	}
-	
+
 	private LoaderState parseBarrierBlock3D(List<String> lines, Set<Point3d> barrier3D) throws LayoutFileException, NumberFormatException
 	{
 		for (String line : lines)
@@ -1679,7 +1988,7 @@ public class FBACometsLoader implements CometsLoader,
 			// ignore empty lines.
 			if (line.length() == 0)
 				continue;
-			
+
 			String[] barrierParsed = line.split("\\s+");
 			if (barrierParsed.length != 3)
 			{
@@ -1689,7 +1998,7 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return LoaderState.OK;
 	}
-	
+
 
 	private String initializeBiomassPointsBatch(String[] parsed, int numModels, CometsParameters cParams)
 	{
@@ -1759,7 +2068,7 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		else
 			return "Unknown layout style '" + parsed[1] + "'";
-		
+
 		// Pre-process numbers of points and such (make sure that they don't
 		// outnumber the number of available spaces, right?)
 		// HERE
@@ -1769,7 +2078,7 @@ public class FBACometsLoader implements CometsLoader,
 		int y = 0;
 		int w = cParams.getNumCols();
 		int h = cParams.getNumRows();
-		
+
 		if (layoutStyle == FILLED_RECTANGLE_LAYOUT || layoutStyle == RANDOM_RECTANGLE_LAYOUT)
 		{
 			x = Integer.parseInt(parsed[2]);
@@ -1828,7 +2137,7 @@ public class FBACometsLoader implements CometsLoader,
 				layoutStyle = FILLED_LAYOUT;
 			}
 		}
-		
+
 		// just use this for rapid lookup. don't really care about the value.
 		for (int i=0; i<numModels; i++)
 		{
@@ -1838,12 +2147,12 @@ public class FBACometsLoader implements CometsLoader,
 				curInitBiomass[j] = 0;
 			}
 			curInitBiomass[i] = startingBiomass[i];
-			
+
 			// Pick a set of starting points for each model.
 			// Trust that these points are absolutely correct - chooseSpaces()
 			// knows only to use new points for different cell types if 
 			// overlap isn't allowed.
-			
+
 			System.out.println("finding starting spaces...");
 			System.out.flush();
 			Point[] startingPoints = chooseSpaces(numStartingSpaces[i], x, y, w, h, layoutStyle, cParams);
@@ -1859,19 +2168,19 @@ public class FBACometsLoader implements CometsLoader,
 				else
 				{
 					cellList.add(new FBACell((int)p.getX(), (int)p.getY(),
-							                 curInitBiomass,
-							                 world,
-							                 models,
-							                 cParams,
-							                 pParams));
+							curInitBiomass,
+							world,
+							models,
+							cParams,
+							pParams));
 				}
 			}
 		}
 
 		return null;
 	}
-	
-	
+
+
 	/**
 	 * Loads a media file. Media files are relatively simple, though
 	 * they are intrinsically linked to a model file. As described elsewhere,
@@ -1919,12 +2228,12 @@ public class FBACometsLoader implements CometsLoader,
 			{
 				if (line.length() == 0)
 					continue;
-				
+
 				String[] numStr = line.split("\\s+");
 				media.put(numStr[0], new Point2D.Double(Double.parseDouble(numStr[1]), count));
 				count++;
-//				nameList.add(numStr[0]);
-//				mediaList.add(new Double(numStr[1]));
+				//				nameList.add(numStr[0]);
+				//				mediaList.add(new Double(numStr[1]));
 			}
 			reader.close();
 		} 
@@ -1956,8 +2265,8 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		pw.close();
 	}
-	
-	
+
+
 	/**
 	 * An accessory method to <code>chooseSpaces()</code>.
 	 * <p>
@@ -1982,7 +2291,7 @@ public class FBACometsLoader implements CometsLoader,
 		 * if n = w*h, then collect all points.
 		 *
 		 */
-		
+
 		Map<String, Point> points = new HashMap<String, Point>();
 
 		for (int i=0; i<n; i++)
@@ -1992,8 +2301,8 @@ public class FBACometsLoader implements CometsLoader,
 			String pStr = Utility.pointToString(a, b);
 			// keep looking until we find an empty spot - make sure all startCells are placed
 			while (points.containsKey(pStr) || 
-				   world.isBarrier(a, b) ||
-				   (!cParams.allowCellOverlap() && world.isOccupied(a, b)))
+					world.isBarrier(a, b) ||
+					(!cParams.allowCellOverlap() && world.isOccupied(a, b)))
 			{
 				a = x + Utility.randomInt(w);
 				b = y + Utility.randomInt(h);
@@ -2035,7 +2344,7 @@ public class FBACometsLoader implements CometsLoader,
 				Point p = new Point(i, j);
 				String pStr = Utility.pointToString(p);
 				if (!world.isBarrier(i, j) &&
-					(cParams.allowCellOverlap() || !world.isOccupied(i, j)))
+						(cParams.allowCellOverlap() || !world.isOccupied(i, j)))
 				{
 					points.put(pStr, p);
 				}
@@ -2059,7 +2368,7 @@ public class FBACometsLoader implements CometsLoader,
 		//check boundary cases - don't overflow the x and y bounds!
 		//if there's an overflow, rein it in.
 		if (x < 0 || x > cParams.getNumCols()-1 || y < 0 || y > cParams.getNumRows()-1 ||
-		    x+w < 0 || x+w > cParams.getNumCols()-1 || y+h < 0 || y+h > cParams.getNumRows()-1)
+				x+w < 0 || x+w > cParams.getNumCols()-1 || y+h < 0 || y+h > cParams.getNumRows()-1)
 		{
 			if (x < 0)
 				x = 0;
@@ -2074,7 +2383,7 @@ public class FBACometsLoader implements CometsLoader,
 			if (x > cParams.getNumCols()-1)
 				x = cParams.getNumCols()-1;
 		}
-		
+
 		// now fill in the rectangle.
 		List<Point> pointList = new ArrayList<Point>();
 		for (int i=x; i<x+w; i++)
@@ -2085,10 +2394,10 @@ public class FBACometsLoader implements CometsLoader,
 					pointList.add(new Point(i, j));
 			}
 		}
-		
+
 		return pointList;
 	}
-	
+
 	/**
 	 * Builds an array of 2D <code>Points</code> representing spaces in the
 	 * <code>World</code>, given the parameters. There are three pairs of
@@ -2114,24 +2423,24 @@ public class FBACometsLoader implements CometsLoader,
 		Collection<Point> points;
 		switch(style)
 		{
-			case RANDOM_LAYOUT:
-				points = chooseRandomSpaces(n, x, y, w, h, cParams);
-				break;
-			case SQUARE_LAYOUT:
-				points = chooseSquareSpaces(n, cParams);
-				break;
-			case FILLED_LAYOUT:
-				points = chooseAllSpaces(x, y, w, h, cParams);
-				break;
-			case RANDOM_RECTANGLE_LAYOUT:
-				points = chooseRandomSpaces(n, x, y, w, h, cParams);
-				break;
-			case FILLED_RECTANGLE_LAYOUT:
-				points = chooseAllSpaces(x, y, w, h, cParams);
-				break;
-			default: // nothing - return empty ArrayList
-				points = new ArrayList<Point>();
-				break;
+		case RANDOM_LAYOUT:
+			points = chooseRandomSpaces(n, x, y, w, h, cParams);
+			break;
+		case SQUARE_LAYOUT:
+			points = chooseSquareSpaces(n, cParams);
+			break;
+		case FILLED_LAYOUT:
+			points = chooseAllSpaces(x, y, w, h, cParams);
+			break;
+		case RANDOM_RECTANGLE_LAYOUT:
+			points = chooseRandomSpaces(n, x, y, w, h, cParams);
+			break;
+		case FILLED_RECTANGLE_LAYOUT:
+			points = chooseAllSpaces(x, y, w, h, cParams);
+			break;
+		default: // nothing - return empty ArrayList
+			points = new ArrayList<Point>();
+			break;
 		}
 
 		// Process that Collection into an array of Points
@@ -2145,7 +2454,7 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return ret;
 	}
-	
+
 	/**
 	 * Saves the layout embedded in the given <code>FBAWorld</code>, <code>Models</code>, and
 	 * <code>List</code> of cells to a file described by <code>path</code>, using the standard 
@@ -2164,8 +2473,8 @@ public class FBACometsLoader implements CometsLoader,
 	 * @param cParams the <code>CometsParameters</code> corresponding to data to be saved
 	 */
 	public void saveLayoutFile(String path, World2D world, Model[] models, 
-							   List<Cell> cellList, int mediaFileState, 
-							   CometsParameters cParams) throws IOException
+			List<Cell> cellList, int mediaFileState, 
+			CometsParameters cParams) throws IOException
 	{
 		// recast into an fbaWorld. This should be used throughout the method.
 		FBAWorld fbaWorld = (FBAWorld)world;
@@ -2180,7 +2489,7 @@ public class FBACometsLoader implements CometsLoader,
 			pw.print("\t" + models[i].getFileName());
 		}
 		pw.print("\n");
-		
+
 		/**************************** model_world line ******************************/
 		/* First, get the general media set. 
 		 * Figure out if there's one overall set we can apply to most of the blocks.
@@ -2197,7 +2506,7 @@ public class FBACometsLoader implements CometsLoader,
 		 * UNLESS we're keeping the original media file.
 		 * Then just load that into genMedia.
 		 */
-		
+
 		double[] globalMedia = new double[fbaWorld.getNumMedia()];
 		if (mediaFileState == USE_ORIGINAL_FILE)
 		{
@@ -2252,7 +2561,7 @@ public class FBACometsLoader implements CometsLoader,
 			if (hash2MediaArr.containsKey(maxHash))
 				globalMedia = hash2MediaArr.get(maxHash);
 		}
-		
+
 		pw.print("\tmodel_world");
 		if (mediaFileState == USE_ORIGINAL_FILE)
 		{
@@ -2272,9 +2581,9 @@ public class FBACometsLoader implements CometsLoader,
 
 		if (mediaFileState == DO_NOT_SAVE)
 		{
-		// write world_media block
+			// write world_media block
 			pw.println("\t\tworld_media");
-			
+
 			/* this block looks like this:
 			 * world_media
 			 *     name1    conc1
@@ -2321,7 +2630,7 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		pw.println("\t\t//");
 
-		
+
 		/********************* media_refresh block *************************/
 		pw.print("\t\tmedia_refresh");
 		double[] mediaRefresh = fbaWorld.getMediaRefreshAmount();
@@ -2345,7 +2654,7 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		pw.println("\t\t//");
 		// -- done! --
-		
+
 		/*********************** static media block **************************/
 		pw.print("\t\tstatic_media");
 		double[] staticMedia = fbaWorld.getStaticMediaAmount();
@@ -2379,7 +2688,7 @@ public class FBACometsLoader implements CometsLoader,
 			pw.print("\n");
 		}
 		pw.println("\t\t//");
-		
+
 		/******************** diffusion constants block ************************/
 		pw.println("\t\tdiffusion_constants\t" + pParams.getDefaultDiffusionConstant());
 		double[] diffusionConsts = fbaWorld.getMediaDiffusionConstants();
@@ -2390,7 +2699,7 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		pw.println("\t\t//");
 		// -- done with media! --
-		
+
 		/************************ barrier block *******************************/
 		pw.println("\t\tbarrier");
 		for (int i=0; i<cParams.getNumCols(); i++)
@@ -2398,7 +2707,7 @@ public class FBACometsLoader implements CometsLoader,
 			for (int j=0; j<cParams.getNumRows(); j++)
 			{
 				if (fbaWorld.isBarrier(i, j))
-				pw.println("\t\t\t" + i + "\t" + j);
+					pw.println("\t\t\t" + i + "\t" + j);
 			}
 		}
 		pw.println("\t\t//");
@@ -2406,90 +2715,90 @@ public class FBACometsLoader implements CometsLoader,
 
 		// --- whew. end of world info. ---
 		pw.println("\t//");
-		
+
 		/*************************** initial_pop block *******************************/
 		// We have lots of options, based on the layoutSavePanel. So ask it what we should do.
-		
+
 		LayoutSavePanel.BiomassStyle style = layoutSavePanel.getBiomassStyle();
 		double[] biomass;
 		int[] spaces;
 		Rectangle rect;
 		switch(style)
 		{
-			case FILLED:
-				pw.print("\tinitial_pop\tfilled");
-				biomass = layoutSavePanel.getBiomassQuantity();
-				for (int i=0; i<biomass.length; i++)
-				{
-					pw.print("\t" + biomass[i]);
-				}
-				break;
-			
-			case FILLED_BOX:
-				pw.print("\tinitial_pop\tfilled_rect\t");
-				biomass = layoutSavePanel.getBiomassQuantity();
-				rect = layoutSavePanel.getBiomassRegion();
-				pw.print("\t" + rect.getX() + "\t" + rect.getY() + "\t" + rect.getWidth() + "\t" + rect.getHeight());
-				for (int i=0; i<biomass.length; i++)
-				{
-					pw.print("\t" + biomass[i]);
-				}
-				break;
-			
-			case RANDOM:
-				pw.print("\tinitial_pop\trandom");
-				spaces = layoutSavePanel.getNumSpaces();
-				biomass = layoutSavePanel.getBiomassQuantity();
-				for (int i=0; i<biomass.length; i++)
-				{
-					pw.print("\t" + spaces[i] + "\t" + biomass[i]);
-				}
-				break;
-			
-			case RANDOM_BOX:
-				pw.print("\tinitial_pop\trandom_rect");
-				rect = layoutSavePanel.getBiomassRegion();
-				spaces = layoutSavePanel.getNumSpaces();
-				biomass = layoutSavePanel.getBiomassQuantity();
-				pw.print("\t" + rect.getX() + "\t" + rect.getY() + "\t" + rect.getWidth() + "\t" + rect.getHeight());
-				for (int i=0; i<biomass.length; i++)
-				{
-					pw.print("\t" + spaces[i] + "\t" + biomass[i]);
-				}				
-				break;
-			
-			case SQUARE:
-				pw.print("\tinitial_pop\tsquare");
-				spaces = layoutSavePanel.getNumSpaces();
-				biomass = layoutSavePanel.getBiomassQuantity();
-				for (int i=0; i<biomass.length; i++)
-				{
-					pw.print("\t" + spaces[i] + "\t" + biomass[i]);
-				}				
-				break;
+		case FILLED:
+			pw.print("\tinitial_pop\tfilled");
+			biomass = layoutSavePanel.getBiomassQuantity();
+			for (int i=0; i<biomass.length; i++)
+			{
+				pw.print("\t" + biomass[i]);
+			}
+			break;
 
-			default: // save as-is
-				pw.print("\tinitial_pop");
-				for (Cell cell : cellList)
+		case FILLED_BOX:
+			pw.print("\tinitial_pop\tfilled_rect\t");
+			biomass = layoutSavePanel.getBiomassQuantity();
+			rect = layoutSavePanel.getBiomassRegion();
+			pw.print("\t" + rect.getX() + "\t" + rect.getY() + "\t" + rect.getWidth() + "\t" + rect.getHeight());
+			for (int i=0; i<biomass.length; i++)
+			{
+				pw.print("\t" + biomass[i]);
+			}
+			break;
+
+		case RANDOM:
+			pw.print("\tinitial_pop\trandom");
+			spaces = layoutSavePanel.getNumSpaces();
+			biomass = layoutSavePanel.getBiomassQuantity();
+			for (int i=0; i<biomass.length; i++)
+			{
+				pw.print("\t" + spaces[i] + "\t" + biomass[i]);
+			}
+			break;
+
+		case RANDOM_BOX:
+			pw.print("\tinitial_pop\trandom_rect");
+			rect = layoutSavePanel.getBiomassRegion();
+			spaces = layoutSavePanel.getNumSpaces();
+			biomass = layoutSavePanel.getBiomassQuantity();
+			pw.print("\t" + rect.getX() + "\t" + rect.getY() + "\t" + rect.getWidth() + "\t" + rect.getHeight());
+			for (int i=0; i<biomass.length; i++)
+			{
+				pw.print("\t" + spaces[i] + "\t" + biomass[i]);
+			}				
+			break;
+
+		case SQUARE:
+			pw.print("\tinitial_pop\tsquare");
+			spaces = layoutSavePanel.getNumSpaces();
+			biomass = layoutSavePanel.getBiomassQuantity();
+			for (int i=0; i<biomass.length; i++)
+			{
+				pw.print("\t" + spaces[i] + "\t" + biomass[i]);
+			}				
+			break;
+
+		default: // save as-is
+			pw.print("\tinitial_pop");
+			for (Cell cell : cellList)
+			{
+				biomass = cell.getBiomass();
+				pw.print("\n\t\t" + cell.getX() + "\t" + cell.getY());
+				for (int i=0; i<biomass.length; i++)
 				{
-					biomass = cell.getBiomass();
-					pw.print("\n\t\t" + cell.getX() + "\t" + cell.getY());
-					for (int i=0; i<biomass.length; i++)
-					{
-						pw.print("\t" + biomass[i]);
-					}
+					pw.print("\t" + biomass[i]);
 				}
-				break;
+			}
+			break;
 		}
-		
+
 		pw.println("\n\t//");
 		// --- aaaaaand DONE! ---
-		
+
 		pw.println("//");
 		pw.close();
 		//return null;
 	}
-	
+
 	public Model loadModelFromFile(Comets c, String path)
 	{
 		FBAModel model = null;
@@ -2506,7 +2815,7 @@ public class FBACometsLoader implements CometsLoader,
 			System.out.println("Error: '" + path + "' is an invalid file.");
 			return null;
 		}
-		
+
 		try
 		{
 			model = FBAModel.loadModelFromFile(f.getPath());
@@ -2528,12 +2837,12 @@ public class FBACometsLoader implements CometsLoader,
 		}
 		return model;
 	}
-	
+
 	public World2D createNewWorld(Comets c, Model[] models)
 	{
 		if (models.length == 0 || c == null)
 			return null;
-		
+
 		FBAModel[] fbaModels = new FBAModel[models.length];
 		for (int i=0; i<models.length; i++)
 		{
@@ -2555,7 +2864,7 @@ public class FBACometsLoader implements CometsLoader,
 		 * I've had way too much coffee.
 		 */
 		Map<String, Integer> mediaNames = new HashMap<String, Integer>();
-		
+
 		for (int i=0; i<models.length; i++)
 		{
 			String[] names = fbaModels[i].getExchangeMetaboliteNames();
@@ -2564,13 +2873,13 @@ public class FBACometsLoader implements CometsLoader,
 				mediaNames.put(names[j], new Integer(1));
 			}
 		}
-		
+
 		// got 'em loaded. package things into a String[] array and an
 		// empty double[] array (initial concentrations) and done!
-		
+
 		String[] names = new String[mediaNames.size()];
 		double[] concs = new double[mediaNames.size()];
-		
+
 		int i=0;
 		Iterator<String> it = mediaNames.keySet().iterator();
 		while(it.hasNext())
@@ -2579,10 +2888,10 @@ public class FBACometsLoader implements CometsLoader,
 			concs[i] = 0;
 			i++;
 		}
-		
+
 		return new FBAWorld(c, names, concs, fbaModels);
 	}
-	
+
 	public void saveLayoutFile(Comets c) throws IOException
 	{
 		// User hits "save"
@@ -2594,10 +2903,10 @@ public class FBACometsLoader implements CometsLoader,
 		//   - a way to communicate all that with the FBACometsLoader
 		if (layoutSavePanel == null)
 			layoutSavePanel = new LayoutSavePanel(c);
-		
+
 		else
 			layoutSavePanel.init();
-		
+
 		JFileChooser chooser = new JFileChooser();
 		chooser.setAccessory(layoutSavePanel);
 		int returnVal = chooser.showSaveDialog(c.getFrame());
@@ -2611,6 +2920,22 @@ public class FBACometsLoader implements CometsLoader,
 	public PackageParameterBatch getParameterBatch(Comets c)
 	{
 		return new FBAParameterBatch(c);
+	}
+
+	public double[][] getExRxnStoich() {
+		return exRxnStoich;
+	}
+
+	public double[][] getExRxnParams() {
+		return exRxnParams;
+	}
+
+	public double[] getExRxnRateConstants() {
+		return exRxnRateConstants;
+	}
+
+	public int[] getExRxnEnzymes() {
+		return exRxnEnzymes;
 	}
 
 }

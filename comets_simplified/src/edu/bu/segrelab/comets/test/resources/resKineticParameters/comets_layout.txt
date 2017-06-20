@@ -1,0 +1,73 @@
+	parameters
+	activateRate = 0.001
+	allowCellOverlap = true
+	deathRate = 0
+	maxCycles = 0
+	maxSpaceBiomass = 2.0002
+	minSpaceBiomass = 2.5e-11
+	pauseOnStep = false
+	randomOrder = false
+	spaceWidth = 0.01
+	simulateActivation = false
+	timeStep = 0.01
+	toroidalWorld = false
+	colorRelative = true
+	displayLayer = 0
+	pixelScale = 5
+	showCycleTime = true
+	showCycleCount = true
+	saveslideshow = false
+	slideshowColorRelative = true
+	slideshowExt = png
+	slideshowLayer = 0
+	slideshowName = ./res.png
+	slideshowRate = 1
+	biomassMotionStyle = Diffusion (Crank-Nicolson)
+	exchangeStyle = Monod Style
+	flowDiffRate = 0
+	growthDiffRate = 0
+	numDiffPerStep = 10
+	numRunThreads = 1
+	defaultAlpha = 1
+	defaultHill = 2
+	defaultKm = 0.01
+	defaultVmax = 10
+	defaultW = 10
+	writeFluxLog = false
+	fluxLogName = C:\sync\biomes\enz\analysis\rates_and_params\log_flux.m
+	fluxLogRate = 1
+	writeMediaLog = false
+	mediaLogName = C:\sync\biomes\enz\analysis\rates_and_params\log_media.m
+	mediaLogRate = 1
+	writeBiomassLog = false
+	biomassLogName = ./biomass.m
+	biomassLogRate = 1
+	writeTotalBiomassLog = false
+	totalBiomassLogRate = 1
+	totalBiomassLogName = ./total_biomass.m
+	useLogNameTimeStamp = false
+//
+model_file React_enze.txt Reset_enze.txt
+	model_world
+		grid_size 1 1
+		world_media
+		PseudoOrganism_Biomass_Mock 0
+		enz[e] 5e-07
+		enz_inactive[e] 0
+		product[e] 0
+		substrate[e] 8e-06
+	//
+	diffusion_constants 1.000000e-06
+	//
+	media
+	//
+	media_refresh 0 0 0 0 0
+	//
+	static_media 0 0 0 0 0 0 0 0 0 0
+	//
+	barrier
+	//
+//
+initial_pop
+	0 0 1 1
+//

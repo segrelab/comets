@@ -32,6 +32,7 @@ import javax.swing.JScrollPane;
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
+import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.World3D;
@@ -39,6 +40,7 @@ import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 
 import edu.bu.segrelab.comets.fba.FBAParameters;
+import edu.bu.segrelab.comets.reaction.RK4Runner;
 
 import java.io.*;
 
@@ -51,7 +53,7 @@ import java.io.*;
  * @author Bill Riehl briehl@bu.edu
  */
 public class FBAWorld3D extends World3D 
-					  implements CometsConstants
+implements CometsConstants
 {
 	private static int THREAD_COUNT = 0;
 
@@ -65,29 +67,35 @@ public class FBAWorld3D extends World3D
 	private double[][][][] diffusionRHS2;
 	private int threadLock;						// while threaded FBA is running, this = number of cells remaining
 
+	protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
+	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
+	//depending on if the reaction is enzymatic
+	protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
+	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
+
 	private FBAParameters pParams;
 	private List<Cell> deadCells;				// list of cells to be removed at the end of a run
 	private Stack<Cell> runCells;				// stack of cells yet to be run by threads
 
 	private long currentTimePoint;				// current simulation time cycle
 	private FBAModel[] models;					// FBA models in this system
-	
+
 	private List<int[]> modelExchList;			// indices of the exchange reactions for each model
 	//private SpaceInfoPanel infoPanel;			// the info panel for the spaces in the world
-												// see the SpaceInfoPanel inner class below
+	// see the SpaceInfoPanel inner class below
 
 	private FBARunThread3D[] runThreads;			// array of run threads
 	private ThreadGroup threadGroup;			// thread group that they all belong to
 
 	private PrintWriter mediaLogWriter,	
-						fluxLogWriter,
-						biomassLogWriter,
-						totalBiomassLogWriter;
-	
+	fluxLogWriter,
+	biomassLogWriter,
+	totalBiomassLogWriter;
+
 	private Set<Circle> circleSet;
 
 	private double defaultDiffConst;
-	
+
 	/**
 	 * Initialize a new, empty world, tied the current <code>Comets</code> with a given
 	 * number of medium components
@@ -98,7 +106,7 @@ public class FBAWorld3D extends World3D
 	{
 		super(c, numMedia);
 	}
-	
+
 	/**
 	 * Initialize a new FBAWorld connected to the given <code>Comets</code> class with 
 	 * initial global media and their names, and associated FBAModels
@@ -109,11 +117,11 @@ public class FBAWorld3D extends World3D
 	 * @param models models to apply to the world
 	 */
 	public FBAWorld3D(Comets c, String[] mediaNames, double[] startingMedia,
-					Model[] models)
+			Model[] models)
 	{
 		this(c, startingMedia.length);
 		pParams = (FBAParameters)c.getPackageParameters();
-//		this.models = models;
+		//		this.models = models;
 		numModels = models.length;
 		this.models = new FBAModel[numModels];
 		for (int i=0; i<numModels; i++)
@@ -167,7 +175,7 @@ public class FBAWorld3D extends World3D
 		changeModelsInWorld(models, models);
 		threadLock = 0;
 	}
-	
+
 	public void setDefaultMediaDiffusionConstant(double defaultDiffConst)
 	{
 		for (int i=0; i<nutrientDiffConsts.length; i++)
@@ -191,14 +199,14 @@ public class FBAWorld3D extends World3D
 			System.out.print("\t" + mediaNames[i]);
 		}
 		System.out.println();
-		
+
 		//Intialize the random number generator. Two rnds are used. 
 		Utility.randomSetSeed(pParams.getRandomSeed());
-		
+
 		currentTimePoint = 0;
 		DateFormat df = new SimpleDateFormat("_yyyyMMddHHmmss");
 		String timeStamp = df.format(new Date()); 
-		
+
 		// Init Flux log and write the first line
 		if (pParams.writeFluxLog())
 		{
@@ -233,7 +241,7 @@ public class FBAWorld3D extends World3D
 			try
 			{
 				mediaLogWriter = new PrintWriter(new FileWriter(new File(name)));
-				
+
 				// init the media log writer.
 				mediaLogWriter.print("media_names = { '" + mediaNames[0] + "'");
 				for (int i=1; i<mediaNames.length; i++)
@@ -260,7 +268,7 @@ public class FBAWorld3D extends World3D
 				mediaLogWriter = null;
 			}
 		}
-		
+
 		// Init biomass log and write the first line
 		if (pParams.writeBiomassLog())
 		{
@@ -287,7 +295,7 @@ public class FBAWorld3D extends World3D
 				biomassLogWriter = null;
 			}
 		}
-		
+
 		// Init the total biomass log and write the first line
 		if (pParams.writeTotalBiomassLog())
 		{
@@ -315,7 +323,7 @@ public class FBAWorld3D extends World3D
 			}
 		}
 	}
-	
+
 	/**
 	 * Does cleanup work at the end of the simulation. Closes log files, etc.
 	 */
@@ -337,7 +345,7 @@ public class FBAWorld3D extends World3D
 			biomassLogWriter.close();
 		}
 	}
-	
+
 	/**
 	 * Adjusts the name of a log file to include a time stamp before the file 
 	 * extension.
@@ -428,7 +436,7 @@ public class FBAWorld3D extends World3D
 	 */
 	public void changeModelsInWorld(Model[] oldModels, Model[] newModels)
 	{
-//		System.out.println("changing models in world");
+		//		System.out.println("changing models in world");
 		/*
 		 * How to go about this: 
 		 * 1. Get the exchange metab names of everything.
@@ -453,8 +461,24 @@ public class FBAWorld3D extends World3D
 				newDiffConsts.put(names[j], diffConsts[j]);
 			}
 		}
-		if (DEBUG) System.out.println(mediaNamesMap.size() + " total nutrients");
 		
+		//preserve metabolites which are involved in extracellular reactions
+		IWorld.reactionModel.reset();
+		IWorld.reactionModel.setup();
+		//String[] exRxnMets = IWorld.reactionModel.getMediaNames();
+		//if (exRxnMets == null || exRxnMets.length < 1) exRxnMets = IWorld.reactionModel.getInitialMetNames();
+		String[] exRxnMets = IWorld.reactionModel.getInitialMetNames();
+		if (exRxnMets != null){
+			for (int i = 0; i < exRxnMets.length; i++){
+				if (!mediaNamesMap.keySet().contains(exRxnMets[i])){
+				mediaNamesMap.put(exRxnMets[i], new Integer(1));
+				newDiffConsts.putIfAbsent(exRxnMets[i], nutrientDiffConsts[i]);
+				}
+			}
+		}
+		
+		if (DEBUG) System.out.println(mediaNamesMap.size() + " total nutrients");
+
 		/*
 		 * Now, figure out what stays and what goes. For each of the current
 		 * metab names, look it up in the map. If it's there, keen. Remove it
@@ -489,7 +513,7 @@ public class FBAWorld3D extends World3D
 		// newMetabNames in any order (we'll sort later)
 		if (mediaNamesMap.size() > 0)
 		{
-//			firstNewMetab = j;
+			//			firstNewMetab = j;
 			Iterator<String> it = mediaNamesMap.keySet().iterator();
 			while (it.hasNext())
 			{
@@ -545,7 +569,7 @@ public class FBAWorld3D extends World3D
 				newMediaIndices[k] = idx;
 			}
 		}
-		
+
 		/* newMediaIndices contains the translation indices for each media component.
 		 * So, the value of each element i is the new position for the old elements.
 		 * The rest should be unchanged.
@@ -630,7 +654,7 @@ public class FBAWorld3D extends World3D
 				}
 			}
 		}
-		
+
 		// Make the changes
 		for (int k = 0; k < oldModels.length; k++)
 		{
@@ -648,8 +672,8 @@ public class FBAWorld3D extends World3D
 					{
 						for(int z = 0; z < numLayers; z++)
 						{
-						newDiffBiomassIn[x][y][z][idx] = diffuseBiomassIn[x][y][z][k];
-						newDiffBiomassOut[x][y][z][idx] = diffuseBiomassOut[x][y][z][k];
+							newDiffBiomassIn[x][y][z][idx] = diffuseBiomassIn[x][y][z][k];
+							newDiffBiomassOut[x][y][z][idx] = diffuseBiomassOut[x][y][z][k];
 						}
 					}
 				}
@@ -714,7 +738,7 @@ public class FBAWorld3D extends World3D
 		 * so it's parallel with both that array and the media[][][] matrix.
 		 */
 		numModels = models.length;
-		
+
 		modelExchList = new ArrayList<int[]>();
 		Map<String, Double> allExchMetabMap = new HashMap<String, Double>();
 		for (int i = 0; i < numModels; i++)
@@ -730,19 +754,19 @@ public class FBAWorld3D extends World3D
 			}
 			modelExchList.add(worldExchIdx);
 		}
-		
-//		nutrientDiffConsts = new double[numMedia];
-//		for (int i = 0; i < mediaNames.length; i++)
-//		{
-//			nutrientDiffConsts[i] = allExchMetabMap.get(mediaNames[i]).doubleValue();
-//		}
+
+		//		nutrientDiffConsts = new double[numMedia];
+		//		for (int i = 0; i < mediaNames.length; i++)
+		//		{
+		//			nutrientDiffConsts[i] = allExchMetabMap.get(mediaNames[i]).doubleValue();
+		//		}
 	}
 
 	public double[] getMediaDiffusionConstants()
 	{
 		return nutrientDiffConsts;
 	}
-	
+
 	/**
 	 * Returns an array of Points adjacent to the space (x, y). That is, this
 	 * should return all points around (x, y).
@@ -1145,7 +1169,7 @@ public class FBAWorld3D extends World3D
 			int oldNumCols = dirichlet.length;
 			int oldNumRows = dirichlet[0].length;
 			int oldNumLayers = dirichlet[1].length;
-			
+
 			boolean[][][] newDirichlet = new boolean[numCols][numRows][numLayers];
 			boolean[][][][] newDiffuseBiomassIn = new boolean[numCols][numRows][numLayers][numModels];
 			boolean[][][][] newDiffuseBiomassOut = new boolean[numCols][numRows][numLayers][numModels];
@@ -1175,18 +1199,18 @@ public class FBAWorld3D extends World3D
 					}
 				}
 			}
-			
+
 			dirichlet = newDirichlet;
 			diffuseBiomassIn = newDiffuseBiomassIn;
 			diffuseBiomassOut = newDiffuseBiomassOut;
 			diffuseMediaIn = newDiffuseMediaIn;
 			diffuseMediaOut = newDiffuseMediaOut;
 		}
-//		if (infoPanel != null)
-//		{
-//			infoPanel.rebuildInfoPanel(c.getModelNames(), mediaNames, this);
-//			updateInfoPanel();
-//		}
+		//		if (infoPanel != null)
+		//		{
+		//			infoPanel.rebuildInfoPanel(c.getModelNames(), mediaNames, this);
+		//			updateInfoPanel();
+		//		}
 		return PARAMS_OK;
 	}
 
@@ -1198,8 +1222,8 @@ public class FBAWorld3D extends World3D
 	{
 		if (pParams.getNumDiffusionsPerStep() == 0)
 			return;
-		
-//		long time = System.currentTimeMillis();
+
+		//		long time = System.currentTimeMillis();
 		/**
 		 * Foreach of the media types, copy each media layer into a
 		 * new double[][], pipe over to Utility.diffusionFick(), then
@@ -1211,7 +1235,7 @@ public class FBAWorld3D extends World3D
 		 */
 		double dT = cParams.getTimeStep() * 3600; // time units = hours ( as in fba ), convert to seconds
 		double dX = cParams.getSpaceWidth();
-		
+
 		if (DEBUG)
 		{
 			System.out.println("dT: " + dT + "\tdX: " + dX);
@@ -1222,7 +1246,7 @@ public class FBAWorld3D extends World3D
 			}
 			System.out.println();
 		}
-		
+
 		for (int k=0; k<numMedia; k++)
 		{
 			double mediaLayerTotal = 0;
@@ -1261,7 +1285,7 @@ public class FBAWorld3D extends World3D
 			}
 		}
 	}
-	
+
 	/**
 	 * Diffuses biomass in a new, novel fashion.
 	 * @author Amrita Kar
@@ -1307,9 +1331,9 @@ public class FBAWorld3D extends World3D
 		 * 2. If ALL adjacent boxes are boundaries, no biomass moves (gives
 		 *    kind of a fuzzy upper limit).
 		 */
-		
-//		double[][][] deltaBiomass = new double[numModels][numCols][numRows];
-		
+
+		//		double[][][] deltaBiomass = new double[numModels][numCols][numRows];
+
 		/* Foreach overfull box
 		 *   1. Initialize 3x3 multiplier matrix
 		 *   2. Get boundary neighborhood
@@ -1326,10 +1350,10 @@ public class FBAWorld3D extends World3D
 		 *   6. Set those newly filled boxes as boundaries.
 		 *   7. Run the boundary neighborhood method again.
 		 */
-		
-		
+
+
 	}
-	
+
 	@SuppressWarnings("unused")
 	private double[][][] neighborhoodMult(boolean[][][] mask)
 	{
@@ -1338,7 +1362,7 @@ public class FBAWorld3D extends World3D
 		 */
 		return null;
 	}
-	
+
 	/**
 	 * Diffuses all biomass according to Fick's second law of diffusion with a few caveats
 	 * and adjustments.
@@ -1361,7 +1385,7 @@ public class FBAWorld3D extends World3D
 		 * single matrix, hand it off to Utility.diffuseFick(),
 		 * then use the results to make new cells as necessary.
 		 */
-		
+
 		/* more problems.
 		 * 1. cell overlap.
 		 * if we allow cell overlap, there's no problem. just do each
@@ -1380,7 +1404,7 @@ public class FBAWorld3D extends World3D
 		double[][][][] biomassGrowthState = new double[numModels][numCols][numRows][numLayers];
 		double[][][][] biomassFlowState = new double[numModels][numCols][numRows][numLayers];
 		Iterator<Cell> it = c.getCells().iterator();
-		
+
 		// capture the current biomass state
 		while (it.hasNext())
 		{
@@ -1419,7 +1443,7 @@ public class FBAWorld3D extends World3D
 				{
 					//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_CN)
 					//	biomassGrowthState[k] = Utility.diffuse3D(biomassGrowthState[k], barrier, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
-						//biomassGrowthState[k] = Utility.diffuseFick3D(biomassGrowthState[k], barrier, dirichlet, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX, pParams.getNumDiffusionsPerStep());
+					//biomassGrowthState[k] = Utility.diffuseFick3D(biomassGrowthState[k], barrier, dirichlet, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX, pParams.getNumDiffusionsPerStep());
 					//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_EP)
 					//	;//biomassGrowthState[k] = Utility.diffuseEightPoint(biomassGrowthState[k], dX, ((FBAModel)models[k]).getGrowthDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), barrier);
 					if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_3D)
@@ -1431,7 +1455,7 @@ public class FBAWorld3D extends World3D
 				{
 					//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_CN)
 					//	biomassFlowState[k] = Utility.diffuse3D(biomassFlowState[k], barrier, ((FBAModel)models[k]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX);
-						//biomassFlowState[k] = Utility.diffuseFick3D(biomassFlowState[k], barrier, dirichlet, ((FBAModel)models[k]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX, pParams.getNumDiffusionsPerStep());
+					//biomassFlowState[k] = Utility.diffuseFick3D(biomassFlowState[k], barrier, dirichlet, ((FBAModel)models[k]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), dX, pParams.getNumDiffusionsPerStep());
 					//if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_EP)
 					//	;//biomassFlowState[k] = Utility.diffuseEightPoint(biomassFlowState[k], dX, ((FBAModel)models[k]).getFlowDiffusionConstant(), dT/pParams.getNumDiffusionsPerStep(), barrier);
 					if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_3D)
@@ -1500,8 +1524,8 @@ public class FBAWorld3D extends World3D
 					System.out.println("No biomass diffusion! The diffusion parameter must be set to 'Diffusion 3D'. ");	
 				if (style == FBAParameters.BiomassMotionStyle.DIFFUSION_EP)
 					System.out.println("No biomass diffusion! The diffusion parameter must be set to 'Diffusion 3D'. ");
-				
-				
+
+
 				/* There's a numerical problem inherent to doing diffusion:
 				 * Even having a small concentration in a single space can diffuse out to 
 				 * a tiny concentration on the fringes of the grid (even down to ~1e-20),
@@ -1544,7 +1568,7 @@ public class FBAWorld3D extends World3D
 					double[] newBiomass = new double[numModels];
 					for (int k=0; k<numModels; k++)
 						newBiomass[k] = biomassGrowthState[k][i][j][l] + biomassFlowState[k][i][j][l];
-				
+
 					if (Utility.hasNonzeroValue(newBiomass))
 					{
 						if (isOccupied(i,j,l))
@@ -1570,7 +1594,7 @@ public class FBAWorld3D extends World3D
 			}
 		}
 	}
-	
+
 	/**
 	 * The 3D convection model for biomass transport. 
 	 *
@@ -1578,7 +1602,7 @@ public class FBAWorld3D extends World3D
 	private void convection3DBiomass()
 	{
 
-		
+
 		/* more problems.
 		 * 1. cell overlap.
 		 * if we allow cell overlap, there's no problem. just do each
@@ -1593,7 +1617,7 @@ public class FBAWorld3D extends World3D
 		 * a cell acts as a Neumann boundary. So just add those boundaries 
 		 * to each calculation on each diffusion cycle.
 		 */
-		
+
 		double[][][][] deltaDensity = new double[numModels][numCols][numRows][numLayers];
 		double[][][][] biomassDensity = new double[numModels][numCols][numRows][numLayers];
 		double[][][][] biomassDensityIntermediate = new double[numModels][numCols][numRows][numLayers];
@@ -1601,8 +1625,8 @@ public class FBAWorld3D extends World3D
 		double[][][][] convectionRHS1 = new double[numModels][numCols][numRows][numLayers];
 		double[][][][] convectionRHS2 = new double[numModels][numCols][numRows][numLayers];
 		Iterator<Cell> it = c.getCells().iterator();
-		
-		
+
+
 		double dT = cParams.getTimeStep() * 3600; // time step is in hours, diffusion is in seconds
 		double dX = cParams.getSpaceWidth();
 		// capture the current biomass state
@@ -1612,11 +1636,11 @@ public class FBAWorld3D extends World3D
 			double[] biomass = cell.getBiomass();  // total biomass
 			double[] deltaBiomass = cell.getDeltaBiomass(); // biomass produced this step
 			//System.out.println(deltaBiomass[0]);
-			
+
 			int x = cell.getX();
 			int y = cell.getY();
 			int z = cell.getZ();
-			
+
 			for (int k=0; k<numModels; k++)
 			{
 				biomassDensity[k][x][y][z]=biomass[k];// - deltaBiomass[k];
@@ -1626,9 +1650,9 @@ public class FBAWorld3D extends World3D
 				convectionRHS2[k][x][y][z]=cell.getConvectionRHS2()[k];
 			}
 		}
-		
+
 		//System.out.println(cParams.allowCellOverlap());
-		
+
 		if (cParams.allowCellOverlap())
 		{
 			for (int k=0; k<numModels; k++)
@@ -1648,7 +1672,7 @@ public class FBAWorld3D extends World3D
 						}
 					}
 				}
-				
+
 				convectionRHS[k]=Utility.getConvectionRHS3D(biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
 				for(int i=0;i<numCols;i++)
 				{
@@ -1671,7 +1695,7 @@ public class FBAWorld3D extends World3D
 						}
 					}
 				}
-				
+
 				convectionRHS[k]=Utility.getConvectionRHS3D(biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant());
 				for(int i=0;i<numCols;i++)
 				{
@@ -1688,7 +1712,7 @@ public class FBAWorld3D extends World3D
 					}
 				}
 
-				
+
 			}
 		}
 		else
@@ -1764,7 +1788,7 @@ public class FBAWorld3D extends World3D
 						}
 					}
 				}
-				
+
 				convectionRHS[curModel]=Utility.getConvectionRHS3D(biomassDensityIntermediate[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant());
 				for(int i=0;i<numCols;i++)
 				{
@@ -1810,7 +1834,7 @@ public class FBAWorld3D extends World3D
 			}
 		}
 		// update the world with the results.
-		
+
 		for (int i=0; i<numCols; i++)
 		{
 			for (int j=0; j<numRows; j++)
@@ -1821,7 +1845,7 @@ public class FBAWorld3D extends World3D
 					double[] newBiomass = new double[numModels];
 					double[] newConvectionRHS1=new double[numModels];
 					double[] newConvectionRHS2=new double[numModels];
-				
+
 					for (int k=0; k<numModels; k++)
 					{
 						newBiomass[k] = biomassDensity[k][i][j][l];
@@ -1829,7 +1853,7 @@ public class FBAWorld3D extends World3D
 						newConvectionRHS2[k]=convectionRHS2[k][i][j][l];
 						//System.out.println(i+","+j+"     "+biomassDensity[k][i][j]);
 					}
-			
+
 					if (Utility.hasNonzeroValue(newBiomass) || Utility.hasNonzeroValue(newConvectionRHS1) || Utility.hasNonzeroValue(newConvectionRHS1))
 					{
 						//System.out.println(i+"  "+j);
@@ -1860,8 +1884,8 @@ public class FBAWorld3D extends World3D
 	{
 		if (pParams.getNumDiffusionsPerStep() == 0)
 			return;
-		
-//		long time = System.currentTimeMillis();
+
+		//		long time = System.currentTimeMillis();
 		/**
 		 * Foreach of the media types, copy each media layer into a
 		 * new double[][], pipe over to Utility.diffusionFick(), then
@@ -1871,11 +1895,11 @@ public class FBAWorld3D extends World3D
 		 * but it will more than make up for it in readability/
 		 * maintainability.
 		 */
-		
+
 		double dT = cParams.getTimeStep() * 3600; // time units = hours ( as in fba ), convert to seconds
 		double dX = cParams.getSpaceWidth();
 		double[][][][] diffusionRHS  = new double[numCols][numRows][numLayers][numMedia];
-		
+
 		if (DEBUG)
 		{
 			System.out.println("dT: " + dT + "\tdX: " + dX);
@@ -1886,7 +1910,7 @@ public class FBAWorld3D extends World3D
 			}
 			System.out.println();
 		}
-		
+
 		for (int k=0; k<numMedia; k++)
 		{
 			//get current state of world (media,RHS1,RHS2)
@@ -1924,7 +1948,7 @@ public class FBAWorld3D extends World3D
 					}
 				}
 			}
-			
+
 			diffusionRHS[k]=Utility.getDiffusionRHS3D(mediaLayer,convDiffConstField,barrier,dX); 	
 			for(int i=0;i<numCols;i++)
 			{
@@ -1952,7 +1976,7 @@ public class FBAWorld3D extends World3D
 					}
 				}
 			}
-			
+
 			diffusionRHS[k]=Utility.getDiffusionRHS3D(mediaLayerIntermediate,convDiffConstField,barrier,dX);
 			for(int i=0;i<numCols;i++)
 			{
@@ -1966,7 +1990,7 @@ public class FBAWorld3D extends World3D
 							mediaLayer[i][j][l]=0.0;
 							System.out.println("Warning: Negative biomass, reduce the time step.");
 						}
-					
+
 						if(mediaLayer[i][j][l]<0.0)
 						{
 							mediaLayer[i][j][l]=0.0;
@@ -1978,112 +2002,112 @@ public class FBAWorld3D extends World3D
 		}
 	}
 	//WIP
-/************** OLD DIFFUSION METHODS ************************/
-	
-//	public void diffuseMedia()
-//	{
-//		diffuseMedia(new int[0]);
-//	}
-//
-//	public void diffuseMedia(int[] excluded)
-//	{
-//		long time = System.currentTimeMillis();
-//		System.out.println("diffusing media");
-//		double[][][] nextMedia = new double[numCols][numRows][numMedia];
-//
-//		// diffuses out all media except for those indices in the excluded list
-//		for (int i = 0; i < numCols; i++) // world x
-//		{
-//			for (int j = 0; j < numRows; j++) // world y
-//			{
-//				if (!isBarrier(i, j))
-//				{
-//					if (cParams.isToroidalGrid())
-//					{
-//						i = adjustX(i);
-//						j = adjustY(j);
-//					}
-//
-//					double[] diff = diffuseMediaBox(i, j);
-//					int exPtr = 0;
-//					for (int k = 0; k < numMedia; k++) // media idx
-//					{
-//						if (exPtr < excluded.length && k == excluded[exPtr])
-//						{
-//							exPtr++;
-//							nextMedia[i][j][k] = media[i][j][k];
-//						} else
-//						{
-//							nextMedia[i][j][k] = media[i][j][k] + diff[k];
-//						}
-//					}
-//				}
-//			}
-//		}
-//		media = nextMedia;
-//		System.out.println("difftime = " + (System.currentTimeMillis() - time));
-//	}
-//
-//	private double[] diffuseMediaBox(int x, int y)
-//	{
-//		double[] diff = new double[numMedia];
-//		int a = 0;
-//		int b = 0;
-//		double[] totalLost = new double[numMedia];
-//
-//		for (int i = x - 1; i <= x + 1; i++) // local neighborhood rows
-//		{
-//			b = 0;
-//
-//			for (int j = y - 1; j <= y + 1; j++) // local neighborhood columns
-//			{
-//				int iReal = i;
-//				int jReal = j;
-//
-//				if (cParams.isToroidalGrid())
-//				{
-//					iReal = adjustX(i);
-//					jReal = adjustY(j);
-//				}
-//				if (iReal != x || jReal != y) // skip the center space - we'll
-//												// diffuse from that when we
-//												// know how much to diffuse
-//				{
-//					// println(x + " " + y);
-//					// println(i + " " + j + "...");
-//					// if space (i,j) can be diffused FROM, then we add some
-//					// amount to diff
-//					for (int k = 0; k < numMedia; k++)
-//					{
-//						// println("k = " + k);
-//						// println("a,b = " + a + " " + b);
-//						if (canDiffuseMediaOut(iReal, jReal, k)
-//								&& canDiffuseMediaIn(x, y, k))
-//						{
-//							diff[k] += DIFFUSION_SCALE[a][b]
-//									* media[iReal][jReal][k];
-//						}
-//						if (canDiffuseMediaIn(iReal, jReal, k)
-//								&& canDiffuseMediaOut(x, y, k))
-//						{
-//							totalLost[k] += DIFFUSION_SCALE[a][b];
-//						}
-//					}
-//				}
-//				b++;
-//			}
-//			a++;
-//		}
-//
-//		for (int i = 0; i < numMedia; i++)
-//		{
-//			diff[i] -= totalLost[i] * media[x][y][i];
-//			diff[i] = cParams.getTimeStep() * cParams.getDiffusionRate()
-//					* diff[i] / 2;
-//		}
-//
-//		return diff;
-//	}
+	/************** OLD DIFFUSION METHODS ************************/
+
+	//	public void diffuseMedia()
+	//	{
+	//		diffuseMedia(new int[0]);
+	//	}
+	//
+	//	public void diffuseMedia(int[] excluded)
+	//	{
+	//		long time = System.currentTimeMillis();
+	//		System.out.println("diffusing media");
+	//		double[][][] nextMedia = new double[numCols][numRows][numMedia];
+	//
+	//		// diffuses out all media except for those indices in the excluded list
+	//		for (int i = 0; i < numCols; i++) // world x
+	//		{
+	//			for (int j = 0; j < numRows; j++) // world y
+	//			{
+	//				if (!isBarrier(i, j))
+	//				{
+	//					if (cParams.isToroidalGrid())
+	//					{
+	//						i = adjustX(i);
+	//						j = adjustY(j);
+	//					}
+	//
+	//					double[] diff = diffuseMediaBox(i, j);
+	//					int exPtr = 0;
+	//					for (int k = 0; k < numMedia; k++) // media idx
+	//					{
+	//						if (exPtr < excluded.length && k == excluded[exPtr])
+	//						{
+	//							exPtr++;
+	//							nextMedia[i][j][k] = media[i][j][k];
+	//						} else
+	//						{
+	//							nextMedia[i][j][k] = media[i][j][k] + diff[k];
+	//						}
+	//					}
+	//				}
+	//			}
+	//		}
+	//		media = nextMedia;
+	//		System.out.println("difftime = " + (System.currentTimeMillis() - time));
+	//	}
+	//
+	//	private double[] diffuseMediaBox(int x, int y)
+	//	{
+	//		double[] diff = new double[numMedia];
+	//		int a = 0;
+	//		int b = 0;
+	//		double[] totalLost = new double[numMedia];
+	//
+	//		for (int i = x - 1; i <= x + 1; i++) // local neighborhood rows
+	//		{
+	//			b = 0;
+	//
+	//			for (int j = y - 1; j <= y + 1; j++) // local neighborhood columns
+	//			{
+	//				int iReal = i;
+	//				int jReal = j;
+	//
+	//				if (cParams.isToroidalGrid())
+	//				{
+	//					iReal = adjustX(i);
+	//					jReal = adjustY(j);
+	//				}
+	//				if (iReal != x || jReal != y) // skip the center space - we'll
+	//												// diffuse from that when we
+	//												// know how much to diffuse
+	//				{
+	//					// println(x + " " + y);
+	//					// println(i + " " + j + "...");
+	//					// if space (i,j) can be diffused FROM, then we add some
+	//					// amount to diff
+	//					for (int k = 0; k < numMedia; k++)
+	//					{
+	//						// println("k = " + k);
+	//						// println("a,b = " + a + " " + b);
+	//						if (canDiffuseMediaOut(iReal, jReal, k)
+	//								&& canDiffuseMediaIn(x, y, k))
+	//						{
+	//							diff[k] += DIFFUSION_SCALE[a][b]
+	//									* media[iReal][jReal][k];
+	//						}
+	//						if (canDiffuseMediaIn(iReal, jReal, k)
+	//								&& canDiffuseMediaOut(x, y, k))
+	//						{
+	//							totalLost[k] += DIFFUSION_SCALE[a][b];
+	//						}
+	//					}
+	//				}
+	//				b++;
+	//			}
+	//			a++;
+	//		}
+	//
+	//		for (int i = 0; i < numMedia; i++)
+	//		{
+	//			diff[i] -= totalLost[i] * media[x][y][i];
+	//			diff[i] = cParams.getTimeStep() * cParams.getDiffusionRate()
+	//					* diff[i] / 2;
+	//		}
+	//
+	//		return diff;
+	//	}
 
 	/**
 	 * Runs one cycle of the simulation on this <code>FBAWorld</code>. The simulation flow
@@ -2107,19 +2131,7 @@ public class FBAWorld3D extends World3D
 		int ret = PARAMS_OK;
 		if (pParams.getNumRunThreads() > 1)
 		{	
-			//try
-			//{
-			//	PrintWriter out1 = new PrintWriter(new FileWriter("fbatime_multithread.txt",true));
-			//    long t = System.currentTimeMillis();
-			    ret = runThreaded();
-			    //System.out.println("total mt fba time = "+(System.currentTimeMillis()-t));
-			    //out1.println((System.currentTimeMillis()-t));
-            //    out1.close();
-		    //}
-		    //catch (IOException e)
-		    //{
-			//    System.out.println("File fbatime_mutithread.dat not found");
-		    //}
+			ret = runThreaded();
 		}
 		else
 		{
@@ -2136,105 +2148,69 @@ public class FBAWorld3D extends World3D
 
 			// 2. tell all the cells to run
 			List<Cell> deadCells = new ArrayList<Cell>();
-			//try
-			//{
-			//	PrintWriter out1 = new PrintWriter(new FileWriter("fbatime_singlethread.txt",true));
-			//    long t = System.currentTimeMillis();
-			    for (int i = 0; i < c.getCells().size(); i++)
-			    { 
-				    // print("running cell " + i + "...");
-				    Cell cell = (Cell) c.getCells().get(i);
-				    int alive = cell.run();
-				    if (alive == Cell.CELL_DEAD)
-					    deadCells.add(cell);
-				    // println(" done!");
-			    }
-			    //System.out.println("total st fba time = " + (System.currentTimeMillis() - t));
-                //out1.println((System.currentTimeMillis() - t));
-             //   out1.close();
-			//}
-			//catch(IOException e)
-			//{
-			//	System.out.println("File fbatime_singlethread.txt not found.");
-			//}
+			for (int i = 0; i < c.getCells().size(); i++)
+			{ 
+				// print("running cell " + i + "...");
+				Cell cell = (Cell) c.getCells().get(i);
+				int alive = cell.run();
+				if (alive == Cell.CELL_DEAD)
+					deadCells.add(cell);
+				// println(" done!");
+			}
+			
 			// remove dead cells.
 			switch(pParams.getBiomassMotionStyle())
 			{
-				case CONVECTION_3D:
-					;
-					break;
-				default:
-					for (int i = 0; i < deadCells.size(); i++)
-					{
-						// System.out.println("removing deadcell " + i + " of " +
-						// deadCells.size());
-						Cell cell = (Cell) c.getCells().remove(
-								c.getCells().indexOf(deadCells.get(i)));
-						removeCell(cell.getX(), cell.getY(), cell.getZ());
-					}
-					break;
+			case CONVECTION_3D:
+				;
+				break;
+			default:
+				for (int i = 0; i < deadCells.size(); i++)
+				{
+					// System.out.println("removing deadcell " + i + " of " +
+					// deadCells.size());
+					Cell cell = (Cell) c.getCells().remove(
+							c.getCells().indexOf(deadCells.get(i)));
+					removeCell(cell.getX(), cell.getY(), cell.getZ());
+				}
+				break;
 			}
 			deadCells.clear();
 		}
-        
-		//try
-		//{
-		//    long t = System.currentTimeMillis();
-		    // 3. diffuse media and biomass
-        //    PrintWriter out1 = new PrintWriter(new FileWriter("difftime.txt",true));
-//System.out.println("ok"+cParams.getDiffusionsPerStep());
-//System.out.println("OK"+pParams.getNumDiffusionsPerStep());
-//System.out.println("flow"+pParams.getFlowDiffRate());
-//System.out.println("growth"+pParams.getGrowthDiffRate());
-//if(pParams.getExchangeStyle() instanceof FBAParameters.ExchangeStyle)
-//System.out.println("style "+pParams.getExchangeStyle());
-//System.out.println("numDiff "+pParams.getNumDiffusionsPerStep());
-			//for (int i = 0; i < cParams.getDiffusionsPerStep(); i++)
-            //for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
-		    //{          	      	
-			    diffuseMediaFick();
-			    //diffuseBiomass(pParams.getBiomassMotionStyle());
-			    switch (pParams.getBiomassMotionStyle())
-			    {
-			    	case DIFFUSION_3D :
-			    		diffuseBiomass(pParams.getBiomassMotionStyle());
-			    		break;
-			    	case CONVECTION_3D:
-			    		convection3DBiomass();
-			    		break;
-//				    case DIFFUSION_CN :
-//					    diffuseBiomass(pParams.getBiomassMotionStyle());
-//					    break;
-//				    case DIFFUSION_EP :
-//					    diffuseBiomass(pParams.getBiomassMotionStyle());
-//					    break;
-//				    default :
-//					    break;
-			    }
 
-		    //}
-//out1.println((System.currentTimeMillis() - t));
-         //   out1.close();
-		//}
-		//catch(IOException e)
-		//{
-		//	System.out.println("File difftime.txt not found.");
-		//}
-		//System.out.println("total st diffusion time = " + (System.currentTimeMillis() - t));
+
+		// 3. Run any extracellular reactions
+		//if (!reactionModel.isSetUp()) reactionModel.setup();
+		if (reactionModel.isSetUp()){
+			if (exRxnStoich != null) executeExternalReactions();
+		}
 		
-		//t = System.currentTimeMillis();
-		// 4. set static media
+		// 4. diffuse media and biomass
+		diffuseMediaFick();
+		//diffuseBiomass(pParams.getBiomassMotionStyle());
+		switch (pParams.getBiomassMotionStyle())
+		{
+		case DIFFUSION_3D :
+			diffuseBiomass(pParams.getBiomassMotionStyle());
+			break;
+		case CONVECTION_3D:
+			convection3DBiomass();
+			break;
+			//				    case DIFFUSION_CN :
+				//					    diffuseBiomass(pParams.getBiomassMotionStyle());
+			//					    break;
+			//				    case DIFFUSION_EP :
+			//					    diffuseBiomass(pParams.getBiomassMotionStyle());
+			//					    break;
+			//				    default :
+			//					    break;
+		}
+
+		// 5. set static media
 		applyStaticMedia();
-		//System.out.println("total applyStaticMedia = " + (System.currentTimeMillis() - t));
-		
-		//t = System.currentTimeMillis();
-		// 5. refresh media, if we're supposed to.
+
+		// 6. refresh media, if we're supposed to.
 		refreshMedia();
-		//System.out.println("total refreshMedia = " + (System.currentTimeMillis() - t));
-		
-		//t = System.currentTimeMillis();
-		//if (!cParams.isCommandLineOnly())
-		//	updateInfoPanel();
 
 		double[] totalBiomass = calculateTotalBiomass();
 		System.out.println ("Total biomass:");
@@ -2242,8 +2218,7 @@ public class FBAWorld3D extends World3D
 		{
 			System.out.println("Model " + i + ": " + totalBiomass[i]);
 		}
-		//System.out.println("total calculateBiomass = " + (System.currentTimeMillis() - t));
-		
+
 		currentTimePoint++;
 		if (pParams.writeFluxLog() && currentTimePoint % pParams.getFluxLogRate() == 0)
 			writeFluxLog();
@@ -2255,7 +2230,7 @@ public class FBAWorld3D extends World3D
 			writeTotalBiomassLog();
 		return ret;
 	}
-	
+
 	/**
 	 * Performs the FBA phase of the simulation run using the <code>FBARunThread</code> group.
 	 * If there are no threads, it makes them first, then runs them. This also removes
@@ -2295,19 +2270,19 @@ public class FBAWorld3D extends World3D
 		// remove dead cells.
 		switch(pParams.getBiomassMotionStyle())
 		{
-			case CONVECTION_3D:
-				;
-				break;
-			default:
-				for (int i = 0; i < deadCells.size(); i++)
-				{
-					// System.out.println("removing deadcell " + i + " of " +
-					// deadCells.size());
-					Cell cell = (Cell) c.getCells().remove(
-							c.getCells().indexOf(deadCells.get(i)));
-					removeCell(cell.getX(), cell.getY(), cell.getZ());
-				}
-				break;
+		case CONVECTION_3D:
+			;
+			break;
+		default:
+			for (int i = 0; i < deadCells.size(); i++)
+			{
+				// System.out.println("removing deadcell " + i + " of " +
+				// deadCells.size());
+				Cell cell = (Cell) c.getCells().remove(
+						c.getCells().indexOf(deadCells.get(i)));
+				removeCell(cell.getX(), cell.getY(), cell.getZ());
+			}
+			break;
 		}
 		deadCells.clear();
 		return 0;
@@ -2323,7 +2298,7 @@ public class FBAWorld3D extends World3D
 		if (returnCode == Cell.CELL_DEAD)
 			deadCells.add(cell);
 	}
-	
+
 	/**
 	 * This doles out a new <code>FBACell</code> to any thread that is ready to run FBA on it. 
 	 * @return an FBACell for the threads to run
@@ -2349,11 +2324,19 @@ public class FBAWorld3D extends World3D
 				FBACell cell = (FBACell)runCells.pop();
 				return cell;
 			}
-				//return (FBACell) runCells.pop();
+			//return (FBACell) runCells.pop();
 		}
 		return null;
 	}
-	
+
+	protected void executeExternalReactions(){
+		//get new media concentrations in the form double[x][y][z][mediaIdx]
+		//Since this is the 2d version of the world, always use z=0
+		RK4Runner rk4 = new RK4Runner(this.c);
+		rk4.run();
+		media = rk4.result;
+	}
+
 	/**
 	 * Writes to the currently initialized flux log, if it is the right time. See documentation
 	 * for the formats.
@@ -2368,73 +2351,73 @@ public class FBAWorld3D extends World3D
 
 			switch(pParams.getFluxLogFormat())
 			{
-				case MATLAB:
-					/*
-					 * Matlab .m file format:
-					 * fluxes{time}{x}{y}{species} = [array];
-					 * so it'll be one bigass structure.
-					 */
-					Iterator<Cell> it = c.getCells().iterator();
-					while (it.hasNext())
+			case MATLAB:
+				/*
+				 * Matlab .m file format:
+				 * fluxes{time}{x}{y}{species} = [array];
+				 * so it'll be one bigass structure.
+				 */
+				Iterator<Cell> it = c.getCells().iterator();
+				while (it.hasNext())
+				{
+					FBACell cell = (FBACell)it.next();
+					double fluxes[][] = cell.getFluxes();
+					if (fluxes == null)
+						continue; // fluxes uninitialized.
+					else
 					{
-						FBACell cell = (FBACell)it.next();
-						double fluxes[][] = cell.getFluxes();
-						if (fluxes == null)
-							continue; // fluxes uninitialized.
-						else
+						for (int i=0; i<fluxes.length; i++)
 						{
-							for (int i=0; i<fluxes.length; i++)
+							if (fluxes[i] != null)
 							{
-								if (fluxes[i] != null)
-								{
-									fluxLogWriter.write("fluxes{" + (currentTimePoint) + "}{" + (cell.getX()+1) + "}{" + (cell.getY()+1) + "}{"+ (cell.getZ()+1) + "}{" + (i+1) + "} = [");
-									for (int j=0; j<fluxes[i].length; j++)
-									{
-										fluxLogWriter.write(nf.format(fluxes[i][j]) + " ");
-									}
-									fluxLogWriter.write("];\n");
-								}
-							}
-						}
-					}
-					break;
-					
-				default:
-					/* print all fluxes from each cell.
-					 * format:
-					 * timepoint\n
-					 * x y fluxes_species_0 fluxes_species_1 ... fluxes_species_n\n
-					 * x y fluxes_species_0 fluxes_species_1 ... fluxes_species_n\n
-					 * ...
-					 */
-					fluxLogWriter.println(currentTimePoint);
-					it = c.getCells().iterator();
-					while (it.hasNext())
-					{
-						// blah print
-						FBACell cell = (FBACell)it.next();
-						double[][] fluxes = cell.getFluxes();
-						if (fluxes[0] == null) // e.g., FBA hasn't been run yet.
-							continue;
-						else
-						{
-							fluxLogWriter.print(cell.getX() + " " + cell.getY()+" " + cell.getZ());
-							for (int i=0; i<fluxes.length; i++)
-							{
+								fluxLogWriter.write("fluxes{" + (currentTimePoint) + "}{" + (cell.getX()+1) + "}{" + (cell.getY()+1) + "}{"+ (cell.getZ()+1) + "}{" + (i+1) + "} = [");
 								for (int j=0; j<fluxes[i].length; j++)
 								{
-									fluxLogWriter.print(" " + nf.format(fluxes[i][j]));
+									fluxLogWriter.write(nf.format(fluxes[i][j]) + " ");
 								}
+								fluxLogWriter.write("];\n");
 							}
-							fluxLogWriter.print("\n");
 						}
 					}
-					break;
+				}
+				break;
+
+			default:
+				/* print all fluxes from each cell.
+				 * format:
+				 * timepoint\n
+				 * x y fluxes_species_0 fluxes_species_1 ... fluxes_species_n\n
+				 * x y fluxes_species_0 fluxes_species_1 ... fluxes_species_n\n
+				 * ...
+				 */
+				fluxLogWriter.println(currentTimePoint);
+				it = c.getCells().iterator();
+				while (it.hasNext())
+				{
+					// blah print
+					FBACell cell = (FBACell)it.next();
+					double[][] fluxes = cell.getFluxes();
+					if (fluxes[0] == null) // e.g., FBA hasn't been run yet.
+						continue;
+					else
+					{
+						fluxLogWriter.print(cell.getX() + " " + cell.getY()+" " + cell.getZ());
+						for (int i=0; i<fluxes.length; i++)
+						{
+							for (int j=0; j<fluxes[i].length; j++)
+							{
+								fluxLogWriter.print(" " + nf.format(fluxes[i][j]));
+							}
+						}
+						fluxLogWriter.print("\n");
+					}
+				}
+				break;
 			}
 			fluxLogWriter.flush();
 		}
 	}
-	
+
 	/**
 	 * Writes to the media log if it is the right time point. See documentation for the format.
 	 */
@@ -2447,7 +2430,7 @@ public class FBAWorld3D extends World3D
 			//nf.setGroupingUsed(false);
 			//nf.setMaximumFractionDigits(9);
 			NumberFormat nf = new DecimalFormat("0.##########E0");
-			
+
 			for (int k=0; k<numMedia; k++)
 			{
 				mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + ", " + numLayers + "));");
@@ -2480,49 +2463,49 @@ public class FBAWorld3D extends World3D
 			nf.setMaximumFractionDigits(100);
 			switch(pParams.getBiomassLogFormat())
 			{
-				/* Matlab .m file format:
-				 * biomass_<time>_<species> = sparse(<num_rows>, <num_cols>);
-				 * biomass_<time>_<species>(<row>, <col>) = <biomass>
-				 * ...
-				 * and so on.
-				 */
-				case MATLAB:
-					for (int i=0; i<models.length; i++)
-					{
-						String varName = "biomass_" + currentTimePoint + "_" + i;
-						biomassLogWriter.println(varName + " = sparse(" + numLayers+", "+ numRows + ", " + numCols +");");
-						Iterator<Cell> it = c.getCells().iterator();
-						while (it.hasNext())
-						{
-							FBACell cell = (FBACell)it.next();
-							double[] biomass = cell.getBiomass();
-							biomassLogWriter.println(varName + "("+(cell.getZ()+1)+", " + (cell.getY()+1) + ", " + (cell.getX()+1) + ") = " + nf.format(biomass[i]) + ";");
-						}
-					}
-					break;
-					
-				default:
-					/*
-					 * Comets file format:
-					 * currentTimePoint on a line
-					 * x y biomass1 biomass2 ... biomassN
-					 * x y ...
-					 * etc.
-					 */
-					biomassLogWriter.println(currentTimePoint);
+			/* Matlab .m file format:
+			 * biomass_<time>_<species> = sparse(<num_rows>, <num_cols>);
+			 * biomass_<time>_<species>(<row>, <col>) = <biomass>
+			 * ...
+			 * and so on.
+			 */
+			case MATLAB:
+				for (int i=0; i<models.length; i++)
+				{
+					String varName = "biomass_" + currentTimePoint + "_" + i;
+					biomassLogWriter.println(varName + " = sparse(" + numLayers+", "+ numRows + ", " + numCols +");");
 					Iterator<Cell> it = c.getCells().iterator();
 					while (it.hasNext())
 					{
 						FBACell cell = (FBACell)it.next();
 						double[] biomass = cell.getBiomass();
-						biomassLogWriter.print(cell.getX() + " " + cell.getY()+ " " + cell.getZ());
-						for (int i=0; i<biomass.length; i++)
-						{
-							biomassLogWriter.print(" " + nf.format(biomass[i]));
-						}
-						biomassLogWriter.print("\n");
+						biomassLogWriter.println(varName + "("+(cell.getZ()+1)+", " + (cell.getY()+1) + ", " + (cell.getX()+1) + ") = " + nf.format(biomass[i]) + ";");
 					}
-					break;
+				}
+				break;
+
+			default:
+				/*
+				 * Comets file format:
+				 * currentTimePoint on a line
+				 * x y biomass1 biomass2 ... biomassN
+				 * x y ...
+				 * etc.
+				 */
+				biomassLogWriter.println(currentTimePoint);
+				Iterator<Cell> it = c.getCells().iterator();
+				while (it.hasNext())
+				{
+					FBACell cell = (FBACell)it.next();
+					double[] biomass = cell.getBiomass();
+					biomassLogWriter.print(cell.getX() + " " + cell.getY()+ " " + cell.getZ());
+					for (int i=0; i<biomass.length; i++)
+					{
+						biomassLogWriter.print(" " + nf.format(biomass[i]));
+					}
+					biomassLogWriter.print("\n");
+				}
+				break;
 			}
 			biomassLogWriter.flush();
 		}
@@ -2540,14 +2523,14 @@ public class FBAWorld3D extends World3D
 			nf.setGroupingUsed(false);
 			nf.setMaximumFractionDigits(100);
 			double[] curBiomass = calculateTotalBiomass();
-			
+
 			totalBiomassLogWriter.print(currentTimePoint);
 			for (int i=0; i<curBiomass.length; i++)
 			{
 				totalBiomassLogWriter.print("\t" + curBiomass[i]);
 			}
 			totalBiomassLogWriter.println();
-			
+
 			totalBiomassLogWriter.flush();
 		}
 	}
@@ -2564,322 +2547,322 @@ public class FBAWorld3D extends World3D
 	}
 
 	/************ VEERRRRY OLD DIFFUSION METHODS ******************/
-//	/**
-//	 * Here's how this works. It figures out how much each biomass component
-//	 * should change in this space using the approximation model in the BacSim
-//	 * paper. (Kreft et al.)
-//	 * 
-//	 * Instead of - like the paper does - calculating how much each set of
-//	 * neighboring points should get, it calculated how much the central point
-//	 * gets from each of its neighbors, along with how much that central point
-//	 * should give out to each of its neighbors.
-//	 * 
-//	 * @param x
-//	 * @param y
-//	 * @return
-//	 */
-//	public double[] diffuseBiomassBox(int x, int y, boolean allowOverlap)
-//	{
-//		// System.out.println("Calcing biomass diffusion on space (" + x + ", "
-//		// + y + ")");
-//		double[] diff = new double[numModels];
-//		// if we don't allow overlap and this site is empty of biomass,
-//		// return the zero array. this case will be dealt with elsewhere.
-//		if (!allowOverlap && !isOccupied(x, y))
-//			return diff;
-//
-//		double[] xyCellBiomass = new double[numModels];
-//		double[] xyCellDeltaBiomass = new double[numModels];
-//		if (isOccupied(x, y))
-//		{
-//			xyCellBiomass = ((FBACell) getCellAt(x, y)).getBiomass();
-//			xyCellDeltaBiomass = ((FBACell) getCellAt(x, y)).getDeltaBiomass();
-//		}
-//		int a = 0, b = 0;
-//
-//		/*
-//		 * Simplest case! -------------- Get biomass[] and deltaBiomass[] arrays
-//		 * from the cell at (x,y), and surrounding cells.
-//		 * 
-//		 * OUTFLOW DIFFUSION if deltaBiomass <= 0, then only the biomass[] value
-//		 * is used for diffusing out.
-//		 * 
-//		 * if deltaBiomass > 0, then we do a 2-stage diffusion. 1.
-//		 * (biomass-deltaBiomass)*model.getFlowDiffusionConstant() 2.
-//		 * deltaBiomass*model.getGrowthDiffusionConstant()
-//		 * 
-//		 * INFLOW DIFFUSION Basically like the outflow diffusion from the point
-//		 * of view of all surrounding cells.
-//		 */
-//		for (int i = x - 1; i <= x + 1; i++)
-//		{
-//			b = 0;
-//			for (int j = y - 1; j <= y + 1; j++)
-//			{
-//				if (i != x || j != y) // ignore the center one. we diffuse to
-//										// and from the outer neighborhood
-//				{
-//					// first, diffuse FROM (i,j)
-//					if (isOccupied(i, j))
-//					{
-//						double[] diffCellBiomass = getCellAt(i, j).getBiomass();
-//						double[] diffCellDeltaBiomass = ((FBACell) getCellAt(i,
-//								j)).getDeltaBiomass();
-//
-//						for (int k = 0; k < numModels; k++)
-//						{
-//							if (canDiffuseBiomassOut(i, j, k)
-//									&& canDiffuseBiomassIn(x, y, k))
-//							{
-//								if (diffCellDeltaBiomass[k] <= 0)
-//									diff[k] += DIFFUSION_SCALE[a][b]
-//											* diffCellBiomass[k]
-//											* fbaModels[k].getFlowDiffusionConstant();
-//								else
-//								{
-//									diff[k] += DIFFUSION_SCALE[a][b]
-//											* (diffCellBiomass[k] - diffCellDeltaBiomass[k])
-//											* fbaModels[k].getFlowDiffusionConstant();
-//									diff[k] += DIFFUSION_SCALE[a][b]
-//											* diffCellDeltaBiomass[k]
-//											* fbaModels[k].getGrowthDiffusionConstant();
-//								}
-//							}
-//						}
-//					}
-//
-//					// now, diffuse TO (i,j)
-//					if (isOccupied(x, y))
-//					{
-//						for (int k = 0; k < numModels; k++)
-//						{
-//							/*
-//							 * if allowOverlap, then just check if it can
-//							 * diffuse to. if !allowOverlap, then make sure
-//							 * there's biomass there to diffuse into. --
-//							 * diffusing into an empty space when overlap isn't
-//							 * allowed is a special case handled by the calling
-//							 * function. so, given that the diffusion can go,
-//							 * allow this to proceed if either allowOverlap is
-//							 * true, OR allowOverlap is false but the target
-//							 * spot is occupied
-//							 */
-//							if ((canDiffuseBiomassIn(i, j, k) && canDiffuseBiomassOut(
-//									x, y, k))
-//									&& (allowOverlap || (!allowOverlap && isOccupied(
-//											i, j))))
-//							{
-//								if (xyCellDeltaBiomass[k] <= 0)
-//									diff[k] -= DIFFUSION_SCALE[a][b]
-//											* xyCellBiomass[k]
-//											* fbaModels[k].getFlowDiffusionConstant();
-//								else
-//								{
-//									diff[k] -= DIFFUSION_SCALE[a][b]
-//											* (xyCellBiomass[k] - xyCellDeltaBiomass[k])
-//											* fbaModels[k].getFlowDiffusionConstant();
-//									diff[k] -= DIFFUSION_SCALE[a][b]
-//											* xyCellDeltaBiomass[k]
-//											* fbaModels[k].getGrowthDiffusionConstant();
-//								}
-//							}
-//						}
-//					}
-//				}
-//				b++;
-//			}
-//			a++;
-//		}
-//		for (int i = 0; i < diff.length; i++)
-//		{
-//			diff[i] *= cParams.getDiffusionRate() * cParams.getTimeStep();
-//		}
-//		return diff;
-//	}
-//
-//	public void diffuseBiomass()
-//	{
-//		System.out.println("Biomass pre-diffusion:");
-//		double[] totalBiomass = calculateTotalBiomass();
-//		for (int i = 0; i < totalBiomass.length; i++)
-//		{
-//			System.out.print(totalBiomass[i] + " ");
-//		}
-//		System.out.println("");
-//
-//		for (int z = 0; z < 1; /* cParams.getDiffusionsPerStep(); */z++)
-//		{
-//			double[][][] biomassDiffBuffer = new double[numCols][numRows][numModels];
-//			for (int i = 0; i < numCols; i++)
-//			{
-//				for (int j = 0; j < numRows; j++)
-//				{
-//					// if there's something in the cell OR we allow for overlap,
-//					// then calculate the buffer in one way.
-//					if (isOccupied(i, j) || cParams.allowCellOverlap())
-//					{
-//						double[] buffer = diffuseBiomassBox(i, j, cParams
-//								.allowCellOverlap());
-//						for (int k = 0; k < buffer.length; k++)
-//							biomassDiffBuffer[i][j][k] += buffer[k];
-//					}
-//					// otherwise (if that space is empty, or overlap isn't
-//					// allowed)
-//					// do something different.
-//					else
-//					{
-//						/*
-//						 * do something completely different. this requires
-//						 * access to the deltaBiomass[][][] matrix, too. so i
-//						 * guess we cram it in here.
-//						 */
-//
-//						double[][][] deltaBox = new double[3][3][numModels];
-//						/*
-//						 * deltaBox will house how much of each surrounding
-//						 * space will contribute to the center one. (center
-//						 * should be 0).
-//						 */
-//
-//						/*
-//						 * the center space can be any. this leads to another
-//						 * case - if the center is on an edge and this is a
-//						 * torus, then some of the outer boxes could map to the
-//						 * other side of the world.
-//						 * 
-//						 * i think that'll be taken care of below. hopefully.
-//						 */
-//
-//						double[] totalDeltaBox = new double[numModels];
-//						for (int a = 0; a < 3; a++)
-//						{
-//							for (int b = 0; b < 3; b++)
-//							{
-//								if ((a == b && b == 1)
-//										|| !isOccupied(i + a - 1, j + b - 1))
-//									continue;
-//
-//								double[] biomass = getCellAt(i + a - 1,
-//										j + b - 1).getBiomass();
-//								double[] deltaBiomass = ((FBACell) getCellAt(i
-//										+ a - 1, j + b - 1)).getDeltaBiomass();
-//
-//								for (int m = 0; m < numModels; m++)
-//								{
-//									if (!canDiffuseBiomassIn(i, j, m)
-//											|| !canDiffuseBiomassOut(i + a - 1,
-//													j + b - 1, m))
-//										continue;
-//
-//									if (deltaBiomass[m] <= 0)
-//										deltaBox[a][b][m] = DIFFUSION_SCALE[a][b]
-//												* biomass[m]
-//												* fbaModels[m].getFlowDiffusionConstant();
-//									else
-//									{
-//										deltaBox[a][b][m] = DIFFUSION_SCALE[a][b]
-//												* (biomass[m] - deltaBiomass[m])
-//												* fbaModels[m].getFlowDiffusionConstant();
-//										deltaBox[a][b][m] = DIFFUSION_SCALE[a][b]
-//												* deltaBiomass[m]
-//												* fbaModels[m].getGrowthDiffusionConstant();
-//									}
-//									totalDeltaBox[m] += deltaBox[a][b][m];
-//								}
-//							}
-//						}
-//
-//						/*
-//						 * now we have a potential set of biomass flowing into
-//						 * the center space. from totalDeltaBox we can find the
-//						 * maximum value, and dub the center space a new cell
-//						 * with that kind of biomass.
-//						 * 
-//						 * but for now, we'll just fill in the
-//						 * deltaBiomass[][][] array with the right value, and
-//						 * update the surrounding elements with the adjusted
-//						 * values. remember to deal with toroidal crap!
-//						 */
-//						int maxIndex = 0;
-//						double maxValue = totalDeltaBox[0];
-//
-//						for (int w = 1; w < totalDeltaBox.length; w++)
-//						{
-//							if (totalDeltaBox[w] > maxValue)
-//							{
-//								maxIndex = w;
-//								maxValue = totalDeltaBox[w];
-//							} else if (totalDeltaBox[w] == maxValue
-//									&& Utility.randomInt(2) == 1)
-//							{
-//								maxIndex = w;
-//							}
-//						}
-//						// now we have a winning value and model index.
-//						// update the deltaBiomass buffer with that value
-//						// and apply the changes around (i,j)
-//						if (maxValue > 0)
-//						{
-//							biomassDiffBuffer[i][j][maxIndex] = maxValue
-//									* cParams.getDiffusionRate()
-//									* cParams.getTimeStep();
-//
-//							for (int a = 0; a < 3; a++)
-//							{
-//								for (int b = 0; b < 3; b++)
-//								{
-//									int adjX = adjustX(i + a - 1);
-//									int adjY = adjustY(j + b - 1);
-//									biomassDiffBuffer[adjX][adjY][maxIndex] -= deltaBox[a][b][maxIndex]
-//											* cParams.getDiffusionRate()
-//											* cParams.getTimeStep();
-//								}
-//							}
-//						}
-//					}
-//				}
-//			}
-//
-//			for (int i = 0; i < numCols; i++)
-//			{
-//				for (int j = 0; j < numRows; j++)
-//				{
-//					// now we have the total buffer. apply it all, and make new
-//					// cells as
-//					// necessary.
-//					// if there's any value in deltaBiomass
-//					if (Utility.hasNonzeroValue(biomassDiffBuffer[i][j]))
-//					{
-//						// if there's a cell there, just update it.
-//						if (isOccupied(i, j))
-//						{
-//							// update biomass
-//							Cell cell = (Cell) getCellAt(i, j);
-//							cell.changeBiomass(biomassDiffBuffer[i][j]);
-//						}
-//						// otherwise, make a new cell there.
-//						else
-//						{
-//							// At this point, we have the new biomass ready to
-//							// rock.
-//							// Make a new cell from it!
-//							Cell cell = new FBACell(i, j,
-//									biomassDiffBuffer[i][j], this,
-//									fbaModels, cParams);
-//							c.getCells().add(cell);
-//						}
-//					}
-//				}
-//			}
-//		}
-//		System.out.println("Biomass post-diffusion:");
-//		totalBiomass = calculateTotalBiomass();
-//		for (int i = 0; i < totalBiomass.length; i++)
-//		{
-//			System.out.print(totalBiomass[i] + " ");
-//		}
-//		System.out.println("");
-//	}
+	//	/**
+	//	 * Here's how this works. It figures out how much each biomass component
+	//	 * should change in this space using the approximation model in the BacSim
+	//	 * paper. (Kreft et al.)
+	//	 * 
+	//	 * Instead of - like the paper does - calculating how much each set of
+	//	 * neighboring points should get, it calculated how much the central point
+	//	 * gets from each of its neighbors, along with how much that central point
+	//	 * should give out to each of its neighbors.
+	//	 * 
+	//	 * @param x
+	//	 * @param y
+	//	 * @return
+	//	 */
+	//	public double[] diffuseBiomassBox(int x, int y, boolean allowOverlap)
+	//	{
+	//		// System.out.println("Calcing biomass diffusion on space (" + x + ", "
+	//		// + y + ")");
+	//		double[] diff = new double[numModels];
+	//		// if we don't allow overlap and this site is empty of biomass,
+	//		// return the zero array. this case will be dealt with elsewhere.
+	//		if (!allowOverlap && !isOccupied(x, y))
+	//			return diff;
+	//
+	//		double[] xyCellBiomass = new double[numModels];
+	//		double[] xyCellDeltaBiomass = new double[numModels];
+	//		if (isOccupied(x, y))
+	//		{
+	//			xyCellBiomass = ((FBACell) getCellAt(x, y)).getBiomass();
+	//			xyCellDeltaBiomass = ((FBACell) getCellAt(x, y)).getDeltaBiomass();
+	//		}
+	//		int a = 0, b = 0;
+	//
+	//		/*
+	//		 * Simplest case! -------------- Get biomass[] and deltaBiomass[] arrays
+	//		 * from the cell at (x,y), and surrounding cells.
+	//		 * 
+	//		 * OUTFLOW DIFFUSION if deltaBiomass <= 0, then only the biomass[] value
+	//		 * is used for diffusing out.
+	//		 * 
+	//		 * if deltaBiomass > 0, then we do a 2-stage diffusion. 1.
+	//		 * (biomass-deltaBiomass)*model.getFlowDiffusionConstant() 2.
+	//		 * deltaBiomass*model.getGrowthDiffusionConstant()
+	//		 * 
+	//		 * INFLOW DIFFUSION Basically like the outflow diffusion from the point
+	//		 * of view of all surrounding cells.
+	//		 */
+	//		for (int i = x - 1; i <= x + 1; i++)
+	//		{
+	//			b = 0;
+	//			for (int j = y - 1; j <= y + 1; j++)
+	//			{
+	//				if (i != x || j != y) // ignore the center one. we diffuse to
+	//										// and from the outer neighborhood
+	//				{
+	//					// first, diffuse FROM (i,j)
+	//					if (isOccupied(i, j))
+	//					{
+	//						double[] diffCellBiomass = getCellAt(i, j).getBiomass();
+	//						double[] diffCellDeltaBiomass = ((FBACell) getCellAt(i,
+	//								j)).getDeltaBiomass();
+	//
+	//						for (int k = 0; k < numModels; k++)
+	//						{
+	//							if (canDiffuseBiomassOut(i, j, k)
+	//									&& canDiffuseBiomassIn(x, y, k))
+	//							{
+	//								if (diffCellDeltaBiomass[k] <= 0)
+	//									diff[k] += DIFFUSION_SCALE[a][b]
+	//											* diffCellBiomass[k]
+	//											* fbaModels[k].getFlowDiffusionConstant();
+	//								else
+	//								{
+	//									diff[k] += DIFFUSION_SCALE[a][b]
+	//											* (diffCellBiomass[k] - diffCellDeltaBiomass[k])
+	//											* fbaModels[k].getFlowDiffusionConstant();
+	//									diff[k] += DIFFUSION_SCALE[a][b]
+	//											* diffCellDeltaBiomass[k]
+	//											* fbaModels[k].getGrowthDiffusionConstant();
+	//								}
+	//							}
+	//						}
+	//					}
+	//
+	//					// now, diffuse TO (i,j)
+	//					if (isOccupied(x, y))
+	//					{
+	//						for (int k = 0; k < numModels; k++)
+	//						{
+	//							/*
+	//							 * if allowOverlap, then just check if it can
+	//							 * diffuse to. if !allowOverlap, then make sure
+	//							 * there's biomass there to diffuse into. --
+	//							 * diffusing into an empty space when overlap isn't
+	//							 * allowed is a special case handled by the calling
+	//							 * function. so, given that the diffusion can go,
+	//							 * allow this to proceed if either allowOverlap is
+	//							 * true, OR allowOverlap is false but the target
+	//							 * spot is occupied
+	//							 */
+	//							if ((canDiffuseBiomassIn(i, j, k) && canDiffuseBiomassOut(
+	//									x, y, k))
+	//									&& (allowOverlap || (!allowOverlap && isOccupied(
+	//											i, j))))
+	//							{
+	//								if (xyCellDeltaBiomass[k] <= 0)
+	//									diff[k] -= DIFFUSION_SCALE[a][b]
+	//											* xyCellBiomass[k]
+	//											* fbaModels[k].getFlowDiffusionConstant();
+	//								else
+	//								{
+	//									diff[k] -= DIFFUSION_SCALE[a][b]
+	//											* (xyCellBiomass[k] - xyCellDeltaBiomass[k])
+	//											* fbaModels[k].getFlowDiffusionConstant();
+	//									diff[k] -= DIFFUSION_SCALE[a][b]
+	//											* xyCellDeltaBiomass[k]
+	//											* fbaModels[k].getGrowthDiffusionConstant();
+	//								}
+	//							}
+	//						}
+	//					}
+	//				}
+	//				b++;
+	//			}
+	//			a++;
+	//		}
+	//		for (int i = 0; i < diff.length; i++)
+	//		{
+	//			diff[i] *= cParams.getDiffusionRate() * cParams.getTimeStep();
+	//		}
+	//		return diff;
+	//	}
+	//
+	//	public void diffuseBiomass()
+	//	{
+	//		System.out.println("Biomass pre-diffusion:");
+	//		double[] totalBiomass = calculateTotalBiomass();
+	//		for (int i = 0; i < totalBiomass.length; i++)
+	//		{
+	//			System.out.print(totalBiomass[i] + " ");
+	//		}
+	//		System.out.println("");
+	//
+	//		for (int z = 0; z < 1; /* cParams.getDiffusionsPerStep(); */z++)
+	//		{
+	//			double[][][] biomassDiffBuffer = new double[numCols][numRows][numModels];
+	//			for (int i = 0; i < numCols; i++)
+	//			{
+	//				for (int j = 0; j < numRows; j++)
+	//				{
+	//					// if there's something in the cell OR we allow for overlap,
+	//					// then calculate the buffer in one way.
+	//					if (isOccupied(i, j) || cParams.allowCellOverlap())
+	//					{
+	//						double[] buffer = diffuseBiomassBox(i, j, cParams
+	//								.allowCellOverlap());
+	//						for (int k = 0; k < buffer.length; k++)
+	//							biomassDiffBuffer[i][j][k] += buffer[k];
+	//					}
+	//					// otherwise (if that space is empty, or overlap isn't
+	//					// allowed)
+	//					// do something different.
+	//					else
+	//					{
+	//						/*
+	//						 * do something completely different. this requires
+	//						 * access to the deltaBiomass[][][] matrix, too. so i
+	//						 * guess we cram it in here.
+	//						 */
+	//
+	//						double[][][] deltaBox = new double[3][3][numModels];
+	//						/*
+	//						 * deltaBox will house how much of each surrounding
+	//						 * space will contribute to the center one. (center
+	//						 * should be 0).
+	//						 */
+	//
+	//						/*
+	//						 * the center space can be any. this leads to another
+	//						 * case - if the center is on an edge and this is a
+	//						 * torus, then some of the outer boxes could map to the
+	//						 * other side of the world.
+	//						 * 
+	//						 * i think that'll be taken care of below. hopefully.
+	//						 */
+	//
+	//						double[] totalDeltaBox = new double[numModels];
+	//						for (int a = 0; a < 3; a++)
+	//						{
+	//							for (int b = 0; b < 3; b++)
+	//							{
+	//								if ((a == b && b == 1)
+	//										|| !isOccupied(i + a - 1, j + b - 1))
+	//									continue;
+	//
+	//								double[] biomass = getCellAt(i + a - 1,
+	//										j + b - 1).getBiomass();
+	//								double[] deltaBiomass = ((FBACell) getCellAt(i
+	//										+ a - 1, j + b - 1)).getDeltaBiomass();
+	//
+	//								for (int m = 0; m < numModels; m++)
+	//								{
+	//									if (!canDiffuseBiomassIn(i, j, m)
+	//											|| !canDiffuseBiomassOut(i + a - 1,
+	//													j + b - 1, m))
+	//										continue;
+	//
+	//									if (deltaBiomass[m] <= 0)
+	//										deltaBox[a][b][m] = DIFFUSION_SCALE[a][b]
+	//												* biomass[m]
+	//												* fbaModels[m].getFlowDiffusionConstant();
+	//									else
+	//									{
+	//										deltaBox[a][b][m] = DIFFUSION_SCALE[a][b]
+	//												* (biomass[m] - deltaBiomass[m])
+	//												* fbaModels[m].getFlowDiffusionConstant();
+	//										deltaBox[a][b][m] = DIFFUSION_SCALE[a][b]
+	//												* deltaBiomass[m]
+	//												* fbaModels[m].getGrowthDiffusionConstant();
+	//									}
+	//									totalDeltaBox[m] += deltaBox[a][b][m];
+	//								}
+	//							}
+	//						}
+	//
+	//						/*
+	//						 * now we have a potential set of biomass flowing into
+	//						 * the center space. from totalDeltaBox we can find the
+	//						 * maximum value, and dub the center space a new cell
+	//						 * with that kind of biomass.
+	//						 * 
+	//						 * but for now, we'll just fill in the
+	//						 * deltaBiomass[][][] array with the right value, and
+	//						 * update the surrounding elements with the adjusted
+	//						 * values. remember to deal with toroidal crap!
+	//						 */
+	//						int maxIndex = 0;
+	//						double maxValue = totalDeltaBox[0];
+	//
+	//						for (int w = 1; w < totalDeltaBox.length; w++)
+	//						{
+	//							if (totalDeltaBox[w] > maxValue)
+	//							{
+	//								maxIndex = w;
+	//								maxValue = totalDeltaBox[w];
+	//							} else if (totalDeltaBox[w] == maxValue
+	//									&& Utility.randomInt(2) == 1)
+	//							{
+	//								maxIndex = w;
+	//							}
+	//						}
+	//						// now we have a winning value and model index.
+	//						// update the deltaBiomass buffer with that value
+	//						// and apply the changes around (i,j)
+	//						if (maxValue > 0)
+	//						{
+	//							biomassDiffBuffer[i][j][maxIndex] = maxValue
+	//									* cParams.getDiffusionRate()
+	//									* cParams.getTimeStep();
+	//
+	//							for (int a = 0; a < 3; a++)
+	//							{
+	//								for (int b = 0; b < 3; b++)
+	//								{
+	//									int adjX = adjustX(i + a - 1);
+	//									int adjY = adjustY(j + b - 1);
+	//									biomassDiffBuffer[adjX][adjY][maxIndex] -= deltaBox[a][b][maxIndex]
+	//											* cParams.getDiffusionRate()
+	//											* cParams.getTimeStep();
+	//								}
+	//							}
+	//						}
+	//					}
+	//				}
+	//			}
+	//
+	//			for (int i = 0; i < numCols; i++)
+	//			{
+	//				for (int j = 0; j < numRows; j++)
+	//				{
+	//					// now we have the total buffer. apply it all, and make new
+	//					// cells as
+	//					// necessary.
+	//					// if there's any value in deltaBiomass
+	//					if (Utility.hasNonzeroValue(biomassDiffBuffer[i][j]))
+	//					{
+	//						// if there's a cell there, just update it.
+	//						if (isOccupied(i, j))
+	//						{
+	//							// update biomass
+	//							Cell cell = (Cell) getCellAt(i, j);
+	//							cell.changeBiomass(biomassDiffBuffer[i][j]);
+	//						}
+	//						// otherwise, make a new cell there.
+	//						else
+	//						{
+	//							// At this point, we have the new biomass ready to
+	//							// rock.
+	//							// Make a new cell from it!
+	//							Cell cell = new FBACell(i, j,
+	//									biomassDiffBuffer[i][j], this,
+	//									fbaModels, cParams);
+	//							c.getCells().add(cell);
+	//						}
+	//					}
+	//				}
+	//			}
+	//		}
+	//		System.out.println("Biomass post-diffusion:");
+	//		totalBiomass = calculateTotalBiomass();
+	//		for (int i = 0; i < totalBiomass.length; i++)
+	//		{
+	//			System.out.print(totalBiomass[i] + " ");
+	//		}
+	//		System.out.println("");
+	//	}
 
 	/**
 	 * @return the number of empty spaces remaining in the FBAWorld. An empty space is 
@@ -2920,8 +2903,8 @@ public class FBAWorld3D extends World3D
 			for (int j = y; j < y + h; j++)
 			{
 				for (int k = z; k < z + l; k++)
-				if (isBarrier(i, j, k) || isOccupied(i, j, k))
-					empty--;
+					if (isBarrier(i, j, k) || isOccupied(i, j, k))
+						empty--;
 			}
 		}
 		return empty;
@@ -3059,7 +3042,7 @@ public class FBAWorld3D extends World3D
 		}
 	}
 
-	
+
 	/**
 	 * Returns the info panel associated with this FBAWorld, showing information at 
 	 * point (x, y).
@@ -3096,8 +3079,8 @@ public class FBAWorld3D extends World3D
 	//	else
 	//		infoPanel.updateInfoPanel();
 	//}
-	
-	
+
+
 	/**
 	 * This inner class defines a <code>JPanel</code> that contains various information about
 	 * a given space in the world. This includes whether or not there is a barrier, 
@@ -3107,9 +3090,9 @@ public class FBAWorld3D extends World3D
 	 */
 	//private class SpaceInfoPanel extends JPanel
 	//{
-		/**
-		 * 
-		 */
+	/**
+	 * 
+	 */
 	//	private static final long serialVersionUID = 9037512261938143370L;
 	//	private int x, 
 	//	            y;
@@ -3129,16 +3112,16 @@ public class FBAWorld3D extends World3D
 	//	private FBAWorld3D world;
 	//	private DecimalFormat numFormat;
 
-		/**
-		 * The main constructor for the SpaceInfoPanel, it fetches information from
-		 * the FBAWorld at space (x, y) and makes a pretty interface so one can see what's
-		 * going on there.
-		 * @param x
-		 * @param y
-		 * @param modelNames
-		 * @param mediaNames
-		 * @param world
-		 */
+	/**
+	 * The main constructor for the SpaceInfoPanel, it fetches information from
+	 * the FBAWorld at space (x, y) and makes a pretty interface so one can see what's
+	 * going on there.
+	 * @param x
+	 * @param y
+	 * @param modelNames
+	 * @param mediaNames
+	 * @param world
+	 */
 	//	public SpaceInfoPanel(int x, int y, String[] modelNames,
 	//			String[] mediaNames, FBAWorld3D world)
 	//	{
@@ -3147,26 +3130,26 @@ public class FBAWorld3D extends World3D
 	//		rebuildInfoPanel(modelNames, mediaNames, world);
 	//	}
 
-		/**
-		 * Makes a new SpaceInfoPanel pointing to space (0, 0).
-		 * @param modelNames
-		 * @param mediaNames
-		 * @param world
-		 */
+	/**
+	 * Makes a new SpaceInfoPanel pointing to space (0, 0).
+	 * @param modelNames
+	 * @param mediaNames
+	 * @param world
+	 */
 	//	@SuppressWarnings("unused")
 	//	public SpaceInfoPanel(String[] modelNames, String[] mediaNames,	FBAWorld3D world)
 	//	{
 	//		this(0, 0, modelNames, mediaNames, world);
 	//	}
 
-		/**
-		 * Rebuilds the SpaceInfoPanel whenever something major changes, such as the addition
-		 * or removal of a model. This is also analogous to the heavy-lifting done by the
-		 * constructor, as it initializes any internal Swing components it needs.
-		 * @param modelNames names of all models
-		 * @param mediaNames names of all media species
-		 * @param world the FBAWorld this applies to
-		 */
+	/**
+	 * Rebuilds the SpaceInfoPanel whenever something major changes, such as the addition
+	 * or removal of a model. This is also analogous to the heavy-lifting done by the
+	 * constructor, as it initializes any internal Swing components it needs.
+	 * @param modelNames names of all models
+	 * @param mediaNames names of all media species
+	 * @param world the FBAWorld this applies to
+	 */
 	//	public void rebuildInfoPanel(String[] modelNames, String[] mediaNames, FBAWorld3D world)
 	//	{
 	//		this.world = world;
@@ -3187,7 +3170,7 @@ public class FBAWorld3D extends World3D
 	//		numFormat = new DecimalFormat();
 	//		numFormat.setMaximumFractionDigits(4);
 	//		numFormat.setMinimumFractionDigits(1);
-    //
+	//
 	//		modelNameLabels = new JLabel[modelNames.length];
 	//		biomassLabels = new JLabel[modelNames.length];
 	//		double[] biomass = new double[modelNames.length];
@@ -3221,17 +3204,17 @@ public class FBAWorld3D extends World3D
 	//			mediaRefreshLabels[i] = new JLabel(numFormat.format(mediaRefresh[i]), JLabel.RIGHT);
 	//		}
 	//		
-    //
+	//
 	//		GridBagConstraints gbc = new GridBagConstraints();
 	//		gbc.fill = GridBagConstraints.BOTH;
 	//		gbc.insets = new Insets(0, 5, 0, 5);
 	//		gbc.gridx = 0;
 	//		gbc.gridy = 0;
-    //
+	//
 	//		JPanel biomassPanel = new JPanel(new GridBagLayout());
 	//		biomassPanel.add(biomassBarrierLabel, gbc);
 	//		biomassBarrierLabel.setVisible(barrier);
-    //
+	//
 	//		for (int i = 0; i < modelNameLabels.length; i++)
 	//		{
 	//			gbc.gridy = i;
@@ -3243,9 +3226,9 @@ public class FBAWorld3D extends World3D
 	//			biomassLabels[i].setVisible(!barrier);
 	//		}
 	//		biomassPanel.setBorder(BorderFactory.createTitledBorder("Biomass"));
-    //
+	//
 	//		JPanel mediaPanel = new JPanel(new GridBagLayout());
-    //
+	//
 	//		gbc.gridx = 0;
 	//		gbc.gridy = 0;
 	//		mediaPanel.add(mediaBarrierLabel, gbc);
@@ -3279,13 +3262,13 @@ public class FBAWorld3D extends World3D
 	//			mediaRefreshLabels[i].setVisible(!barrier);
 	//		}
 	//		// mediaPanel.setBorder(BorderFactory.createTitledBorder("Media"));
-    //
+	//
 	//		JScrollPane mediaScrollPane = new JScrollPane(mediaPanel);
 	//		mediaScrollPane
 	//				.setBorder(BorderFactory.createTitledBorder("Media"));
 	//		if (mediaNameLabels.length > 8)
 	//			mediaScrollPane.setMinimumSize(new Dimension(500, 400));
-    //
+	//
 	//		setLayout(new GridBagLayout());
 	//		gbc.gridx = 0;
 	//		gbc.gridy = 0;
@@ -3297,30 +3280,30 @@ public class FBAWorld3D extends World3D
 	//		revalidate();
 	//	}
 	//	
-		/**
-		 * Updates the SpaceInfoPanel to fetch information from space (x, y)
-		 * @param x
-		 * @param y
-		 */
+	/**
+	 * Updates the SpaceInfoPanel to fetch information from space (x, y)
+	 * @param x
+	 * @param y
+	 */
 	//	public void updateInfoPanel(int x, int y)
 	//	{
 	//		this.x = x;
 	//		this.y = y;
-    //
+	//
 	//		updateInfoPanel();
 	//	}
 
-		/**
-		 * Updates the info panel to fetch any new data that might be present.
-		 */
+	/**
+	 * Updates the info panel to fetch any new data that might be present.
+	 */
 	//	public void updateInfoPanel()
 	//	{
 	//		spaceLabel.setText("Space: (" + x + ", " + y + ")");
-    //
+	//
 	//		boolean barrier = world.isBarrier(x, y);
 	//		biomassBarrierLabel.setVisible(barrier);
 	//		mediaBarrierLabel.setVisible(barrier);
-    //
+	//
 	//		double[] biomass = new double[biomassLabels.length];
 	//		if (world.isOccupied(x, y))
 	//			biomass = world.getCellAt(x, y).getBiomass();
@@ -3330,7 +3313,7 @@ public class FBAWorld3D extends World3D
 	//			biomassLabels[i].setVisible(!barrier);
 	//			modelNameLabels[i].setVisible(!barrier);
 	//		}
-    //
+	//
 	//		double[] media = world.getMediaAt(x, y);
 	//		boolean[] staticSet = world.getStaticMediaSet(x, y);
 	//		double[] mediaRefresh = world.getMediaRefreshAmount(x, y);
@@ -3353,7 +3336,7 @@ public class FBAWorld3D extends World3D
 	//		mediaRefreshLabel.setVisible(!barrier);
 	//		repaint();
 	//	}
-    //
+	//
 	//	public Dimension getPreferredSize()
 	//	{
 	//		return new Dimension(600, 600);
@@ -3371,10 +3354,46 @@ public class FBAWorld3D extends World3D
 	//{
 	//	return circleSet;
 	//}
-	
+
 	public void setDiffusionConstants(final double[] diffConsts)
 	{
 		if(numMedia == diffConsts.length)
 			this.nutrientDiffConsts = diffConsts;
+	}
+
+	public Comets getComets(){
+		return c;
+	}
+
+	public double[][] getExRxnStoich() {
+		return exRxnStoich;
+	}
+
+	public void setExRxnStoich(double[][] exRxnStoich) {
+		this.exRxnStoich = exRxnStoich;
+	}
+
+	public double[][] getExRxnParams() {
+		return exRxnParams;
+	}
+
+	public void setExRxnParams(double[][] exRxnParams) {
+		this.exRxnParams = exRxnParams;
+	}
+
+	public double[] getExRxnRateConstants() {
+		return exRxnRateConstants;
+	}
+
+	public void setExRxnRateConstants(double[] exRxnRateConstants) {
+		this.exRxnRateConstants = exRxnRateConstants;
+	}
+
+	public int[] getExRxnEnzymes() {
+		return exRxnEnzymes;
+	}
+
+	public void setExRxnEnzymes(int[] exRxnEnzymes) {
+		this.exRxnEnzymes = exRxnEnzymes;
 	}
 }
