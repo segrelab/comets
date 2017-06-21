@@ -508,9 +508,11 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 							ret=0;
 						} else {
 							System.out.println("   Model is not feasible in second optimization");
+						//Set fluxes to non-minimal values
 							for(int i=0;i<rxnFluxes.length;i++){
-								fluxesModel[i]=0;
+								fluxesModel[i]=rxnFluxes[i].get(GRB.DoubleAttr.X);
 							}
+					    	ret=0;
 						}
 					} else {
 						System.out.println("   Model is not feasible");
