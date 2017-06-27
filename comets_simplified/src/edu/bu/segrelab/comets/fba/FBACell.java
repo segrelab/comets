@@ -732,11 +732,29 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					// Start of modified code corrected lb 9/19/13 Ilija D.
 					if(media[j]/(cParams.getTimeStep()*modelBiomass)<calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill))
 					{
-						rates[j] = Math.min(Math.abs(lb[j]),Math.abs(media[j]/(cParams.getTimeStep()*modelBiomass)));
+						//If lb is positive, set rate to negative lb:
+						if(lb[j]>0)
+						{
+							rates[j] = -Math.abs(lb[j]);
+						}
+						//If lb is negative, take absolute minimum of lb or monod:
+						else
+						{
+							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(media[j]/(cParams.getTimeStep()*modelBiomass)));
+						}
 					}
 					else
 					{
-						rates[j] = Math.min(Math.abs(lb[j]),Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
+						//If lb is positive, set rate to negative lb:
+						if(lb[j]>0)
+						{
+							rates[j] = -Math.abs(lb[j]);
+						}
+						//If lb is negative, take absolute minimum of lb or monod:
+						else
+						{
+							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
+						}
 					}
 				}
 
