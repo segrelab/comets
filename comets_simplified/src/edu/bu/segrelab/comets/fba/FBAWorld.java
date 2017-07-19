@@ -783,7 +783,8 @@ public class FBAWorld extends World2D
 			for (int i = 0; i < exRxnMets.length; i++){
 				if (!mediaNamesMap.keySet().contains(exRxnMets[i])){
 				mediaNamesMap.put(exRxnMets[i], new Integer(1));
-				newDiffConsts.putIfAbsent(exRxnMets[i], nutrientDiffConsts[i]);
+//				newDiffConsts.putIfAbsent(exRxnMets[i], nutrientDiffConsts[i]);
+				newDiffConsts.put(exRxnMets[i], nutrientDiffConsts[i]);
 				}
 			}
 		}
@@ -1431,7 +1432,9 @@ public class FBAWorld extends World2D
 		{
 			for (int i = 0; i < mediaList.length; i++)
 			{
+				//System.out.println("model "+model+" "+i+"  "+mediaNames[mediaList[i]]+"  "+mediaDelta[i]);
 				media[x][y][mediaList[i]] += mediaDelta[i];
+				//System.out.println("model "+model+" "+i+" medList "+mediaList[i]+"  "+mediaNames[mediaList[i]]+"  "+media[x][y][mediaList[i]]);
 				if (media[x][y][mediaList[i]] < 0)
 					media[x][y][mediaList[i]] = 0;
 			}

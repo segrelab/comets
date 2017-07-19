@@ -649,11 +649,11 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				// into concentrations
 				// delta = v * biomass * time_step
 
-//				System.out.print("flux");
+				//System.out.print("Model "+i+" fluxes");
 				for (int j=0; j<mediaDelta.length; j++)
 				{
 					mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
-//					System.out.print("\t" + exchFlux[j]);
+					//System.out.print("mediaDelta "+j+"  "+mediaDelta[j]+"\n");
 				}
 				if(cParams.getNumLayers() == 1)
 					world.changeModelMedia(x, y, i, mediaDelta);
