@@ -2117,7 +2117,7 @@ public class FBAWorld extends World2D
 		{
 			int[] order = Utility.randomOrder(numModels);
 			try{ if (!pParams.getRandomOrder()){ //don't randomize the order
-				for (int i = 0; 1 < numModels; i++){
+				for (int i = 0; i < numModels; i++){
 					order[i] = i;
 					}
 				}
