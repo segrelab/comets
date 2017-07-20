@@ -23,6 +23,7 @@ import javax.swing.JRadioButton;
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.ui.DoubleField;
 
+import org.apache.commons.math3.distribution.*;
 
 /**
  * This class defines the functions necessary to load, process, and execute a flux balance
@@ -146,6 +147,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	
 	
 	private ModelParametersPanel paramsPanel;
+	
+	
+	private double neutralDriftSigma;
+	private PoissonDistribution poissonDist;
+	private GammaDistribution gammaDist;
 
 	/**
 	 * Create a new simple FBAModel without any stoichiometry information loaded.
@@ -1031,7 +1037,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   frictionConst=1,
 				   convDiffConst=1,
 				   packDensity=1,
-				   noiseVariance=0.0;
+				   noiseVariance=0.0,
+				   neutralDriftSigma=0.0;
 			
 			boolean blockOpen = false;
 			
@@ -1981,6 +1988,25 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					lineNum++;
 					blockOpen = false;
 				}
+				
+				/**************************************************************
+				 ******************* LOAD NEUTRAL DRIFT PARAMETER *******************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("neutralDriftParameter"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The neutralDriftParameter should be followed only by its value at line " + lineNum);
+					}
+					neutralDriftSigma = Double.parseDouble(tokens[1]);
+					if (neutralDriftSigma < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The neutralDriftSigma value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
 			}
 			reader.close();
 			if (blockOpen)
@@ -2210,6 +2236,21 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		frictionConst=val;;
 	}
 	
+	/**
+	 * @return the value of the neutral drift constant.
+	 */
+	public double getNeutralDriftSigma()
+	{
+		return neutralDriftSigma;
+	}
+	
+	/**
+	 * Sets the elastic modulus constant in Pa
+	 */
+	public void setNeutralDruftSigma(double val)
+	{
+		neutralDriftSigma=val;;
+	}
 
 	//public void setFluxesModel(double[] fl)
 	//{

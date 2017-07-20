@@ -49,6 +49,7 @@ import com.jmatio.types.*;
 
 import java.lang.reflect.Field;
 
+
 /**
  * FBAWorld
  * --------
@@ -110,6 +111,8 @@ public class FBAWorld extends World2D
 	private FBASubstrate[] substrates;
 	
 	private int numSubstrates;
+	
+	
 	/**
 	 * Initialize a new, empty world, tied the current <code>Comets</code> with a given
 	 * number of medium components
