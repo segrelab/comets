@@ -442,10 +442,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 					rxnFluxes=model.getVars();
 					// check to see if optimal
 					int optimstatus = model.get(GRB.IntAttr.Status);
-					for(int i=0;i<rxnFluxes.length;i++){
-						fluxesModel[i]=0;
-					}
-					if (optimstatus == GRB.Status.OPTIMAL && rxnFluxes[objReaction-1].get(GRB.DoubleAttr.X)!= 0.0) {
+					if (optimstatus == GRB.Status.OPTIMAL) {
 				    	for(int i=0;i<rxnFluxes.length;i++){
 							fluxesModel[i]=rxnFluxes[i].get(GRB.DoubleAttr.X);
 						}
