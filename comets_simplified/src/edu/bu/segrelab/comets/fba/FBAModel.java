@@ -149,9 +149,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private ModelParametersPanel paramsPanel;
 	
 	
-	private double neutralDriftSigma;
-	private PoissonDistribution poissonDist;
-	private GammaDistribution gammaDist;
+	private double neutralDriftSigma=0.01;
+	private boolean neutralDrift=false;
+	//The Distributions are moved to FBACell since they depend on the biomass in a cell. 
+	//private PoissonDistribution poissonDist;
+	//private GammaDistribution gammaDist;
 
 	/**
 	 * Create a new simple FBAModel without any stoichiometry information loaded.
@@ -1042,6 +1044,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			
 			boolean blockOpen = false;
 			
+			boolean neutralDrift = false;
+			
 			// first thing we need is the S-matrix. That **has** to be the first
 			// data block, since it sets the scale for every other array here.
 			
@@ -1340,6 +1344,44 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						optim= GUROBI;
 					else if(tokens[1].equalsIgnoreCase("GLPK"))
 						optim= GLPK;
+				}
+				
+				/**************************************************************
+				 **************** LOAD NEUTRALDRIFT BOOLEAN *******************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("neutralDrift"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The neutralDrift should be followed only by the value true or false at line " + lineNum);
+					}
+					neutralDrift = Boolean.parseBoolean(tokens[1]);
+					if ( neutralDrift != true || neutralDrift != false)
+					{
+						reader.close();
+						throw new ModelFileException("The neutral drift value given at line " + lineNum + "should be boolean, true or false.");
+					}
+					
+				}
+				
+				/**************************************************************
+				 **************** LOAD NEUTRALDRIFTSIGMA VALUE ****************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("neutralDriftSigma"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The neutralDriftSigma should be followed only by the value at line " + lineNum);
+					}
+					neutralDriftSigma = Double.parseDouble(tokens[1]);
+					if ( neutralDriftSigma <=0)
+					{
+						reader.close();
+						throw new ModelFileException("The neutral drift sigma value given at line " + lineNum + "should be positive.");
+					}
+					
 				}
 				
 				/**************************************************************
@@ -2077,6 +2119,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setPackedDensity(packDensity);
 			model.setNoiseVariance(noiseVariance);
 			
+			model.setNeutralDrift(neutralDrift);
+			model.setNeutralDriftSigma(neutralDriftSigma);
 			
 			model.setFileName(filename);
 			return model;
@@ -2245,11 +2289,27 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	}
 	
 	/**
-	 * Sets the elastic modulus constant in Pa
+	 * Sets the value of the neutral drift constant.
 	 */
-	public void setNeutralDruftSigma(double val)
+	public void setNeutralDriftSigma(double val)
 	{
-		neutralDriftSigma=val;;
+		neutralDriftSigma=val;
+	}
+	
+	/**
+	 * @return the value of the neutral drift boolean.
+	 */
+	public boolean getNeutralDrift()
+	{
+		return neutralDrift;
+	}
+	
+	/**
+	 * Sets the value of the neutral drift boolean.
+	 */
+	public void setNeutralDrift(boolean val)
+	{
+		neutralDrift=val;;
 	}
 
 	//public void setFluxesModel(double[] fl)

@@ -10,6 +10,8 @@ import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Utility;
 
+import org.apache.commons.math3.distribution.*;
+
 /**
  * FBACell
  * --------------------------------
@@ -40,6 +42,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	  
 	private CometsParameters cParams;
 	private FBAParameters pParams;
+	
+	//Distributions for neutral drift of the biomass.   
+	private PoissonDistribution poissonDist;
+	private GammaDistribution gammaDist;
 	
 	/**
 	 * Creates a new <code>FBACell</code> with randomized biomass from 0->1 g for each species.
@@ -842,6 +848,24 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		{
 			deltaBiomass[i] -= cParams.getDeathRate() * biomass[i] * cParams.getTimeStep();
 			biomass[i] += deltaBiomass[i];
+			
+			//Neutral drift block. Get the sigmas from the model and 
+			// calculate biomass=(sigma^2*timestep/2)*Gamm(Poiss(2*biomass/sigma^2*timesteo))
+			if(fbaModels[i].getNeutralDrift())
+			{   
+				double poissLambda=2.0*biomass[i]/(cParams.getTimeStep()*fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
+				poissonDist=new PoissonDistribution(poissLambda);
+				int gammaAlpha=poissonDist.sample();
+				System.out.println("gammaAlpha  "+gammaAlpha+"  "+poissLambda);
+				gammaDist=new GammaDistribution(gammaAlpha,1.0);
+				double gammaSample=gammaDist.sample();
+				System.out.println("gammaSample  "+gammaSample);
+				System.out.println("biomass  "+biomass[i]);
+				//biomass[i]=0.5*gammaSample*(cParams.getTimeStep()*fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
+				biomass[i]=gammaSample*biomass[i]/poissLambda;
+				System.out.println("biomass after  "+biomass[i]);
+			}
+			
 			
 			if (biomass[i] < cParams.getMinSpaceBiomass())
 				biomass[i] = 0;
