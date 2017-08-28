@@ -617,7 +617,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			double modelBiomass = biomass[i];
 			
 		    double[] lb = calculateMaxExchangeFluxes((FBAModel)models[i], media, modelBiomass, rho);
-		    
+		    //for(int j=0;j<lb.length;j++)lb[j]=-10;//System.out.println(j+"  lb  "+lb[j]);
 		    ((FBAModel)models[i]).setExchLowerBounds(lb);
 		    
 			/************************* SET MAX BIOMASS *****************************/
@@ -638,6 +638,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			
 			int stat = models[i].run();
 			fluxes[i] = ((FBAModel)models[i]).getFluxes();
+			//System.out.println("biomass "+fluxes[281]);
 			if (stat != 5 && stat != 180)
 			{
 				// failure! don't do anything right now.
@@ -667,8 +668,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					world3D.changeModelMedia(x, y, z, i, mediaDelta);
 
 				/***************** GET BIOMASS CONCENTRATION CHANGE ****************/
+				//System.out.println("biomass "+((FBAModel)models[i]).getBiomassFluxSolution());
 				// biomass is in grams
 				deltaBiomass[i] = (double)(((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];
+				//System.out.println("deltaBiomass "+deltaBiomass[i]);
 				if(deltaBiomass[i]<0.0)deltaBiomass[i]=0.0;
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());

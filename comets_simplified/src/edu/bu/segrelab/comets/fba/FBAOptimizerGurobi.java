@@ -23,6 +23,14 @@ import gurobi.*;
  * 
  * @author Ilija Dukovski ilija.dukovski@gmail.com
  * created 11 Mar 2014
+ * 
+ * 
+ * 26 Aug 2015: min of sum of abs. flux algorithm 
+ * implemented following the implementation in
+ * FBA_min_fluxAV.m (from Segre FBA_showcase) 
+ * @author Jeremy M. Chacon  chaco001@umn.edu
+ * 
+ * 
  */
 public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer 
 					  implements edu.bu.segrelab.comets.CometsConstants
@@ -36,12 +44,14 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	
 	private double[][] stoichMatrix; //This is used only in the clone() method. TODO eliminate this.
 	
-	//These are variables for the sum of absolute values minimization, the Abs is for absolute.
-	private GRBEnv envAbs;
-	private GRBModel modelAbs;
-	private GRBVar[] rxnFluxesPlus;
-	private GRBVar[] rxnFluxesMinus;
-	private GRBVar[] rxnFluxesAbs;
+	
+	//Chacon sum of abs min vars
+	private GRBEnv envMin;
+	private GRBModel modelMin;
+	private GRBVar[] modelMinVars;
+	private int nVars; // will be double the amount of reactions in S
+	private final String biomassConstraintName = "biomassConstraint"; // useful for getting this constraint to reset the right-hand-side
+	
 	
 	private boolean runSuccess;
 	private int numMetabs;
@@ -62,10 +72,6 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		env.set(GRB.IntParam.OutputFlag,0);
 		model = new GRBModel(env);
 		
-		//Environment and model for the sum of absolute values problem
-		envAbs = new GRBEnv();
-		envAbs.set(GRB.IntParam.OutputFlag,0);
-		modelAbs = new GRBModel(envAbs);
 		
 	    } catch (GRBException e) {
 	      System.out.println("Error code: " + e.getErrorCode() + ". " +
@@ -85,24 +91,35 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	{
 		this();
 		
+		
+		// this should probably only be bothered with if we're doing max/min, 
+		// but right now this class doesn't know the objective style until run()
+		initializeAbsModel(m, l, u, r);
+		
+		//everything below here is for initializing the basic model
 		stoichMatrix=m;
 		fluxesModel = new double[l.length];
 		double[] objective=new double[l.length];
-		char[] types=new char[l.length];
+		char[] types=new char[l.length]; // continuous vs. binary, etc
+		//make vector of zeros for the objective, which will get filled in with a '1' later
+		//all our variables (fluxes) are always continuous
 		for(int i=0;i<l.length;i++){
 			objective[i]=0;
 			types[i]=GRB.CONTINUOUS;
 		}
 		
 		try{
-			
 			rxnFluxes = model.addVars(l, u, objective, types, null);
+			//must either update() or optimize() for changes to take effect
 			model.update();
 			
-			double[] rhsValues=new double[m.length];
-			char[] senses=new char[m.length];
-			rxnExpressions=new GRBLinExpr[m.length];
+			double[] rhsValues=new double[m.length]; // right-hand-side values, usually zero (Sv=0)
+			char[] senses=new char[m.length]; // represents equals, less than, etc. this is equals for most of ours (Sv EQUALS 0)
+			rxnExpressions=new GRBLinExpr[m.length]; //generate expressions to represent each matrix row
 			
+			//this makes each expression, which corresponds to a row of Sv = 0. 
+			// e.g. if S = [[-1 0 -1], [1 -1 0]] then 
+			// rxnExpression[0] is basically  -1*v1 + 0*v2 + -1*v3 = 0.0
 			for(int i=0;i<m.length;i++){
 				rxnExpressions[i]=new GRBLinExpr();
 				rxnExpressions[i].addTerms(m[i], rxnFluxes);
@@ -118,83 +135,243 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			
 			setObjectiveReaction(numRxns, r);
 			
-			//Now populate the modelAbs for the minimization of sum of absolute values
-			double[] objectiveAbs=new double[2*l.length];
-			double[] lAbs=new double[2*l.length];
-			double[] uAbs=new double[2*l.length];
-			char[] typesAbs=new char[2*l.length];
-			for(int i=0;i<2*l.length;i++){
-				objectiveAbs[i]=0;
-				typesAbs[i]=GRB.CONTINUOUS;
-				lAbs[i]=0.0;
-				uAbs[i]=Math.max(Math.abs(u[i%u.length]),Math.abs(l[i%u.length]));
-			}
-			
-				//add the variables V+ and V-
-				rxnFluxesAbs = modelAbs.addVars(lAbs, uAbs, objectiveAbs, typesAbs, null);
-				modelAbs.update();
-				rxnFluxesPlus=new GRBVar[l.length];
-				rxnFluxesMinus=new GRBVar[l.length];
-				for(int i=0;i<l.length;i++){
-					rxnFluxesPlus[i]=rxnFluxesAbs[i];
-					rxnFluxesMinus[i]=rxnFluxesAbs[l.length+i];
-				}
-				
-				//Add the stoichiometric constraints
-				double[] rhsValuesAbs=new double[m.length];
-				char[] sensesAbs=new char[m.length];
-				GRBLinExpr[] rxnExpressionsAbs=new GRBLinExpr[m.length];
-				
-				//Local copy of the negative of the stoichiometric matrix. 
-				double[][] mNegative=new double[m.length][m[0].length];
-				for(int i=0;i<m.length;i++){
-					for(int j=0;j<m[0].length;j++){
-						mNegative[i][j]=-1*m[i][j];
-					}
-				}
-				
-				
-				for(int i=0;i<m.length;i++){
-					rxnExpressionsAbs[i]=new GRBLinExpr();
-					rxnExpressionsAbs[i].addTerms(m[i], rxnFluxesPlus);
-					rxnExpressionsAbs[i].addTerms(mNegative[i],rxnFluxesMinus);
-					sensesAbs[i]=GRB.EQUAL;
-					rhsValuesAbs[i]=0.0;
-				}
-				
-				modelAbs.addConstrs( rxnExpressionsAbs, sensesAbs, rhsValuesAbs, null);
-				//Add bounds for vPlus-vMinus
-				GRBLinExpr[] rxnExpressionsAbsLB=new GRBLinExpr[l.length];
-				GRBLinExpr[] rxnExpressionsAbsUB=new GRBLinExpr[l.length];
-				char[] sensesAbsLB=new char[l.length];
-				char[] sensesAbsUB=new char[l.length];
-				double[] rhsValuesAbsLB=new double[l.length];
-				double[] rhsValuesAbsUB=new double[l.length];
-				
-				for(int i=0;i<l.length;i++){
-					rxnExpressionsAbsLB[i]=new GRBLinExpr();
-					rxnExpressionsAbsLB[i].addTerm(1, rxnFluxesPlus[i]);
-					rxnExpressionsAbsLB[i].addTerm(-1, rxnFluxesMinus[i]);
-					sensesAbsLB[i]=GRB.GREATER_EQUAL;
-					rhsValuesAbsLB[i]=l[i];
-					
-					rxnExpressionsAbsUB[i]=new GRBLinExpr();
-					rxnExpressionsAbsUB[i].addTerm(1, rxnFluxesPlus[i]);
-					rxnExpressionsAbsUB[i].addTerm(-1, rxnFluxesMinus[i]);
-					sensesAbsUB[i]=GRB.LESS_EQUAL;
-					rhsValuesAbsUB[i]=u[i];
-				}
-				
-				modelAbs.addConstrs( rxnExpressionsAbsLB, sensesAbsLB, rhsValuesAbsLB, null);
-				modelAbs.update();
-				modelAbs.addConstrs( rxnExpressionsAbsUB, sensesAbsUB, rhsValuesAbsUB, null);
-				modelAbs.update();
 		}
 		catch(GRBException e){
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
                     e.getMessage());
 		}
 	}
+	
+	/**
+	 * 
+	 * @param m the stoichoimetric matrix
+	 * @param l lower bounds
+	 * @param u upper bounds
+	 * @param r the reaction to be maximized (the biomass reaction)
+	 */
+	public void initializeAbsModel(double[][] m, double[] l, double[] u, int r){
+		/*
+		 * basically, if we start with this S matrix:
+		 * 
+		 * S = [-1  0 -1    = 0
+		 *       1 -1  0]   = 0
+		 * 
+		 * lb = [0  0 -1]
+		 * ub = [1  1  1]
+		 * c =  [0  1  0]
+		 * 
+		 * we want to create this S matrix in order to minimize flux while holding the obj. constant:
+		 * 
+		 *    orig. vars  new dummy vars
+		 *       -------  -------
+		 * S = [-1  0 -1  0  0  0    =  0
+		 *       1 -1  0  0  0  0    =  0
+		 *       0  1  0  0  0  0    =  whatever the optimized flux was (i.e. gets set each time step)
+		 *       1  0  0 -1  0  0    <= 0
+		 *      -1  0  0 -1  0  0    <= 0   
+		 *       0  1  0  0 -1  0    <= 0
+		 *       0 -1  0  0 -1  0    <= 0
+		 *       0  0  1  0  0 -1    <= 0
+		 *       0  0 -1  0  0 -1]   <= 0
+		 *       
+		 * lb =  0  0 -1  0  0  0       i.e.  original lb then zeros 
+		 * ub =  1  1  1  Inf Inf Inf   i.e.  original ub then max value allowed
+		 * c  =  0  0  0  1  1  1       i.e.  zeroes for original flux variables, ones for the "dummy" variables
+		 * 
+		 *       So everything can be set in one step, except:
+		 *       
+		 *       1. the right-hand-side of the "biomass" constraint
+		 *       2. the lower bounds of any exchange metabolites, which depend on media availability
+		 *       
+		 *       Note that I use vars and flux reactions interchangeably in some comments. 
+		 *       
+		 *       While the bounds are a form of constraints, below I typically only
+		 *       refer to row constraints by the term constraint. 
+		 */
+		
+		
+		//make as many vars as bounds * 2
+		nVars = l.length * 2;
+		createEmptyModelMin();
+		createVarsModelMin(l, u); // generates all variables, including the dummies
+		createObjFuncModelMin(); // generates the minimization objective function of half zeros, half ones
+		addOrigConstraintsModelMin(m); // adds the baseline Sv = 0 constraints (the stoichiometry constraints)
+		addBiomassConstraintModelMin(r); // adds the constraint that will be used to fix biomass
+		addAbsSumConstraintsModelMin();	// adds the constraints that are req'd to minimize sum of abs. fluxes
+	}
+	
+	/**
+	 * createEmptyModelMin generates an empty model for use with
+	 * minimization of sum of absolute value of fluxes
+	 */
+	private void createEmptyModelMin(){
+		try{
+			envMin = new GRBEnv();
+			envMin.set(GRB.IntParam.OutputFlag,0);
+			modelMin = new GRBModel(envMin);
+		}
+		catch (GRBException e) {
+		      System.out.println("Error code: " + e.getErrorCode() + ". " +
+                      e.getMessage());
+		}
+	}
+	
+	private void createVarsModelMin(double[] l, double[] u){
+		double[] lbMin = new double[nVars];
+		double[] ubMin = new double[nVars];
+		double[] objMin = new double[nVars];
+		char[] cTypeMin = new char[nVars];
+		// populate the vars as in the max/min example in FBA_showcase
+		// first copy the bounds for the original rxns
+		for (int k = 0; k < nVars/2; k++){
+			lbMin[k] = l[k];
+			ubMin[k] = u[k];
+			objMin[k] = 0;
+			cTypeMin[k] = GRB.CONTINUOUS;
+		}
+		// now populate the bounds for the dummy vars
+		for (int k = nVars/2; k < nVars; k++){
+			lbMin[k] = 0;
+			ubMin[k] = Double.MAX_VALUE;
+			objMin[k] = 1;
+			cTypeMin[k] = GRB.CONTINUOUS;			
+		}
+		// now create the variables
+		try{
+			modelMinVars = modelMin.addVars(lbMin, ubMin, objMin, cTypeMin, null);
+			modelMin.update();
+		}		
+		catch(GRBException e){
+			System.out.println("  error in createVarsModelMin: ");
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+                    e.getMessage());
+		}
+
+	}
+	
+	private void createObjFuncModelMin(){
+		//now setup the objective. this is only 1's for the dummy variables, hence the forloop start spot
+		GRBLinExpr objectiveFunc = new GRBLinExpr();
+		for (int k = nVars/2; k < nVars; k++){
+			objectiveFunc.addTerm(1.0, modelMinVars[k]);		
+		}
+	    try{
+	    	modelMin.setObjective(objectiveFunc, GRB.MINIMIZE); // have to un-hard code this probably
+	    }
+	    catch(GRBException e)
+	    {
+			System.out.println("  error in createObjFuncModelMin: ");
+	    	System.out.println("Error code: " + e.getErrorCode() + ". " +
+                    e.getMessage());
+	    }
+	}
+
+	private void addOrigConstraintsModelMin(double[][] m){
+		//add original constraints (Sv = 0)  -- rows 1,2 in the example above
+		// no need to go through all of the variables because the
+		// stoichoimetric matrix we are putting together has zeros
+		// for these variables in the original row
+		int nMetabolites = m.length;
+		GRBLinExpr[] origConstraints = new GRBLinExpr[nMetabolites];
+		char[] senses = new char[nMetabolites]; // holds the "=" in Sv = 0
+		double[] rhs = new double[nMetabolites]; // holds the "0" in Sv = 0
+		
+		for (int k = 0; k < nMetabolites; k++){
+			// make the left-hand-side expressions
+			origConstraints[k] = new GRBLinExpr();
+			for (int j = 0; j < nVars / 2; j++){
+				origConstraints[k].addTerm(m[k][j],	modelMinVars[j]);
+			}
+			// for these expressions, all senses are =, all rhs are 0
+			senses[k] = GRB.EQUAL;
+			rhs[k] = 0;
+		}
+		
+		//add the constraints to the model
+		try{
+			modelMin.addConstrs(origConstraints, senses, rhs, null);
+			modelMin.update();
+		}		
+		catch(GRBException e){
+			System.out.println("  error in addOrigConstrainsModelMin: ");
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+                    e.getMessage());
+		}
+	}
+
+	private void addBiomassConstraintModelMin(int biomassVarNum){
+		/* adds the biomass constraint -- row three in the example above
+		 * this add a new row to the S matrix with a 1 in the optimized reaction
+		 * (e.g. biomass) and sets it equal to the optimized value. I think
+		 * the way to do this is to set up the entire constraint, including the 
+		 * right-hand side, which I'll set to zero. I'll give this constraint 
+		 * the name "biomass," then update its right-hand-side each timestep
+		 */
+		GRBLinExpr biomassConstraint = new GRBLinExpr();
+		char biomassSense = GRB.EQUAL;
+		double biomassRHS = 0; // this is what changes dynamically
+		double biomassCoef = 1;
+		biomassConstraint.addTerm(biomassCoef, modelMinVars[biomassVarNum - 1]); // need minus one because this will be one-ordered, must have zero-ordered
+		
+		//add the constraints to the model
+		try{
+			modelMin.addConstr(biomassConstraint, biomassSense, biomassRHS, biomassConstraintName);
+			modelMin.update();
+		}		
+		catch(GRBException e){
+			System.out.println("  error in addBiomassConstraintModelMin: ");
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+                    e.getMessage());
+		}
+	}
+
+	private void addAbsSumConstraintsModelMin(){
+		// add the constraints that force the min absolute value of the fluxes -- rows 4-9 in the example above
+		// note that all these constraints are <= zero, in contrast to the typical FBA constraints
+		GRBLinExpr[] absSumConstraints = new GRBLinExpr[nVars];
+		int counter = 0;
+		int nOrigReactions = nVars / 2;
+		char[] senses = new char[nVars];
+		double[] rhs = new double[nVars];
+		
+		//generate the expressions
+		for (int k = 0; k < nOrigReactions; k++){
+			// add the constraint that minimizes positive flux through this reaction
+			absSumConstraints[counter] = new GRBLinExpr();
+			absSumConstraints[counter].addTerm(1, modelMinVars[k]);
+			absSumConstraints[counter].addTerm(-1, modelMinVars[k + nOrigReactions]);
+			counter++;
+			// add the constraint the minimized negative flux through this reaction
+			absSumConstraints[counter] = new GRBLinExpr();
+			absSumConstraints[counter].addTerm(-1, modelMinVars[k]);
+			absSumConstraints[counter].addTerm(-1, modelMinVars[k + nOrigReactions]);
+			counter++;
+		}
+		
+		//populate the senses and rhs
+		for (int k = 0; k < nVars; k++){
+			senses[k] = GRB.LESS_EQUAL;
+			rhs[k] = 0;
+		}
+		
+		//add the constraints to the model
+		try{
+			modelMin.addConstrs(absSumConstraints, senses, rhs, null);
+			modelMin.update();
+		}		
+		catch(GRBException e){
+			System.out.println("  error in addAbsSumConstraintsModelMin: ");
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+                    e.getMessage());
+		}		
+	}
+	
+
+	
+
+	
+
+
 
 
 
@@ -202,7 +379,9 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 
 	/**
 	 * Sets the current lower bounds (e.g. -uptake rates) for the exchange reactions
-	 * in the model.
+	 * in the model. Also sets it for the min. abs. sum. flux model, which should probably be changed
+	 * to be set only if doing max/min (i.e. right now it sets the exch reaction even if we're just 
+	 * doing max obj)
 	 * @param exch
 	 * @param lb
 	 * @return PARAMS_OK if the lb and exch array are of the same length; 
@@ -214,6 +393,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		if (lb.length != exch.length)
 			return PARAMS_ERROR;
 		GRBVar[] exchFluxes=new GRBVar[exch.length];
+
 		for (int i=0; i<exch.length; i++)
 		{   
 			try{
@@ -225,6 +405,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
                         e.getMessage());
 			}
+
 		}
 		try{
 			model.set(GRB.DoubleAttr.LB, exchFluxes,lb);
@@ -235,7 +416,33 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
                     e.getMessage());
 		}
+		
+		
+		setExchLowerBoundsModelMin(exch, lb);
 		return PARAMS_OK;
+	}
+	
+	/**
+	 * Sets the lower bounds for the min sub abs flux model
+	 * Called by setExchLowerBounds()
+	 * @param exch a list of the exchange reaction indices
+	 * @param lb the new lower bounds for these reactions
+	 */
+	private void setExchLowerBoundsModelMin(int[] exch, double[] lb){
+		GRBVar[] exchFluxes = new GRBVar[exch.length];
+		// grab exchange flux vars from the model
+		for (int k = 0; k < exch.length; k++){
+			exchFluxes[k] = modelMinVars[exch[k] - 1]; // minus one because the exchange indices are 1-ordered
+		}
+		// set the exchange flux lower bounds all at once
+		try{
+			modelMin.set(GRB.DoubleAttr.LB,  exchFluxes, lb);
+		}
+		catch(GRBException e)
+		{
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+                    e.getMessage());
+		}
 	}
 
 	/**
@@ -429,6 +636,13 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		}
 		// an internal status checker. If this = 0 after a run, everything is peachy.
 		int ret = -1;
+		
+		// gurobi optimization status.
+		// 2 = optimal, 3 = infeasible, 4 = infeasible or unbounded
+		// to parallel the GLPK implementation, if gurobi returns 2, then
+		// run() returns 5 (which is GLPK's optimal status)
+		// otherwise it will return 4 (GLPK's infeasible status)
+		int status = -1; 
 		switch(objSty)
 		{
 			// the usual, just max the objective
@@ -439,6 +653,9 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 					model.setObjective(objective, GRB.MAXIMIZE);
 					model.update();
 					model.optimize();
+					
+					status = model.get(GRB.IntAttr.Status);
+					
 					rxnFluxes=model.getVars();
 					// check to see if optimal
 					int optimstatus = model.get(GRB.IntAttr.Status);
@@ -461,65 +678,33 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 				break;
 			case FBAModel.MAX_OBJECTIVE_MIN_TOTAL:
 				try{
+					
+					// first find the maximized objective with vanilla FBA (e.g. biomass)
 					GRBLinExpr objective=new GRBLinExpr();
 					objective.addTerm(1.0, rxnFluxes[objReaction-1]);
 					model.setObjective(objective, GRB.MAXIMIZE);
 					model.update();
 					model.optimize();
-
+					
+					
 					rxnFluxes=model.getVars();
-					// check to see if optimal
-					int optimstatus = model.get(GRB.IntAttr.Status);
-					if (optimstatus == GRB.Status.OPTIMAL) {
-						//Now do the minimization of the sum of absolute values.	
-						//Define new model for variables vPlus=(v+|v|)/2 and vMinus=(|v|-v)/2
-						//minimize Sum|v|=Sum(vPlus+vMinus)
-						
-						// Fix the objective function value from the initial maximization
-						// 1*pos_obj_val - 1*neg_obj_val = obj_val
-						GRBLinExpr rxnExpressionAbsObj=new GRBLinExpr();
-						rxnExpressionAbsObj.addTerm(1, rxnFluxesPlus[objReaction-1]);
-						rxnExpressionAbsObj.addTerm(-1, rxnFluxesMinus[objReaction-1]);
-						char senseAbsObj=GRB.EQUAL;
-						double rhsValueAbsObj=rxnFluxes[objReaction-1].get(GRB.DoubleAttr.X);
-						modelAbs.addConstr( rxnExpressionAbsObj, senseAbsObj, rhsValueAbsObj, null);
-						// Minimize the sum of absolute fluxes
-						// min(1*pos_flux + 1*neg_flux)
-						GRBLinExpr objectiveAbs=new GRBLinExpr();
-						for(int k=0;k<rxnFluxesPlus.length;k++){
-							objectiveAbs.addTerm(1.0, rxnFluxesPlus[k]);
-							objectiveAbs.addTerm(1.0, rxnFluxesMinus[k]);
-						}
-						modelAbs.setObjective(objectiveAbs,GRB.MINIMIZE);
-						modelAbs.update();
-						modelAbs.optimize();
-						
-						rxnFluxesAbs=modelAbs.getVars();
-						// check to see if optimal
-						int optimstatusAbs = modelAbs.get(GRB.IntAttr.Status);
-						if (optimstatusAbs == GRB.Status.OPTIMAL) {
-							for(int k=0;k<rxnFluxesPlus.length;k++){
-								rxnFluxesPlus[k]=rxnFluxesAbs[k];
-								rxnFluxesMinus[k]=rxnFluxesAbs[rxnFluxesPlus.length+k];
-								
-								//Finally set the fluxes to a set that minimizes the sum of absolute values
-								fluxesModel[k]=rxnFluxesPlus[k].get(GRB.DoubleAttr.X)-rxnFluxesMinus[k].get(GRB.DoubleAttr.X);
-							}
-							ret=0;
-						} else {
-							System.out.println("   Model is not feasible in second optimization");
-						//Set fluxes to non-minimized values
-							for(int i=0;i<rxnFluxes.length;i++){
-								fluxesModel[i]=rxnFluxes[i].get(GRB.DoubleAttr.X);
-							}
-					    	ret=0;
-						}
-					} else {
-						System.out.println("   Model is not feasible");
-						for(int i=0;i<rxnFluxes.length;i++){
-							fluxesModel[i]=0;
-						}
+					
+					// now fix the biomass in the min abs. sum. model, then run that one.
+					double maximizedObjective = rxnFluxes[objReaction-1].get(GRB.DoubleAttr.X);
+					setObjectiveFluxToSpecificValue(maximizedObjective);
+					
+					modelMin.optimize();
+					
+					status = model.get(GRB.IntAttr.Status);
+
+					
+					// save the new fluxes.
+					modelMinVars =modelMin.getVars();
+					for (int k = 0; k < modelMinVars.length / 2; k++){
+						fluxesModel[k] = modelMinVars[k].get(GRB.DoubleAttr.X);
 					}
+					
+					ret=0;
 					
 				}
 				catch(GRBException e){
@@ -538,7 +723,44 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			runSuccess = true;
 		}
 		
-        return 5;
+		// convert gurobi status indicators into GLPK statuses
+		if (status == 2){
+			status = 5;
+		}else if(status == 3){
+			status = 4;
+		}
+		
+        return status;
+	}
+	
+	/**
+	 * setObjectiveFluxToSpecificValue is used when minimizing the sum of the absolute value of the fluxes, while keeping the flux
+	 * of the biomass reaction constant.
+	 * 
+	 * @param objectiveFlux the amount at which the objective flux reaction, typically biomass, should be fixed 
+	 */
+	private void setObjectiveFluxToSpecificValue(double objectiveFlux){
+		GRBConstr[] biomassFluxVar = new GRBConstr[1]; 
+		// grab the biomass constraint by name (this is the row constraint associated with the objective reaction -- row 3 in the example) 
+		try{
+			biomassFluxVar[0] = modelMin.getConstrByName(biomassConstraintName);
+		}
+		catch(GRBException e){
+			System.out.println("   Error in setObjectiveFluxToSpecificValue");
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+                     e.getMessage());
+		}
+		double[] v = new double[1];
+		v[0] = objectiveFlux;
+		// change the right-hand-side attribute of the 
+		try{
+			modelMin.set(GRB.DoubleAttr.RHS, biomassFluxVar, v);
+		}
+		catch(GRBException e){
+			System.out.println("   Error in setObjectiveFluxToSpecificValue");
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+                     e.getMessage());
+		}
 	}
 
 	
@@ -561,30 +783,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	}
     
 	
-	// Debugging code
-	/*
-	public double[] getFluxesTest(double[] test)
-	{
-		double[] v = new double[numRxns];
-		if (runSuccess)
-		{
-			for (int i = 0; i < numRxns; i++)
-			{
-				try{
-					v[i] = rxnFluxes[i].get(GRB.DoubleAttr.X);
-				}
-				catch(GRBException e)
-				{
-					System.out.println("Error code: " + e.getErrorCode() + ". " +
-	                         e.getMessage());
-				}
-				//v[i]=fluxes[i];
-				System.out.println(fluxesModel[i]+" "+v[i]+" "+test[i]);
-			}
-		}
-		return v;
-	}
-	*/
+
 	
 	/**
 	 * @return the exchange fluxes from the most recent FBA run
