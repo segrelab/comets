@@ -262,7 +262,8 @@ public class ReactionModel extends Model implements CometsConstants {
 	 */
 	public void setup() {
 		if (initialExRxnParams == null || initialExRxnRateConstants == null || initialExRxnStoich == null){
-			if ((exRxnStoich == null ||	exRxnRateConstants == null || exRxnEnzymes == null)){
+			if ((exRxnStoich == null ||	exRxnRateConstants == null || exRxnEnzymes == null)
+					|| (exRxnStoich.length == 0 || exRxnRateConstants.length == 0 || exRxnEnzymes.length == 0)){
 				//There isn't enough information to go on. Do nothing
 				return;
 			}
