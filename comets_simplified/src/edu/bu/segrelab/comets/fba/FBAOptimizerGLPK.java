@@ -1053,6 +1053,14 @@ public class FBAOptimizerGLPK extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		this.numExch = numExch;
 	}
 	
+	public FBAOptimizerGLPK(double[][] m, double[] l, double[] u, int[] objs) {
+		this(m,l,u,objs[0]);
+		if (objs.length > 1) {
+			System.out.println("Warning: the GLPK optimizer is not configured to support multiple objective reactions!");
+			System.out.println("Using reaction " + String.valueOf(objs[0]) + " as the objective.");
+		}
+	}
+
 	/**
 	 * Produces a clone of this <code>FBAModel</code> with all parameters intact.
 	 */
@@ -1068,6 +1076,29 @@ public class FBAOptimizerGLPK extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		optimizerCopy.setParameters();
 		
 		return optimizerCopy;
+	}
+
+	@Override
+	public int getFBAstatus() {
+		return (runSuccess ? 1 : 0);
+	}
+
+	@Override
+	public int setObjectiveReaction(int numRxns, int[] objs) {
+		if (objs.length > 1) {
+			System.out.println("Warning: the GLPK optimizer is not configured to support multiple objective reactions!");
+			System.out.println("Using reaction " + String.valueOf(objs[0]) + " as the objective.");
+		}
+		return setObjectiveReaction(numRxns, objs[0]);
+	}
+
+	@Override
+	public double[] getObjectiveSolutions(int[] objReactions) {
+		double[] res = new double[objReactions.length];
+		for (int i = 0; i < objReactions.length; i++) {
+			res[i] = getObjectiveSolution(objReactions[i]);
+		}
+		return res;
 	}
 
 

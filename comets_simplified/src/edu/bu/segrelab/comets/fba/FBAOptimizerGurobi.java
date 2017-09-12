@@ -33,7 +33,7 @@ import gurobi.*;
  * 
  */
 public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer 
-					  implements edu.bu.segrelab.comets.CometsConstants
+implements edu.bu.segrelab.comets.CometsConstants
 {
 
 	private GRBEnv env;     //Gurobi environment
@@ -41,24 +41,26 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	private GRBVar[] rxnFluxes; //These are optimization variables, i.e. fluxes
 	private GRBLinExpr[] rxnExpressions; //These are constraints on fluxes, one for each metabolite
 	private double[] fluxesModel;
-	
+
 	private double[][] stoichMatrix; //This is used only in the clone() method. TODO eliminate this.
-	
-	
+
+
 	//Chacon sum of abs min vars
 	private GRBEnv envMin;
 	private GRBModel modelMin;
 	private GRBVar[] modelMinVars;
 	private int nVars; // will be double the amount of reactions in S
 	private final String biomassConstraintName = "biomassConstraint"; // useful for getting this constraint to reset the right-hand-side
-	
-	
+
+
 	private boolean runSuccess;
 	private int numMetabs;
 	private int numRxns;
-	private int objReaction;
+	private int[] objReactions; //for consistency, this should ALWAYS be 1-ordered!
+	private boolean[] maximize;
+	private String[] objConstraintNames;
 
-	
+
 	/**
 	 * Create a new simple FBAOptimizerGurobi without any stoichiometry information loaded.
 	 * Creates the Gurobi environment and model only.
@@ -66,36 +68,36 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	private FBAOptimizerGurobi()
 	{
 		runSuccess = false;
-		
+
 		try {
-		env = new GRBEnv();
-		env.set(GRB.IntParam.OutputFlag,0);
-		model = new GRBModel(env);
-		
-		
-	    } catch (GRBException e) {
-	      System.out.println("Error code: " + e.getErrorCode() + ". " +
-	                         e.getMessage());
-	    }
+			env = new GRBEnv();
+			env.set(GRB.IntParam.OutputFlag,0);
+			model = new GRBModel(env);
+
+
+		} catch (GRBException e) {
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+					e.getMessage());
+		}
 	}
 
 	/**
 	 * Create a new FBAOptimizerGurobi with stoichiometric matrix m, lower bounds l, upper bounds u,
 	 * and objective reaction r. 
-	 * @param m
-	 * @param l
-	 * @param u
-	 * @param r
+	 * @param m Stoichiometric matrix
+	 * @param l lower bounds
+	 * @param u upper bounds
+	 * @param objIdxs list of indexes for objective reactions, from 1 to N, in order of priority with the highest first
+	 * @param maximize list signifying if the corresponding objective rxn should be maximized, otherwise it will be minimized
 	 */
-	public FBAOptimizerGurobi(double[][] m, double[] l, double[] u, int r)
+	public FBAOptimizerGurobi(double[][] m, double[] l, double[] u, int[] objIdxs, boolean[] maximize)
 	{
 		this();
-		
-		
+
 		// this should probably only be bothered with if we're doing max/min, 
 		// but right now this class doesn't know the objective style until run()
-		initializeAbsModel(m, l, u, r);
-		
+		initializeAbsModel(m, l, u, objIdxs);
+
 		//everything below here is for initializing the basic model
 		stoichMatrix=m;
 		fluxesModel = new double[l.length];
@@ -107,16 +109,16 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			objective[i]=0;
 			types[i]=GRB.CONTINUOUS;
 		}
-		
+
 		try{
 			rxnFluxes = model.addVars(l, u, objective, types, null);
 			//must either update() or optimize() for changes to take effect
 			model.update();
-			
+
 			double[] rhsValues=new double[m.length]; // right-hand-side values, usually zero (Sv=0)
 			char[] senses=new char[m.length]; // represents equals, less than, etc. this is equals for most of ours (Sv EQUALS 0)
 			rxnExpressions=new GRBLinExpr[m.length]; //generate expressions to represent each matrix row
-			
+
 			//this makes each expression, which corresponds to a row of Sv = 0. 
 			// e.g. if S = [[-1 0 -1], [1 -1 0]] then 
 			// rxnExpression[0] is basically  -1*v1 + 0*v2 + -1*v3 = 0.0
@@ -129,17 +131,44 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 
 			model.addConstrs( rxnExpressions, senses, rhsValues, null);
 			model.update();
-	
+
 			numMetabs = m.length;
 			numRxns = m[0].length;
-			
-			setObjectiveReaction(numRxns, r);
-			
+
+			setObjectiveReaction(numRxns, objIdxs, maximize);
+
 		}
 		catch(GRBException e){
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
+	}
+	
+	/**Alternate constructors
+	 * 
+	 */
+	public FBAOptimizerGurobi(double[][] m, double[] l, double[] u, int r) {
+		this(m,l,u,new int[] {r});
+	}
+	public FBAOptimizerGurobi(double[][] m, double[] l, double[] u, int[] objIdxs) {	
+		this(m,l,u,objIdxs,getMaximizeList(objIdxs));
+	}
+
+	/**Helper function to determine if the indicated position should be maximized or 
+	 * minimized. If the index is >0 it's maximized, otherwise it's minimized.
+	 * 
+	 * remember that the index list should always be 1-ordered! 0 isn't a valid entry!
+	 * 
+	 * @param idxs
+	 * @return
+	 */
+	protected static boolean[] getMaximizeList(int[] idxs) {
+		boolean[] maximize = new boolean[idxs.length];
+		for (int i = 0; i < maximize.length; i++) { 
+			if (idxs[i] >= 0) maximize[i] = true;
+			else maximize[i] = false;
+		}
+		return maximize;
 	}
 	
 	/**
@@ -149,7 +178,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	 * @param u upper bounds
 	 * @param r the reaction to be maximized (the biomass reaction)
 	 */
-	public void initializeAbsModel(double[][] m, double[] l, double[] u, int r){
+	public void initializeAbsModel(double[][] m, double[] l, double[] u, int[] objIdxs){
 		/*
 		 * basically, if we start with this S matrix:
 		 * 
@@ -188,18 +217,19 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		 *       While the bounds are a form of constraints, below I typically only
 		 *       refer to row constraints by the term constraint. 
 		 */
-		
-		
+
+
 		//make as many vars as bounds * 2
 		nVars = l.length * 2;
 		createEmptyModelMin();
 		createVarsModelMin(l, u); // generates all variables, including the dummies
 		createObjFuncModelMin(); // generates the minimization objective function of half zeros, half ones
 		addOrigConstraintsModelMin(m); // adds the baseline Sv = 0 constraints (the stoichiometry constraints)
-		addBiomassConstraintModelMin(r); // adds the constraint that will be used to fix biomass
+		//addBiomassConstraintModelMin(r); // adds the constraint that will be used to fix biomass
+		addObjectiveListConstraintModelMin(objIdxs); // adds the constraints that will be used to fix the objectives
 		addAbsSumConstraintsModelMin();	// adds the constraints that are req'd to minimize sum of abs. fluxes
 	}
-	
+
 	/**
 	 * createEmptyModelMin generates an empty model for use with
 	 * minimization of sum of absolute value of fluxes
@@ -211,11 +241,11 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			modelMin = new GRBModel(envMin);
 		}
 		catch (GRBException e) {
-		      System.out.println("Error code: " + e.getErrorCode() + ". " +
-                      e.getMessage());
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+					e.getMessage());
 		}
 	}
-	
+
 	private void createVarsModelMin(double[] l, double[] u){
 		double[] lbMin = new double[nVars];
 		double[] ubMin = new double[nVars];
@@ -244,26 +274,26 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		catch(GRBException e){
 			System.out.println("  error in createVarsModelMin: ");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
 
 	}
-	
+
 	private void createObjFuncModelMin(){
 		//now setup the objective. this is only 1's for the dummy variables, hence the forloop start spot
 		GRBLinExpr objectiveFunc = new GRBLinExpr();
 		for (int k = nVars/2; k < nVars; k++){
 			objectiveFunc.addTerm(1.0, modelMinVars[k]);		
 		}
-	    try{
-	    	modelMin.setObjective(objectiveFunc, GRB.MINIMIZE); // have to un-hard code this probably
-	    }
-	    catch(GRBException e)
-	    {
+		try{
+			modelMin.setObjective(objectiveFunc, GRB.MINIMIZE); // have to un-hard code this probably
+		}
+		catch(GRBException e)
+		{
 			System.out.println("  error in createObjFuncModelMin: ");
-	    	System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
-	    }
+			System.out.println("Error code: " + e.getErrorCode() + ". " +
+					e.getMessage());
+		}
 	}
 
 	private void addOrigConstraintsModelMin(double[][] m){
@@ -275,7 +305,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		GRBLinExpr[] origConstraints = new GRBLinExpr[nMetabolites];
 		char[] senses = new char[nMetabolites]; // holds the "=" in Sv = 0
 		double[] rhs = new double[nMetabolites]; // holds the "0" in Sv = 0
-		
+
 		for (int k = 0; k < nMetabolites; k++){
 			// make the left-hand-side expressions
 			origConstraints[k] = new GRBLinExpr();
@@ -286,7 +316,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			senses[k] = GRB.EQUAL;
 			rhs[k] = 0;
 		}
-		
+
 		//add the constraints to the model
 		try{
 			modelMin.addConstrs(origConstraints, senses, rhs, null);
@@ -295,7 +325,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		catch(GRBException e){
 			System.out.println("  error in addOrigConstrainsModelMin: ");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
 	}
 
@@ -312,7 +342,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		double biomassRHS = 0; // this is what changes dynamically
 		double biomassCoef = 1;
 		biomassConstraint.addTerm(biomassCoef, modelMinVars[biomassVarNum - 1]); // need minus one because this will be one-ordered, must have zero-ordered
-		
+
 		//add the constraints to the model
 		try{
 			modelMin.addConstr(biomassConstraint, biomassSense, biomassRHS, biomassConstraintName);
@@ -321,8 +351,35 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		catch(GRBException e){
 			System.out.println("  error in addBiomassConstraintModelMin: ");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
+	}
+	
+	private void addObjectiveListConstraintModelMin(int[] objIdxs) {
+		//replicates the functionality of addBiomassConstraintModelMin for models with
+		//multiple objective reactions. Priority no longer matters, since these are
+		//all being set to a specific fixed flux.
+		for (int idx : objIdxs) {
+			if (idx < 0) idx = -idx;
+			
+			GRBLinExpr objConstraint = new GRBLinExpr();
+			char objSense = GRB.EQUAL;
+			double objRHS = 0; // this is what changes dynamically
+			double objCoef = 1;
+			objConstraint.addTerm(objCoef, modelMinVars[idx - 1]); // need minus one because this will be one-ordered, must have zero-ordered
+
+			//add the constraints to the model
+			try{
+				modelMin.addConstr(objConstraint, objSense, objRHS, biomassConstraintName);
+				modelMin.update();
+			}		
+			catch(GRBException e){
+				System.out.println("  error in addObjectiveListConstraintModelMin: ");
+				System.out.println("Error code: " + e.getErrorCode() + ". " +
+						e.getMessage());
+			}
+		}
+		
 	}
 
 	private void addAbsSumConstraintsModelMin(){
@@ -333,7 +390,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		int nOrigReactions = nVars / 2;
 		char[] senses = new char[nVars];
 		double[] rhs = new double[nVars];
-		
+
 		//generate the expressions
 		for (int k = 0; k < nOrigReactions; k++){
 			// add the constraint that minimizes positive flux through this reaction
@@ -347,13 +404,13 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			absSumConstraints[counter].addTerm(-1, modelMinVars[k + nOrigReactions]);
 			counter++;
 		}
-		
+
 		//populate the senses and rhs
 		for (int k = 0; k < nVars; k++){
 			senses[k] = GRB.LESS_EQUAL;
 			rhs[k] = 0;
 		}
-		
+
 		//add the constraints to the model
 		try{
 			modelMin.addConstrs(absSumConstraints, senses, rhs, null);
@@ -362,20 +419,9 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		catch(GRBException e){
 			System.out.println("  error in addAbsSumConstraintsModelMin: ");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}		
 	}
-	
-
-	
-
-	
-
-
-
-
-
-
 
 	/**
 	 * Sets the current lower bounds (e.g. -uptake rates) for the exchange reactions
@@ -387,7 +433,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	 * @return PARAMS_OK if the lb and exch array are of the same length; 
 	 * PARAMS_ERROR if not.
 	 */
-	
+
 	public int setExchLowerBounds(int[] exch, double[] lb)
 	{
 		if (lb.length != exch.length)
@@ -403,7 +449,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			catch(GRBException e)
 			{
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
-                        e.getMessage());
+						e.getMessage());
 			}
 
 		}
@@ -414,14 +460,14 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		catch(GRBException e)
 		{
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
-		
-		
+
+
 		setExchLowerBoundsModelMin(exch, lb);
 		return PARAMS_OK;
 	}
-	
+
 	/**
 	 * Sets the lower bounds for the min sub abs flux model
 	 * Called by setExchLowerBounds()
@@ -441,7 +487,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		catch(GRBException e)
 		{
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
 	}
 
@@ -453,7 +499,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	 * @return PARAMS_OK if the ub and exch arrays are of the same length; 
 	 * PARAMS_ERROR if not.
 	 */
-	
+
 	public int setExchUpperBounds(int[] exch, double[] ub)
 	{
 		if (ub.length != exch.length)
@@ -468,7 +514,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			catch(GRBException e)
 			{
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
-                        e.getMessage());
+						e.getMessage());
 			}
 		}
 		try{
@@ -478,7 +524,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		catch(GRBException e)
 		{
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
 		return PARAMS_OK;
 	}
@@ -502,17 +548,17 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			catch(GRBException e)
 			{
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
-                        e.getMessage());
+						e.getMessage());
 			}
 		}
 		return PARAMS_OK;
 	}
-	
+
 	/**
 	 * @return the array of lower bounds for all fluxes.
 	 * @param nrxns
 	 */
-	
+
 	public double[] getLowerBounds(int nrxns)
 	{   
 		GRBVar[] rxnFluxesLocal=model.getVars();
@@ -525,7 +571,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			catch(GRBException e)
 			{
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
-                        e.getMessage());
+						e.getMessage());
 			}
 		}
 		return l;
@@ -553,7 +599,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			catch(GRBException e)
 			{
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
-                        e.getMessage());
+						e.getMessage());
 			}
 		}
 		return PARAMS_OK;
@@ -576,14 +622,14 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 			catch(GRBException e)
 			{
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
-                        e.getMessage());
+						e.getMessage());
 			}
 		}
 		return u;
 	}
 
 
-	
+
 	/**
 	 * Sets the objective reaction. Maximizing growth is probably
 	 * the most common, but any reaction can be used as the objective.
@@ -594,30 +640,91 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	 */
 	public int setObjectiveReaction(int nrxns, int r)
 	{
-		if (r < 1 || r > nrxns)
-		{
-			return PARAMS_ERROR;
+		return setObjectiveReaction(nrxns, new int[] {r}, new boolean[] {true});
+	}
+	
+	public int setObjectiveReaction(int numRxns, int[] objs) {
+		boolean[] max = new boolean[objs.length];
+		for (int i = 0; i < objs.length; i++) {
+			max[i] = (objs[i] >= 0);
+		}
+		return setObjectiveReaction(numRxns, objs, max);
+	}
+
+
+	/**
+	 * Sets one or multiple objective reactions
+	 * @param nrxns
+	 * @param idxs Index of the objective reactions (1 thru nRxns)
+	 * @param maximize For each index in idxs, should the reaction be maximized? Otherwise, it will be minimized
+	 * @return
+	 */
+	public int setObjectiveReaction(int nrxns, int[] idxs, boolean[] maximize){
+		for (int i : idxs){
+			if (i < 1 || i > nrxns){
+				return PARAMS_ERROR;
+			}
 		}
 		if (numMetabs == 0 || numRxns == 0)
 		{
 			return MODEL_NOT_INITIALIZED;
 		}
-		GRBLinExpr expr = new GRBLinExpr();
-	    expr.addTerm(1.0, rxnFluxes[r-1]);
-	    
-	    try{
-	    	model.setObjective(expr, GRB.MAXIMIZE);
-	    }
-	    catch(GRBException e)
-	    {
+		
+		int nObjs = idxs.length;
+		String[] objRxnNames = new String[nObjs];
+		
+		//list the priorities. This is just a simple countdown because the optimization uses a strict hierarchy
+		int[] priorities = new int[nObjs];
+		for (int i = 0; i < nObjs; i++) {
+			priorities[i] = nObjs - i;
+		}
+		
+		//Note that a model has a single objective sense (controlled by the ModelSense 
+		//attribute). This means that you can't maximize the first objective and minimize 
+		//the second. However, you can achieve the same result with a simple trick. Each 
+		//objective has a weight, and these weights are allowed to be negative. Minimizing 
+		//an objective function is equivalent to maximizing the negation of that function. 
+		int[] weights = new int[nObjs];
+		for (int i = 0; i < nObjs; i++) {
+			weights[i] = maximize[i] ? 1 : -1;
+		}
+		
+		try {
+			// Set number of objectives
+			model.set(GRB.IntAttr.NumObj, nObjs);
+			
+		      // Set and configure i-th objective
+		      for (int i = 0; i < nObjs; i++) {
+		        model.set(GRB.IntParam.ObjNumber, i);
+		        model.set(GRB.IntAttr.ObjNPriority, priorities[i]);
+		        model.set(GRB.DoubleAttr.ObjNWeight, weights[i]);
+
+		        String vname = "Obj" + String.valueOf(i);
+		        model.set(GRB.StringAttr.ObjNName, vname);
+		        objRxnNames[i] = vname;
+		        
+		        GRBLinExpr expr = new GRBLinExpr();
+		        expr.addTerm(1.0, rxnFluxes[idxs[i]-1]);
+		        
+		        model.setObjective(expr, GRB.MAXIMIZE);
+		      }
+			
+		} catch (GRBException e) {
 	    	System.out.println("Error code: " + e.getErrorCode() + ". " +
                     e.getMessage());
-	    }
-	    
-		objReaction = r;
+		}
+
+
+		objReactions = idxs;
+		objConstraintNames = objRxnNames;
+		this.maximize = maximize;
+		
 		return PARAMS_OK;
+
+		//gurobi.GurobiJni.version(arg0);
+
 	}
-	
+
 	/**
 	 * Performs an FBA run with the loaded model, constraints, and bounds. Fluxes
 	 * and solutions are stored in the FBAOptimizerGurobi class and can be used through their
@@ -636,7 +743,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		}
 		// an internal status checker. If this = 0 after a run, everything is peachy.
 		int ret = -1;
-		
+
 		// gurobi optimization status.
 		// 2 = optimal, 3 = infeasible, 4 = infeasible or unbounded
 		// to parallel the GLPK implementation, if gurobi returns 2, then
@@ -645,110 +752,114 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		int status = -1; 
 		switch(objSty)
 		{
-			// the usual, just max the objective
-			case FBAModel.MAXIMIZE_OBJECTIVE_FLUX:
-				try{
-					GRBLinExpr objective=new GRBLinExpr();
-					objective.addTerm(1.0, rxnFluxes[objReaction-1]);
-					model.setObjective(objective, GRB.MAXIMIZE);
-					model.update();
-					model.optimize();
-					
-					status = model.get(GRB.IntAttr.Status);
-					
-					rxnFluxes=model.getVars();
-					// check to see if optimal
-					int optimstatus = model.get(GRB.IntAttr.Status);
-					if (optimstatus == GRB.Status.OPTIMAL) {
-				    	for(int i=0;i<rxnFluxes.length;i++){
-							fluxesModel[i]=rxnFluxes[i].get(GRB.DoubleAttr.X);
-						}
-				    	ret=0;
-				    } else {
-				    	System.out.println("   Model is not feasible");
-				    	for(int i=0;i<rxnFluxes.length;i++){
-							fluxesModel[i]=0;
-						}
-				    }
-				}
-				catch(GRBException e){
-					System.out.println("Error code: " + e.getErrorCode() + ". " +
-	                         e.getMessage());
-				}
-				break;
-			case FBAModel.MAX_OBJECTIVE_MIN_TOTAL:
-				try{
-					
-					// first find the maximized objective with vanilla FBA (e.g. biomass)
-					GRBLinExpr objective=new GRBLinExpr();
-					objective.addTerm(1.0, rxnFluxes[objReaction-1]);
-					model.setObjective(objective, GRB.MAXIMIZE);
-					model.update();
-					model.optimize();
-					
-					
-					rxnFluxes=model.getVars();
-					
-					// now fix the biomass in the min abs. sum. model, then run that one.
-					double maximizedObjective = rxnFluxes[objReaction-1].get(GRB.DoubleAttr.X);
-					setObjectiveFluxToSpecificValue(maximizedObjective);
-					
-					modelMin.optimize();
-					
-					status = model.get(GRB.IntAttr.Status);
+		// the usual, just max the objective
+		case FBAModel.MAXIMIZE_OBJECTIVE_FLUX:
+			try{
+				//GRBLinExpr objective=new GRBLinExpr();
+				//objective.addTerm(1.0, rxnFluxes[objReaction-1]);
+				//model.setObjective(objective, GRB.MAXIMIZE);
+				setObjectiveReaction(numRxns,objReactions,maximize);
+				model.update();
+				model.optimize();
 
-					
-					// save the new fluxes.
-					modelMinVars =modelMin.getVars();
-					for (int k = 0; k < modelMinVars.length / 2; k++){
-						fluxesModel[k] = modelMinVars[k].get(GRB.DoubleAttr.X);
+				status = model.get(GRB.IntAttr.Status);
+
+				rxnFluxes=model.getVars();
+				// check to see if optimal
+				int optimstatus = model.get(GRB.IntAttr.Status);
+				if (optimstatus == GRB.Status.OPTIMAL) {
+					for(int i=0;i<rxnFluxes.length;i++){
+						fluxesModel[i]=rxnFluxes[i].get(GRB.DoubleAttr.X);
 					}
-					
 					ret=0;
-					
+				} else {
+					System.out.println("   Model is not feasible");
+					for(int i=0;i<rxnFluxes.length;i++){
+						fluxesModel[i]=0;
+					}
 				}
-				catch(GRBException e){
-					System.out.println("Error code: " + e.getErrorCode() + ". " +
-	                         e.getMessage());
+			}
+			catch(GRBException e){
+				System.out.println("Error code: " + e.getErrorCode() + ". " +
+						e.getMessage());
+			}
+			break;
+		case FBAModel.MAX_OBJECTIVE_MIN_TOTAL:
+			try{
+
+				// first find the maximized objective with vanilla FBA (e.g. biomass)
+				//GRBLinExpr objective=new GRBLinExpr();
+				//objective.addTerm(1.0, rxnFluxes[objReaction-1]);
+				//model.setObjective(objective, GRB.MAXIMIZE);
+				setObjectiveReaction(numRxns,objReactions,maximize);
+				model.update();
+				model.optimize();
+
+				rxnFluxes=model.getVars();
+
+				// now fix the objectives in the min abs. sum. model, then run that one.
+				for (int i = 0; i < objReactions.length; i++) {
+					double maximizedObjective = rxnFluxes[objReactions[i]-1].get(GRB.DoubleAttr.X);
+					setObjectiveFluxToSpecificValue(i,maximizedObjective);
 				}
-				break;
-				
-			default:
-		
-				break;
+				modelMin.optimize();
+
+				status = model.get(GRB.IntAttr.Status);
+
+
+				// save the new fluxes.
+				modelMinVars =modelMin.getVars();
+				for (int k = 0; k < modelMinVars.length / 2; k++){
+					fluxesModel[k] = modelMinVars[k].get(GRB.DoubleAttr.X);
+				}
+
+				ret=0;
+
+			}
+			catch(GRBException e){
+				System.out.println("Error code: " + e.getErrorCode() + ". " +
+						e.getMessage());
+			}
+			break;
+
+		default:
+
+			break;
 		}
-		
+
 		if (ret == 0)
 		{   
 			runSuccess = true;
 		}
-		
+
 		// convert gurobi status indicators into GLPK statuses
 		if (status == 2){
 			status = 5;
 		}else if(status == 3){
 			status = 4;
 		}
-		
-        return status;
+
+		return status;
 	}
-	
+
 	/**
 	 * setObjectiveFluxToSpecificValue is used when minimizing the sum of the absolute value of the fluxes, while keeping the flux
-	 * of the biomass reaction constant.
+	 * of the indicated reaction constant.
 	 * 
+	 * @param objIdx the index in objReactions[] of the reaction being locked
 	 * @param objectiveFlux the amount at which the objective flux reaction, typically biomass, should be fixed 
 	 */
-	private void setObjectiveFluxToSpecificValue(double objectiveFlux){
+	private void setObjectiveFluxToSpecificValue(int objIdx, double objectiveFlux){
 		GRBConstr[] biomassFluxVar = new GRBConstr[1]; 
+		int rxnIdx = objReactions[objIdx]-1;
 		// grab the biomass constraint by name (this is the row constraint associated with the objective reaction -- row 3 in the example) 
 		try{
-			biomassFluxVar[0] = modelMin.getConstrByName(biomassConstraintName);
+			biomassFluxVar[0] = modelMin.getConstrByName(objConstraintNames[objIdx]);
 		}
 		catch(GRBException e){
 			System.out.println("   Error in setObjectiveFluxToSpecificValue");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                     e.getMessage());
+					e.getMessage());
 		}
 		double[] v = new double[1];
 		v[0] = objectiveFlux;
@@ -759,11 +870,11 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		catch(GRBException e){
 			System.out.println("   Error in setObjectiveFluxToSpecificValue");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                     e.getMessage());
+					e.getMessage());
 		}
 	}
 
-	
+
 	/**
 	 * @return The fluxes from the most recent FBA run
 	 */
@@ -771,7 +882,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	{
 
 		double[] v = new double[numRxns];
-		
+
 		if (runSuccess)
 		{
 			for (int i = 0; i < numRxns; i++)
@@ -781,10 +892,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		}
 		return v;
 	}
-    
-	
 
-	
 	/**
 	 * @return the exchange fluxes from the most recent FBA run
 	 * @param exch list of exchange reactions
@@ -802,14 +910,10 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		return v;
 	}
 
-
-
-
-
 	/**
 	 * If the FBA run was successful, this returns
 	 * the value of the objective solution. Otherwise, it returns -Double.MAX_VALUE
-	 * @return either the objective solution of -Double.MAX_VALUE
+	 * @return either the objective solution or -Double.MAX_VALUE
 	 * @param objreact Objective reaction index.
 	 */
 	public double getObjectiveSolution(int objreact)
@@ -820,11 +924,25 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		}
 		catch(GRBException e){
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
 		return -Double.MAX_VALUE;
 	}
 	
+	/**
+	 * Get the list of objective solutions 
+	 * @return list of either the objective solutions or -Double.MAX_VALUE
+	 * @param objs Objective reaction indexes
+	 */
+	public double[] getObjectiveSolutions(int[] objs)
+	{
+		double[] res = new double[objs.length];
+		for (int i = 0; i < objs.length; i ++) {
+			res[i] = getObjectiveSolution(objs[i]);
+		}
+		return res;
+	}
+
 	/**
 	 * A repeat of getObjective Solution due to GLPK legacy.
 	 * TODO Fix this. 
@@ -838,11 +956,11 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		}
 		catch(GRBException e){
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
 		return -Double.MAX_VALUE;
 	}
-	
+
 	/**
 	 * Returns the status of FBA (feasible or infeasible).
 	 * @return
@@ -863,7 +981,7 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 	 * @param ub
 	 * @return PARAMS_OK 
 	 */
-	
+
 	public int setObjectiveUpperBound(int objreact, double ub)
 	{
 		GRBVar[] objFlux=new GRBVar[1];
@@ -878,19 +996,19 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		catch(GRBException e)
 		{
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
-		
+
 		return PARAMS_OK;
 	}
-	
+
 	/**
 	 * Sets the lower bound on the objective reaction. 
 	 * @param objreact
 	 * @param lb
 	 * @return PARAMS_OK 
 	 */
-	
+
 	public int setObjectiveLowerBound(int objreact, double lb)
 	{
 		GRBVar[] objFlux=new GRBVar[1];
@@ -905,17 +1023,17 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		catch(GRBException e)
 		{
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
-		
+
 		return PARAMS_OK;
 	}
-	
-	
+
+
 	/**
 	 * Produces a clone of this <code>FBAOptimizerGurobi</code> with all parameters intact.
 	 */
-	
+
 	public FBAOptimizerGurobi clone()
 	{
 
@@ -923,7 +1041,9 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		double[] l=new double[rxnFluxesLocal.length];
 		double[] u=new double[rxnFluxesLocal.length];
 		//double[][] m=new double[][];
-		int r = objReaction;
+		//int r = objReaction;
+		int[] objs = objReactions;
+		boolean[] max = maximize;
 		try{
 			for(int k=0;k<rxnFluxesLocal.length;k++)
 			{
@@ -933,13 +1053,12 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		}
 		catch(GRBException e){
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-                    e.getMessage());
+					e.getMessage());
 		}
-		FBAOptimizerGurobi optimizerCopy=new FBAOptimizerGurobi(stoichMatrix,l,u,r);
+		FBAOptimizerGurobi optimizerCopy=new FBAOptimizerGurobi(stoichMatrix,l,u,objs,max);
 
 		return optimizerCopy;
 	}
-
 
 
 }

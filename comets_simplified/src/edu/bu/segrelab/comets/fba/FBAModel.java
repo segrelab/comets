@@ -115,7 +115,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double packedDensity;
 	private double convectionDiffConst;
 	private double noiseVariance;
-	private int objReaction;
+	private int[] objReactions;
 	private int biomassReaction;
 	private int objStyle;
 	
@@ -178,7 +178,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public FBAModel(double[][] m, double[] l, double[] u, int r, int optim)
 	{
-		this(m, l, u, r, r, optim);
+		this(m, l, u, new int[] {r}, r, optim);
 	}
 	
 	/**
@@ -192,24 +192,24 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * @param b
 	 * @param optim
 	 */
-	public FBAModel(double[][] m, double[] l, double[] u, int r, int b, int optim)
+	public FBAModel(double[][] m, double[] l, double[] u, int[] objs, int b, int optim)
 	{
 		runSuccess = false;
 		objStyle = MAX_OBJECTIVE_MIN_TOTAL;
 	
 		switch(optim){
 		case GUROBI:
-			fbaOptimizer=new FBAOptimizerGurobi( m, l, u, r);
+			fbaOptimizer=new FBAOptimizerGurobi( m, l, u, objs);
 			break;
 		case GLPK:
-			fbaOptimizer=new FBAOptimizerGLPK(m,l,u,r);
+			fbaOptimizer=new FBAOptimizerGLPK(m,l,u,objs);
 		default:
 			break;
 		}
 		numMetabs = m.length;
 		numRxns = m[0].length;
 		setBaseBounds(l, u);
-		setObjectiveReaction(r);
+		setObjectiveReactions(objs);
 		setBiomassReaction(b);
 	}
 
@@ -247,7 +247,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					final int objStyle,
 					final int optim)
 	{
-		this(m, l, u, r, b, optim);
+		this(m, l, u, new int[] {r}, b, optim);
 		
 		if (exch == null)
 			throw new IllegalArgumentException("There must be an array of exchange reactions.");
@@ -800,9 +800,17 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		return objStyle; 
 	}
 	
-	public int getObjectiveIndex()
+	public int[] getObjectiveIndexes()
 	{
-		return objReaction;
+		return objReactions;
+	}
+	
+	/**Returns the index (1 thru N) of the primary objective reaction
+	 * 
+	 * @return
+	 */
+	public int getObjectiveIndex() {
+		return objReactions[0];
 	}
 
 	
@@ -824,10 +832,17 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			return MODEL_NOT_INITIALIZED;
 		}
 		fbaOptimizer.setObjectiveReaction(numRxns, r);
-		objReaction = r;
+		objReactions = new int[] {r};
 		
 		return PARAMS_OK;
 	}
+	
+	public int setObjectiveReactions(int[] objs) {
+		objReactions = objs;
+		fbaOptimizer.setObjectiveReaction(numRxns, objs);
+		return PARAMS_OK;		
+	}
+
 	
 	/**
 	 * Performs an FBA run with the loaded model, constraints, and bounds. Fluxes
@@ -952,17 +967,14 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			this.exch = exch;
 	}
 
-
-
-
 	/**
 	 * If the FBA run was successful (as denoted by the GLPK status code), this returns
-	 * the value of the objective solution. Otherwise, it returns -Double.MAX_VALUE
+	 * the value of the objective solutions. Otherwise, it returns -Double.MAX_VALUE
 	 * @return either the objective solution of -Double.MAX_VALUE
 	 */
-	public double getObjectiveSolution()
+	public double[] getObjectiveSolutions()
 	{
-		return fbaOptimizer.getObjectiveSolution(objReaction);
+		return fbaOptimizer.getObjectiveSolutions(objReactions);
 	}
 	
 	/**
@@ -972,9 +984,9 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * objective solution, which may be a linear combination of many fluxes
 	 * @return
 	 */
-	public double getObjectiveFluxSolution()
+	public double[] getObjectiveFluxSolution()
 	{
-		return fbaOptimizer.getObjectiveFluxSolution(objReaction);
+		return fbaOptimizer.getObjectiveSolutions(objReactions);
 	}
 	
 	public double getBiomassFluxSolution()
@@ -984,7 +996,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		 * not the case, or rename the function to getFluxSolution if I've got it right
 		 * -MQuintin 12/1/2016
 		 */
-		return fbaOptimizer.getObjectiveFluxSolution(biomassReaction);
+		return fbaOptimizer.getObjectiveSolution(biomassReaction);
 	}
 	
 	/**
@@ -1229,10 +1241,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 							continue;
 
 						String[] parsed = objLine.split("\\s+");
-						if (parsed.length != 1) {
-							reader.close();
-							throw new ModelFileException("There should be just 1 element for the objective line - the index of the reaction.");
-						}
+						//if (parsed.length != 1) {
+						//	reader.close();
+						//	throw new ModelFileException("There should be just 1 element for the objective line - the index of the reaction.");
+						//}
 						
 						int rxn = Integer.parseInt(parsed[0]);
 						if (rxn < 1 || rxn > numRxns) {
@@ -2322,14 +2334,33 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	//	return fluxesModel;
 	//}
 	/**
-	 * Sets the upper bound on the objective reaction. 
+	 * Sets the upper bound on all objective reactions. 
 	 * @param ub
 	 * @return PARAMS_ERROR if ub < the current lb for the objective, PARAMS_OK otherwise
 	 */
-	
 	public int setObjectiveUpperBound(double ub)
 	{
-		return fbaOptimizer.setObjectiveUpperBound(objReaction, ub);
+		int res = PARAMS_OK;
+		for (int objReaction : objReactions) {
+			int t = fbaOptimizer.setObjectiveUpperBound(objReaction, ub);
+			if (t != PARAMS_OK) res = PARAMS_ERROR;
+		}
+		return res;
+	}
+	
+	/**Set the upper bounds of the objective reactions to the values in the given list.
+	 * If the length of ub < N_Objectives, unpaired objectives will not have bounds set.
+	 * 
+	 * @param ub
+	 * @return
+	 */
+	public int setObjectiveUpperBounds(double[] ub) {
+		int res = PARAMS_OK;
+		for (int i = 0; i < ub.length; i++){
+			int t = fbaOptimizer.setObjectiveUpperBound(objReactions[i], ub[i]);
+			if (t != PARAMS_OK) res = PARAMS_ERROR;
+		}
+		return res;
 	}
 	
 	/**
@@ -2343,15 +2374,36 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	}
 	
 	/**
-	 * Sets the lower bound on the objective reaction. 
-	 * @param ulb
+	 * Sets the lower bound on all objective reactions. 
+	 * @param lb
 	 * @return PARAMS_ERROR if lb > the current ub for the objective, PARAMS_OK otherwise
 	 */
 	
 	public int setObjectiveLowerBound(double lb)
 	{
-		return fbaOptimizer.setObjectiveLowerBound(objReaction, lb);
+		int res = PARAMS_OK;
+		for (int objReaction : objReactions) {
+			int t = fbaOptimizer.setObjectiveLowerBound(objReaction, lb);
+			if (t != PARAMS_OK) res = PARAMS_ERROR;
+		}
+		return res;
 	}
+	
+	/**Set the lower bounds of the objective reactions to the values in the given list.
+	 * If the length of lb < N_Objectives, unpaired objectives will not have bounds set.
+	 * 
+	 * @param lb
+	 * @return
+	 */
+	public int setObjectiveLowerBounds(double[] lb) {
+		int res = PARAMS_OK;
+		for (int i = 0; i < lb.length; i++){
+			int t = fbaOptimizer.setObjectiveLowerBound(objReactions[i], lb[i]);
+			if (t != PARAMS_OK) res = PARAMS_ERROR;
+		}
+		return res;
+	}
+
 	
 	/**
 	 * Returns the info panel for this <code>FBAModel</code> (as required by 
@@ -2389,7 +2441,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		modelCopy.setBaseBounds(getBaseLowerBounds(), getBaseUpperBounds());
 		modelCopy.setBaseExchLowerBounds(getBaseExchLowerBounds());
 		modelCopy.setBaseExchUpperBounds(getBaseExchUpperBounds());
-		modelCopy.setObjectiveReaction(getObjectiveIndex());
+		modelCopy.setObjectiveReactions(getObjectiveIndexes());
 		modelCopy.setBiomassReaction(getBiomassReaction());
 		modelCopy.setExchangeIndices(getExchangeIndices());
 		modelCopy.setExchangeKm(getExchangeKm());

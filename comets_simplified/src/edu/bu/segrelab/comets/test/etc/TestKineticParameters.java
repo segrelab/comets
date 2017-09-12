@@ -91,7 +91,7 @@ public class TestKineticParameters implements CometsConstants{
 		FBAModel reactor = (FBAModel) c.getModels()[0];
 		
 		
-		double kcat, e, s, km = 1.0;
+		double kcat=1.0, e=1.0, s=1.0, km=1.0;
 		double v = kcat * e * s / (km + s);
 		return v;
 	}

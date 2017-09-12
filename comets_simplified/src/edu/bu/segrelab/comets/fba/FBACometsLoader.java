@@ -1073,7 +1073,7 @@ CometsConstants
 				System.out.println("(looks ok!)");
 			else
 				System.out.println("(might be an error?)");
-			System.out.println("objective solution = " + models[i].getObjectiveSolution());
+			System.out.println("objective solution = " + models[i].getObjectiveSolutions());
 			System.out.flush();
 		}
 
@@ -2828,7 +2828,7 @@ CometsConstants
 				System.out.println("(looks ok!)");
 			else
 				System.out.println("(might be an error?)");
-			System.out.println("objective solution = " + model.getObjectiveSolution());
+			System.out.println("objective solution = " + model.getObjectiveSolutions());
 			System.out.flush();
 		}
 		catch (ModelFileException e)
