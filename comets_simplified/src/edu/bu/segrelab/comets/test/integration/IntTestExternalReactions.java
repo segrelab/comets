@@ -5,6 +5,8 @@ package edu.bu.segrelab.comets.test.integration;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.net.URL;
 
 import org.junit.AfterClass;
@@ -64,6 +66,16 @@ public class IntTestExternalReactions {
 	 */
 	@Before
 	public void setUp() throws Exception {
+		Comets.EXIT_AFTER_SCRIPT = false;
+		//create the comets_script file in the proper location, and populate it with the absolute path to the layout
+		URL scriptFolderURL = TestKineticParameters.class.getResource("../resources/resKineticParameters/");
+		String folderPath = scriptFolderURL.getPath();
+		String scriptPath = folderPath + File.separator + "comets_script.txt";
+		String layoutPath = folderPath + File.separator + "comets_layout.txt";
+		
+		FileWriter fw = new FileWriter(new File(scriptPath), false);
+		fw.write("load_layout " + layoutPath);
+		fw.close();
 	}
 
 	/*
@@ -82,7 +94,7 @@ public class IntTestExternalReactions {
 		URL scriptURL = TestKineticParameters.class.getResource("../resources/resKineticParameters/comets_script.txt");
 		Comets comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
 				"-script", scriptURL.getPath()});
-		//int x = 1; //landing pad for breakpoint
+		int x = 1; //landing pad for breakpoint
 	}
 	
 	/* When a metabolite would have its concentration fall below 0, split the timestep into smaller steps to improve accuracy

@@ -5,6 +5,8 @@ package edu.bu.segrelab.comets.test.unit.fba;
 
 import static org.junit.Assert.*;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.net.URL;
 
 import org.junit.After;
@@ -13,8 +15,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.exception.ModelFileException;
+import edu.bu.segrelab.comets.fba.FBACometsLoader;
 import edu.bu.segrelab.comets.fba.FBAModel;
+import edu.bu.segrelab.comets.test.classes.TComets;
+import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
 
 /**An incomplete test case for the FBAModel class.
  * 
@@ -31,6 +37,8 @@ public class TestFBAModel {
 	private static FBAModel biomassUndeclared;
 	private static FBAModel biomassDeclared;
 	
+	private static TComets tcomets = new TComets();
+
 	/**Functions that only get called once, before instantiating this test class
 	 * @throws java.lang.Exception
 	 */
@@ -62,6 +70,25 @@ public class TestFBAModel {
 		//		"/comets_simplified/src/edu/bu/segrelab/comets/test/resources/model_CSP.txt");
 		//biomassDeclared = (FBAModel) loader.loadModelFromFile(comets, 
 		//		"/comets_simplified/src/edu/bu/segrelab/comets/test/resources/model_CSP_biomass.txt");
+		/*Comets.EXIT_AFTER_SCRIPT = false;
+
+		//create the comets_script files in the proper location, and populate it with the absolute path to the layout
+		URL scriptFolderURL = TestKineticParameters.class.getResource("../resources/");
+		String folderPath = scriptFolderURL.getPath();
+		String scriptPath = folderPath + File.separator + "comets_script_2carbons.txt";
+		String layoutPath = folderPath + File.separator + "comets_layout_2carbons.txt";
+		FileWriter fw = new FileWriter(new File(scriptPath), false);
+		fw.write("load_layout " + layoutPath);
+		fw.close();
+		
+		scriptFolderURL = TestKineticParameters.class.getResource("../resources/");
+		folderPath = scriptFolderURL.getPath();
+		scriptPath = folderPath + File.separator + "comets_script_2carbons_multiObj.txt";
+		layoutPath = folderPath + File.separator + "comets_layout_2carbons_multiObj.txt";
+		fw = new FileWriter(new File(scriptPath), false);
+		fw.write("load_layout " + layoutPath);
+		fw.close();
+		*/
 	}
 
 	/**
@@ -70,10 +97,10 @@ public class TestFBAModel {
 	@After
 	public void tearDown() throws Exception {
 	}
-	
+
 	@Test
 	public void testConstructors(){
-		
+
 	}
 
 	//confirm that building the models in setUp() worked
@@ -85,7 +112,7 @@ public class TestFBAModel {
 		assertEquals(19,biomassDeclared.getObjectiveIndex());
 		assertEquals(27,biomassDeclared.getBiomassReaction());
 	}
-	
+
 	/**
 	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#run()}.
 	 */
@@ -98,31 +125,56 @@ public class TestFBAModel {
 		int resDeclared = biomassDeclared.run();
 		assertEquals(5,resDeclared);
 	}
-	
-	/**Test files with multiple objective functions
-	 * 
+
+	/**Test files with multiple objective functions.
+	 * For now, spot check that these get a different result.
 	 */
 	@Test
 	public void testMultiObjective() {
-		//a model that optimizes biomass (rxn 27), then minimizes carbon flux (rxns 1 & 2)
-		//OBJECTIVE 27 -1 -2
-		URL url = TestFBAModel.class.getResource("../../resources/model_CSP_multiObj.txt");
-		try {
-			FBAModel multiObjModel = FBAModel.loadModelFromFile(url.getPath());
-			int res = multiObjModel.run();
-			assertEquals(5,res);
-			
-			//spot check these match rxn 27, but the others don't have to
-			System.out.println("Multiple Objective flux solutions: " + multiObjModel.getFluxes()[26] + " " + multiObjModel.getFluxes()[0] + " " + multiObjModel.getFluxes()[1]);
-			System.out.println("Single   Objective flux solutions: " + biomassUndeclared.getFluxes()[26] + " " + biomassUndeclared.getFluxes()[0] + " " + biomassUndeclared.getFluxes()[1]);
-			
-		} catch (ModelFileException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
+		String res1 = runCometsLayout2CarbonsB(); //maximize biomass
+		//String res2 = runCometsLayout2CarbonsMultiObj(); //maximize Carbon1 uptake, then biomass
+		System.out.println(res1);
+		//System.out.println(res2);
 	}
 
+	private String runCometsLayout2Carbons() {
+		//Comets.EXIT_AFTER_SCRIPT = false;
+		int[] targetRxns = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+		URL urlS = TestFBAModel.class.getResource("../../resources/comets_script_2carbons.txt");
+		Comets comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
+				"-script", urlS.getPath()});
+		String result = "Single Objective Flux Solutions:";
+		for (int i : targetRxns) {
+			result = result + " " + String.valueOf(((FBAModel) comets.getModels()[0]).getFluxes()[i]);
+		}
+		return result;
+	}
+	
+	private String runCometsLayout2CarbonsB() {
+		String modelPath = "testmodel_2carbons.txt";
+		int[] targetRxns = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+				
+		double[] fluxes = tcomets.runModelFile(modelPath);
+		
+		String result = "Single Objective Flux Solutions:";
+		for (int i : targetRxns) {
+			result = result + " " + String.valueOf(fluxes[i]);
+		}
+		return result;
+	}
+
+	private String runCometsLayout2CarbonsMultiObj() {
+		//Comets.EXIT_AFTER_SCRIPT = false;
+		int[] targetRxns = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+		URL urlM = TestFBAModel.class.getResource("../../resources/comets_script_2carbons_multiObj.txt");
+		Comets comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
+				"-script", urlM.getPath()});
+		String result = "Multi  Objective Flux Solutions:";
+		for (int i : targetRxns) {
+			result = result + " " + String.valueOf(((FBAModel) comets.getModels()[0]).getFluxes()[i]);
+		}
+		return result;
+	}
 	/*
 	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#FBAModel(double[][], double[], double[], int, int)}.
 	 */
@@ -186,6 +238,6 @@ public class TestFBAModel {
 	public void testClone() {
 		//fail("Not yet implemented"); // TODO
 	}
-	
-	*/
+
+	 */
 }

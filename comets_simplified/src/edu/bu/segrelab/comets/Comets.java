@@ -89,14 +89,19 @@ public class Comets implements CometsConstants,
 							   CometsLoadListener,
 							   CometsChangeListener
 {
+	private String versionString = "2.5.2_1, 20 September 2017"; //remove "_1" when merging this back into trunk
+	
 	/**
 	 * A debugging tool. If this is set to true, then the only running done
 	 * by each cell just runs through a diffusion routine.
 	 */
 	public static boolean DIFFUSION_TEST_MODE = false;
-	public static boolean EXIT_AFTER_SCRIPT = true;
-	private String versionString = "2.5.1, 28 August 2017";
 
+	//More debug/test features
+	public static boolean AUTORUN = true; //Have the constructor run the script it's given?
+	public static boolean EXIT_AFTER_SCRIPT = true; //Disable to allow debugging & tests
+	public static boolean DEBUG_COMMAND_LINE_MODE = false;
+	
 	// The setup pane 
 	private CometsSimRunner runner;
 	
@@ -109,7 +114,7 @@ public class Comets implements CometsConstants,
 	private List<Cell> initCellList, cellList;
 
 	private int mode;
-	private CometsLoader loader = null;
+	protected CometsLoader loader = null;
 	private String loaderClassName;
 	
 	private Deque<World2D> worldUndoDeque;
@@ -123,7 +128,7 @@ public class Comets implements CometsConstants,
 	
 	private CyclicBarrier runBarrier;
 	
-	private String scriptFileName = null;
+	protected String scriptFileName = null;
 	
 	// UI Widgets
 	private JFrame 				cFrame;					// main Frame for the program
@@ -216,10 +221,12 @@ public class Comets implements CometsConstants,
 		
 		
 		// if we have a script file, load and run it, then exit.
-		if (scriptFileName != null)
+		if (scriptFileName != null || DEBUG_COMMAND_LINE_MODE)
 		{
 			cParams.showGraphics(false);
-			runScript(scriptFileName);
+			if (AUTORUN){
+				runScript(scriptFileName);
+			}
 			if (EXIT_AFTER_SCRIPT){
 				exitProgram();
 			}
@@ -419,7 +426,7 @@ public class Comets implements CometsConstants,
 	 * Parses and runs a COMETS script.
 	 * @param filename
 	 */
-    private void runScript(String filename)
+    protected void runScript(String filename)
     {
 		System.out.println("running script file: " + filename);
 		try

@@ -63,6 +63,8 @@ public class TestFBAParameters{
 	 */
 	@Test
 	public void testLoadParameterState() {
+		//TODO: This is failing because the Comets object given to pParams's constructor is null,
+		//so its fields can't be set back to the defaults
 		pParams.setParameter("randomorder", "true");
 		pParams.loadParameterState();
 		assertTrue(pParams.getRandomOrder());

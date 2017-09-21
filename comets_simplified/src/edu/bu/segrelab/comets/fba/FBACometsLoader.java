@@ -244,7 +244,7 @@ CometsConstants
 		 */
 		try
 		{
-			BufferedReader reader = new BufferedReader(new FileReader(filename));
+			BufferedReader reader = new BufferedReader(new FileReader(f));
 			String line;
 
 			int numMedia;
@@ -290,6 +290,7 @@ CometsConstants
 				 * 	prevent_media_out []
 				 * 	prevent_media_in []
 				 * initial_pop []
+				 * parameters
 				 */
 
 				if (parsed[0].equalsIgnoreCase(MODEL_FILE))
