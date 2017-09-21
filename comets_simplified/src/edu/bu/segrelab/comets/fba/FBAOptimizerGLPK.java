@@ -1101,6 +1101,11 @@ public class FBAOptimizerGLPK extends edu.bu.segrelab.comets.fba.FBAOptimizer
 		return res;
 	}
 
+	@Override
+	public int setObjectiveMaximize(boolean[] objMax) {
+		return PARAMS_ERROR; //this class isn't set up to handle multiple objectives yet
+	}
+
 
 
 	

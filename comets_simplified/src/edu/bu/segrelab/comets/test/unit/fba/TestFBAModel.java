@@ -7,13 +7,16 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.net.URL;
 
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.exception.ModelFileException;
@@ -34,9 +37,17 @@ import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
  */
 public class TestFBAModel {
 
+	/*The TemporaryFolder Rule allows creation of files and folders that should 
+	 * be deleted when the test method finishes (whether it passes or fails). Whether 
+	 * the deletion is successful or not is not checked by this rule. No exception 
+	 * will be thrown in case the deletion fails.
+	 */
+	@Rule
+	public TemporaryFolder tempdir= new TemporaryFolder();
+
 	private static FBAModel biomassUndeclared;
 	private static FBAModel biomassDeclared;
-	
+
 	private static TComets tcomets = new TComets();
 
 	/**Functions that only get called once, before instantiating this test class
@@ -80,7 +91,7 @@ public class TestFBAModel {
 		FileWriter fw = new FileWriter(new File(scriptPath), false);
 		fw.write("load_layout " + layoutPath);
 		fw.close();
-		
+
 		scriptFolderURL = TestKineticParameters.class.getResource("../resources/");
 		folderPath = scriptFolderURL.getPath();
 		scriptPath = folderPath + File.separator + "comets_script_2carbons_multiObj.txt";
@@ -88,7 +99,7 @@ public class TestFBAModel {
 		fw = new FileWriter(new File(scriptPath), false);
 		fw.write("load_layout " + layoutPath);
 		fw.close();
-		*/
+		 */
 	}
 
 	/**
@@ -131,50 +142,41 @@ public class TestFBAModel {
 	 */
 	@Test
 	public void testMultiObjective() {
-		String res1 = runCometsLayout2CarbonsB(); //maximize biomass
+		try {
+			String res1 = runCometsLayout2Carbons();
+			System.out.println(res1);
+			String res2 = runCometsLayout2CarbonsMultiObj();
+			System.out.println(res2);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			fail();
+			e.printStackTrace();
+		} //maximize biomass
 		//String res2 = runCometsLayout2CarbonsMultiObj(); //maximize Carbon1 uptake, then biomass
-		System.out.println(res1);
 		//System.out.println(res2);
 	}
 
-	private String runCometsLayout2Carbons() {
-		//Comets.EXIT_AFTER_SCRIPT = false;
-		int[] targetRxns = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-		URL urlS = TestFBAModel.class.getResource("../../resources/comets_script_2carbons.txt");
-		Comets comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
-				"-script", urlS.getPath()});
+	private String runCometsLayout2Carbons() throws IOException {
+		FBAModel model = tcomets.runModelString(testmodel_2carbons, tempdir);
+		double[] fluxes = model.getFluxes();
 		String result = "Single Objective Flux Solutions:";
-		for (int i : targetRxns) {
-			result = result + " " + String.valueOf(((FBAModel) comets.getModels()[0]).getFluxes()[i]);
-		}
-		return result;
-	}
-	
-	private String runCometsLayout2CarbonsB() {
-		String modelPath = "testmodel_2carbons.txt";
-		int[] targetRxns = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-				
-		double[] fluxes = tcomets.runModelFile(modelPath);
-		
-		String result = "Single Objective Flux Solutions:";
-		for (int i : targetRxns) {
+		for (int i = 0; i < fluxes.length; i++) {
 			result = result + " " + String.valueOf(fluxes[i]);
 		}
 		return result;
 	}
 
-	private String runCometsLayout2CarbonsMultiObj() {
-		//Comets.EXIT_AFTER_SCRIPT = false;
-		int[] targetRxns = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-		URL urlM = TestFBAModel.class.getResource("../../resources/comets_script_2carbons_multiObj.txt");
-		Comets comets = new Comets(new String[]{"-loader", FBACometsLoader.class.getName(),
-				"-script", urlM.getPath()});
+	private String runCometsLayout2CarbonsMultiObj() throws IOException {
+		FBAModel model = tcomets.runModelString(testmodel_2carbons_multiObj, tempdir);
+		double[] fluxes = model.getFluxes();
 		String result = "Multi  Objective Flux Solutions:";
-		for (int i : targetRxns) {
-			result = result + " " + String.valueOf(((FBAModel) comets.getModels()[0]).getFluxes()[i]);
+		for (int i = 0; i < fluxes.length; i++) {
+			result = result + " " + String.valueOf(fluxes[i]);
 		}
 		return result;
 	}
+
+	
 	/*
 	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#FBAModel(double[][], double[], double[], int, int)}.
 	 */
@@ -240,4 +242,136 @@ public class TestFBAModel {
 	}
 
 	 */
+
+	/* -------------Testing File Contents ---------------------- */
+
+	public static String testmodel_2carbons = "SMATRIX  7  10\r\n" + 
+			"    1   1   -1.000000\r\n" + 
+			"    1   3   -1.000000\r\n" + 
+			"    1   6   -1.000000\r\n" + 
+			"    2   1   -6.000000\r\n" + 
+			"    2   2   -3.000000\r\n" + 
+			"    2   8   -1.000000\r\n" + 
+			"    3   1   -6.000000\r\n" + 
+			"    3   2   -3.000000\r\n" + 
+			"    3   9   -1.000000\r\n" + 
+			"    4   1   6.000000\r\n" + 
+			"    4   2   3.000000\r\n" + 
+			"    4   3   -10.000000\r\n" + 
+			"    4   4   -10.000000\r\n" + 
+			"    5   2   -1.000000\r\n" + 
+			"    5   4   -2.000000\r\n" + 
+			"    5   7   -1.000000\r\n" + 
+			"    6   3   -1.000000\r\n" + 
+			"    6   4   -1.000000\r\n" + 
+			"    6   10   -1.000000\r\n" + 
+			"    7   3   1.000000\r\n" + 
+			"    7   4   1.000000\r\n" + 
+			"    7   5   -1.000000\r\n" + 
+			"//\r\n" + 
+			"BOUNDS  -1000  1000\r\n" + 
+			"    1   0.000000   1000.000000\r\n" + 
+			"    2   0.000000   1000.000000\r\n" + 
+			"    3   0.000000   1000.000000\r\n" + 
+			"    4   0.000000   1000.000000\r\n" + 
+			"    5   0.000000   1000.000000\r\n" + 
+			"    6   -10.000000   1000.000000\r\n" + 
+			"    7   -10.000000   1000.000000\r\n" + 
+			"    8   -10.000000   1000.000000\r\n" + 
+			"    9   -10.000000   1000.000000\r\n" + 
+			"    10   -10.000000   1000.000000\r\n" + 
+			"//\r\n" + 
+			"OBJECTIVE\r\n" + 
+			"    5\r\n" + 
+			"//\r\n" + 
+			"METABOLITE_NAMES\r\n" + 
+			"    c1\r\n" + 
+			"    o\r\n" + 
+			"    p\r\n" + 
+			"    atp\r\n" + 
+			"    c2\r\n" + 
+			"    n\r\n" + 
+			"    bio\r\n" + 
+			"//\r\n" + 
+			"REACTION_NAMES\r\n" + 
+			"    atp_1\r\n" + 
+			"    atp_2\r\n" + 
+			"    biomass_1\r\n" + 
+			"    biomass_2\r\n" + 
+			"    objective\r\n" + 
+			"    EX_c1\r\n" + 
+			"    EX_c2\r\n" + 
+			"    EX_o\r\n" + 
+			"    EX_p\r\n" + 
+			"    EX_n\r\n" + 
+			"//\r\n" + 
+			"EXCHANGE_REACTIONS\r\n" + 
+			" 6 7 8 9 10\r\n" + 
+			"//\r\n" + 
+			"";
+
+	public static String testmodel_2carbons_multiObj = "SMATRIX  7  10\r\n" + 
+			"    1   1   -1.000000\r\n" + 
+			"    1   3   -1.000000\r\n" + 
+			"    1   6   -1.000000\r\n" + 
+			"    2   1   -6.000000\r\n" + 
+			"    2   2   -3.000000\r\n" + 
+			"    2   8   -1.000000\r\n" + 
+			"    3   1   -6.000000\r\n" + 
+			"    3   2   -3.000000\r\n" + 
+			"    3   9   -1.000000\r\n" + 
+			"    4   1   6.000000\r\n" + 
+			"    4   2   3.000000\r\n" + 
+			"    4   3   -10.000000\r\n" + 
+			"    4   4   -10.000000\r\n" + 
+			"    5   2   -1.000000\r\n" + 
+			"    5   4   -2.000000\r\n" + 
+			"    5   7   -1.000000\r\n" + 
+			"    6   3   -1.000000\r\n" + 
+			"    6   4   -1.000000\r\n" + 
+			"    6   10   -1.000000\r\n" + 
+			"    7   3   1.000000\r\n" + 
+			"    7   4   1.000000\r\n" + 
+			"    7   5   -1.000000\r\n" + 
+			"//\r\n" + 
+			"BOUNDS  -1000  1000\r\n" + 
+			"    1   0.000000   1000.000000\r\n" + 
+			"    2   0.000000   1000.000000\r\n" + 
+			"    3   0.000000   1000.000000\r\n" + 
+			"    4   0.000000   1000.000000\r\n" + 
+			"    5   0.000000   1000.000000\r\n" + 
+			"    6   -10.000000   1000.000000\r\n" + 
+			"    7   -10.000000   1000.000000\r\n" + 
+			"    8   -10.000000   1000.000000\r\n" + 
+			"    9   -10.000000   1000.000000\r\n" + 
+			"    10   -10.000000   1000.000000\r\n" + 
+			"//\r\n" + 
+			"OBJECTIVE\r\n" + 
+			"    4 -3\r\n" + 
+			"//\r\n" + 
+			"METABOLITE_NAMES\r\n" + 
+			"    c1\r\n" + 
+			"    o\r\n" + 
+			"    p\r\n" + 
+			"    atp\r\n" + 
+			"    c2\r\n" + 
+			"    n\r\n" + 
+			"    bio\r\n" + 
+			"//\r\n" + 
+			"REACTION_NAMES\r\n" + 
+			"    atp_1\r\n" + 
+			"    atp_2\r\n" + 
+			"    biomass_1\r\n" + 
+			"    biomass_2\r\n" + 
+			"    objective\r\n" + 
+			"    EX_c1\r\n" + 
+			"    EX_c2\r\n" + 
+			"    EX_o\r\n" + 
+			"    EX_p\r\n" + 
+			"    EX_n\r\n" + 
+			"//\r\n" + 
+			"EXCHANGE_REACTIONS\r\n" + 
+			" 6 7 8 9 10\r\n" + 
+			"//\r\n" + 
+			"";
 }

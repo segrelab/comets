@@ -8,6 +8,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 
+import org.junit.rules.TemporaryFolder;
+
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.fba.FBACometsLoader;
@@ -67,14 +69,34 @@ public class TComets extends Comets {
 	/**run the optimizer on the given model file without putting it into a layout context
 	 * @param filePath
 	 */
-	public double[] runModelFile(String filePath) {
+	public FBAModel runModelFile(String filePath) {
 		loader = new FBACometsLoader();
 		FBAModel model = (FBAModel) loader.loadModelFromFile(this, filePath);
 		int status = model.run();
-		if (status != 180 && status != 5)
+		if (status != 180 && status != 5) {
 			System.out.println("Problem running " + filePath);
 			System.out.println("Status of model.run() indicated error or failure");
-		return model.getObjectiveSolutions();
+		}
+		return model;
 	}
 	
+	/**Run the optimizer on the given String, which must be valid contents for a model file,
+	 * without putting it into a layout context
+	 * 
+	 * @param modelFileContents
+	 * @param tempFolder
+	 * @return
+	 * @throws IOException 
+	 */
+	public FBAModel runModelString(String modelFileContents, TemporaryFolder tempFolder) throws IOException {
+		File modelFile = tempFolder.newFile();
+		String modelFilePath = modelFile.getAbsolutePath();
+		
+		FileWriter fw = new FileWriter(modelFilePath);
+		fw.write(modelFileContents);
+		fw.close();
+		
+		FBAModel model = runModelFile(modelFilePath);
+		return model;
+	}
 }

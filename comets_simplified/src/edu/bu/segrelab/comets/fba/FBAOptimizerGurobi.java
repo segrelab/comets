@@ -57,7 +57,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 	private int numMetabs;
 	private int numRxns;
 	private int[] objReactions; //for consistency, this should ALWAYS be 1-ordered!
-	private boolean[] maximize;
+	private boolean[] objMaximize;
 	private String[] objConstraintNames;
 
 
@@ -717,7 +717,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 		objReactions = idxs;
 		objConstraintNames = objRxnNames;
-		this.maximize = maximize;
+		this.objMaximize = maximize;
 		
 		return PARAMS_OK;
 
@@ -758,7 +758,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 				//GRBLinExpr objective=new GRBLinExpr();
 				//objective.addTerm(1.0, rxnFluxes[objReaction-1]);
 				//model.setObjective(objective, GRB.MAXIMIZE);
-				setObjectiveReaction(numRxns,objReactions,maximize);
+				setObjectiveReaction(numRxns,objReactions,objMaximize);
 				model.update();
 				model.optimize();
 
@@ -791,7 +791,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 				//GRBLinExpr objective=new GRBLinExpr();
 				//objective.addTerm(1.0, rxnFluxes[objReaction-1]);
 				//model.setObjective(objective, GRB.MAXIMIZE);
-				setObjectiveReaction(numRxns,objReactions,maximize);
+				setObjectiveReaction(numRxns,objReactions,objMaximize);
 				model.update();
 				model.optimize();
 
@@ -1043,7 +1043,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		//double[][] m=new double[][];
 		//int r = objReaction;
 		int[] objs = objReactions;
-		boolean[] max = maximize;
+		boolean[] max = objMaximize;
 		try{
 			for(int k=0;k<rxnFluxesLocal.length;k++)
 			{
@@ -1058,6 +1058,12 @@ implements edu.bu.segrelab.comets.CometsConstants
 		FBAOptimizerGurobi optimizerCopy=new FBAOptimizerGurobi(stoichMatrix,l,u,objs,max);
 
 		return optimizerCopy;
+	}
+
+	@Override
+	public int setObjectiveMaximize(boolean[] objMax) {
+		this.objMaximize = objMax;
+		return PARAMS_OK;
 	}
 
 

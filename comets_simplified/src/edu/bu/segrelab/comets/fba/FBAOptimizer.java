@@ -45,4 +45,6 @@ public abstract class FBAOptimizer  implements edu.bu.segrelab.comets.CometsCons
 	public abstract FBAOptimizer clone();
 
 	public abstract double[] getObjectiveSolutions(int[] objReactions);
+
+	public abstract int setObjectiveMaximize(boolean[] objMax);
 }

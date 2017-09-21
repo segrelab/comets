@@ -25,6 +25,8 @@ import edu.bu.segrelab.comets.ui.DoubleField;
 
 import org.apache.commons.math3.distribution.*;
 
+import com.sun.xml.internal.ws.util.StringUtils;
+
 /**
  * This class defines the functions necessary to load, process, and execute a flux balance
  * analysis model. It can load a model from different file formats (//TODO add SBML), and
@@ -116,6 +118,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double convectionDiffConst;
 	private double noiseVariance;
 	private int[] objReactions;
+	private boolean[] objMaximize;
 	private int biomassReaction;
 	private int objStyle;
 	
@@ -178,7 +181,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public FBAModel(double[][] m, double[] l, double[] u, int r, int optim)
 	{
-		this(m, l, u, new int[] {r}, r, optim);
+		this(m, l, u, new int[] {Math.abs(r)}, new boolean[] {r>=0}, Math.abs(r), optim);
 	}
 	
 	/**
@@ -192,14 +195,14 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * @param b
 	 * @param optim
 	 */
-	public FBAModel(double[][] m, double[] l, double[] u, int[] objs, int b, int optim)
+	public FBAModel(double[][] m, double[] l, double[] u, int[] objs, boolean[] objsMax, int b, int optim)
 	{
 		runSuccess = false;
 		objStyle = MAX_OBJECTIVE_MIN_TOTAL;
 	
 		switch(optim){
 		case GUROBI:
-			fbaOptimizer=new FBAOptimizerGurobi( m, l, u, objs);
+			fbaOptimizer=new FBAOptimizerGurobi( m, l, u, objs, objsMax);
 			break;
 		case GLPK:
 			fbaOptimizer=new FBAOptimizerGLPK(m,l,u,objs);
@@ -210,6 +213,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		numRxns = m[0].length;
 		setBaseBounds(l, u);
 		setObjectiveReactions(objs);
+		setObjectiveMaximize(objsMax);
 		setBiomassReaction(b);
 	}
 
@@ -233,7 +237,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	public FBAModel(final double[][] m, 
 					final double[] l, 
 					final double[] u, 
-					int r, 
+					int[] r,
+					boolean[] objMax,
 					int b,
 					final int[] exch, 
 					final double[] exchDiffConsts,
@@ -247,7 +252,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					final int objStyle,
 					final int optim)
 	{
-		this(m, l, u, new int[] {r}, b, optim);
+		this(m, l, u, r, objMax, b, optim);
 		
 		if (exch == null)
 			throw new IllegalArgumentException("There must be an array of exchange reactions.");
@@ -300,7 +305,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	}
 	
 	/**Constructor added to make the biomass reaction optional. If not given,
-	 * the objective reaction will be used to calculate biomass flux
+	 * the primary objective reaction will be used to calculate biomass flux
 	 * @param m Stoichiometric matrix
 	 * @param l lower bounds
 	 * @param u upper bounds
@@ -317,7 +322,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	public FBAModel(final double[][] m, 
 					final double[] l, 
 					final double[] u, 
-					int r, 
+					int[] r,
+					boolean[] objMax,
 					final int[] exch, 
 					final double[] exchDiffConsts,
 					final double[] exchKm, 
@@ -329,7 +335,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					final String[] rxnNames,
 					final int objStyle,
 					final int optim){
-		this(m,l,u,r,r,exch,exchDiffConsts,exchKm,exchVmax,exchHillCoeff,exchAlpha,
+		this(m,l,u,r,objMax,r[0],exch,exchDiffConsts,exchKm,exchVmax,exchHillCoeff,exchAlpha,
 				exchW,metabNames,rxnNames,objStyle,optim);
 	}
 
@@ -839,10 +845,13 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	
 	public int setObjectiveReactions(int[] objs) {
 		objReactions = objs;
-		fbaOptimizer.setObjectiveReaction(numRxns, objs);
-		return PARAMS_OK;		
+		return fbaOptimizer.setObjectiveReaction(numRxns, objs);
 	}
 
+	public int setObjectiveMaximize(boolean[] objMax) {
+		objMaximize = objMax;
+		return fbaOptimizer.setObjectiveMaximize(objMax);
+	}
 	
 	/**
 	 * Performs an FBA run with the loaded model, constraints, and bounds. Fluxes
@@ -1024,7 +1033,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			double[][] S = null;
 			double[] lb = null;
 			double[] ub = null;
-			int obj = 0;
+			int[] objs = {0};
+			boolean[] objMax = {true};
 			int bio = 0;
 			int objSt = MAXIMIZE_OBJECTIVE_FLUX;
 			int optim = GUROBI;
@@ -1246,13 +1256,20 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						//	throw new ModelFileException("There should be just 1 element for the objective line - the index of the reaction.");
 						//}
 						
-						int rxn = Integer.parseInt(parsed[0]);
-						if (rxn < 1 || rxn > numRxns) {
-							reader.close();
-							throw new ModelFileException("The reaction index in OBJECTIVE block line " + lineNum + " should be between 1 and " + numRxns);
+						int[] rxns = new int[parsed.length];
+						boolean[] maxs = new boolean[parsed.length];
+						for (int i = 0; i < parsed.length; i++) {
+							String s = parsed[i];
+							int val = Integer.parseInt(s);
+							val = Math.abs(val); //input may have a negative value to indicate minimizing. Turn it into an index.
+							boolean max = !s.contains("-"); //can't use "val<0" because that would miss "-0"
+													//Update: Recall that these indexes are 1->N, so there shouldn't be a 0
+							rxns[i] = val;
+							maxs[i] = max;
 						}
 						
-						obj = rxn;
+						objs = rxns;
+						objMax = maxs;
 					}
 					lineNum++;
 					blockOpen = false;
@@ -2112,11 +2129,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			}
 			
 		
-			if (bio == 0){ //if the Biomass reaction wasn't specified, use the Objective reaction
-				bio = obj;
+			if (bio == 0){ //if the Biomass reaction wasn't specified, use the primary Objective reaction
+				bio = objs[0];
 			}
 			
-			FBAModel model = new FBAModel(S, lb, ub, obj, bio, exchRxns, diffConsts, exchKm, exchVmax, exchHillCoeff, exchAlpha, exchW, metNames, rxnNames, objSt, optim);
+			FBAModel model = new FBAModel(S, lb, ub, objs, objMax, bio, exchRxns, diffConsts, exchKm, exchVmax, exchHillCoeff, exchAlpha, exchW, metNames, rxnNames, objSt, optim);
 			model.setDefaultAlpha(defaultAlpha);
 			model.setDefaultW(defaultW);
 			model.setDefaultHill(defaultHill);
