@@ -271,8 +271,9 @@ public class ReactionModel extends Model implements CometsConstants {
 		}
 		reset(); //Because setup should only be run when arrays are in their initial state
 		
+		int totalMedia = 0;
 		String[] allNames = initialMetNames;
-		int totalMedia = allNames.length;
+		if (initialMetNames != null) totalMedia = allNames.length;
 		
 		if (totalMedia < 1) return; //there's no media, so nothing to do here.
 		

@@ -244,7 +244,7 @@ CometsConstants
 		 */
 		try
 		{
-			BufferedReader reader = new BufferedReader(new FileReader(filename));
+			BufferedReader reader = new BufferedReader(new FileReader(f));
 			String line;
 
 			int numMedia;
@@ -290,6 +290,7 @@ CometsConstants
 				 * 	prevent_media_out []
 				 * 	prevent_media_in []
 				 * initial_pop []
+				 * parameters
 				 */
 
 				if (parsed[0].equalsIgnoreCase(MODEL_FILE))
@@ -1073,7 +1074,7 @@ CometsConstants
 				System.out.println("(looks ok!)");
 			else
 				System.out.println("(might be an error?)");
-			System.out.println("objective solution = " + models[i].getObjectiveSolution());
+			System.out.println("objective solution = " + models[i].getObjectiveSolutions());
 			System.out.flush();
 		}
 
@@ -2828,7 +2829,7 @@ CometsConstants
 				System.out.println("(looks ok!)");
 			else
 				System.out.println("(might be an error?)");
-			System.out.println("objective solution = " + model.getObjectiveSolution());
+			System.out.println("objective solution = " + model.getObjectiveSolutions());
 			System.out.flush();
 		}
 		catch (ModelFileException e)

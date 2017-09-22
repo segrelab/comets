@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.fba.FBAParameters;
+import edu.bu.segrelab.comets.test.classes.TComets;
 
 /**Test class for {@link FBAParameters}
  * 
@@ -48,7 +49,7 @@ public class TestFBAParameters{
 	 */
 	@Before
 	public void setUp() throws Exception {
-		pParams = new FBAParameters((Comets) null);
+		pParams = new FBAParameters(new TComets());
 	}
 
 	/**

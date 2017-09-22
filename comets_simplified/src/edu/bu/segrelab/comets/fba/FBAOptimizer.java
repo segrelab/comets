@@ -26,6 +26,8 @@ public abstract class FBAOptimizer  implements edu.bu.segrelab.comets.CometsCons
 	
 	public abstract int setObjectiveReaction(int numRxns, int r);
 	
+	public abstract int setObjectiveReaction(int numRxns, int[] objs);
+	
 	public abstract double getObjectiveSolution(int objReaction);
 	
 	public abstract double getObjectiveFluxSolution(int objReaction);
@@ -41,4 +43,8 @@ public abstract class FBAOptimizer  implements edu.bu.segrelab.comets.CometsCons
 	public abstract double[] getExchangeFluxes(int[] exch);
 	
 	public abstract FBAOptimizer clone();
+
+	public abstract double[] getObjectiveSolutions(int[] objReactions);
+
+	public abstract int setObjectiveMaximize(boolean[] objMax);
 }

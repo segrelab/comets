@@ -21,6 +21,8 @@ import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.PackageParameters;
 import edu.bu.segrelab.comets.ParametersFileHandler;
 import edu.bu.segrelab.comets.exception.ParameterFileException;
+import edu.bu.segrelab.comets.fba.FBAParameters;
+import edu.bu.segrelab.comets.test.classes.TComets;
 
 /**A class to test interactions with {@link CometsParameters} and {@link FBAParameters}.
  * Note that universal considerations should always refer to CometsParameters, and any feature
@@ -36,6 +38,7 @@ import edu.bu.segrelab.comets.exception.ParameterFileException;
 public class TestParametersIntegration {
 	
 	private CometsParameters cParams;
+	private FBAParameters pParams;
 	private static File paramsFile;
 
 	/**
@@ -66,8 +69,11 @@ public class TestParametersIntegration {
 		//initialize the CometsParameters object
 		cParams = new CometsParameters();
 		
+		//initialize the PackageParametersObject
+		pParams = new FBAParameters(new TComets());
+		
 		//load the parametersFileBlock
-		ParametersFileHandler.loadParametersFile(paramsFile.getAbsolutePath(), cParams, (PackageParameters) cParams);
+		ParametersFileHandler.loadParametersFile(paramsFile.getAbsolutePath(), cParams, pParams);
 		
 	}
 
