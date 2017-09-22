@@ -1,7 +1,7 @@
 /**
  * 
  */
-package edu.bu.segrelab.comets.test.unit.fba;
+package edu.bu.segrelab.comets.test.integration;
 
 import static org.junit.Assert.*;
 
@@ -30,12 +30,13 @@ import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
  * Note: You may experience an error along the lines of "no gurobijni70 in java.library.path"
  * The simplest solution is to copy the .dll files it's asking for from the /bin folder
  * of your Gurobi installation into the /bin of the JRE you're using. The more involved solution
- * is to check that your IDE can handle compiling C++
+ * is to check that your IDE can handle compiling C++, and make sure that your builder has gurobi.jar
+ * pointing to the proper bin folder as its native library location
  * 
  * @author mquintin
  *
  */
-public class TestFBAModel {
+public class IntTestFBAModelOptimization {
 
 	/*The TemporaryFolder Rule allows creation of files and folders that should 
 	 * be deleted when the test method finishes (whether it passes or fails). Whether 
@@ -44,6 +45,8 @@ public class TestFBAModel {
 	 */
 	@Rule
 	public TemporaryFolder tempdir= new TemporaryFolder();
+	
+	private static boolean VERBOSE = false;
 
 	private static FBAModel biomassUndeclared;
 	private static FBAModel biomassDeclared;
@@ -55,9 +58,9 @@ public class TestFBAModel {
 	 */
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
-		URL url = TestFBAModel.class.getResource("../../resources/model_CSP.txt");
+		URL url = IntTestFBAModelOptimization.class.getResource("../resources/model_CSP.txt");
 		biomassUndeclared = FBAModel.loadModelFromFile(url.getPath());
-		url = TestFBAModel.class.getResource("../../resources/model_CSP_biomass.txt");
+		url = IntTestFBAModelOptimization.class.getResource("../resources/model_CSP_biomass.txt");
 		biomassDeclared = FBAModel.loadModelFromFile(url.getPath());
 	}
 
@@ -81,25 +84,8 @@ public class TestFBAModel {
 		//		"/comets_simplified/src/edu/bu/segrelab/comets/test/resources/model_CSP.txt");
 		//biomassDeclared = (FBAModel) loader.loadModelFromFile(comets, 
 		//		"/comets_simplified/src/edu/bu/segrelab/comets/test/resources/model_CSP_biomass.txt");
-		/*Comets.EXIT_AFTER_SCRIPT = false;
+		//Comets.EXIT_AFTER_SCRIPT = false;
 
-		//create the comets_script files in the proper location, and populate it with the absolute path to the layout
-		URL scriptFolderURL = TestKineticParameters.class.getResource("../resources/");
-		String folderPath = scriptFolderURL.getPath();
-		String scriptPath = folderPath + File.separator + "comets_script_2carbons.txt";
-		String layoutPath = folderPath + File.separator + "comets_layout_2carbons.txt";
-		FileWriter fw = new FileWriter(new File(scriptPath), false);
-		fw.write("load_layout " + layoutPath);
-		fw.close();
-
-		scriptFolderURL = TestKineticParameters.class.getResource("../resources/");
-		folderPath = scriptFolderURL.getPath();
-		scriptPath = folderPath + File.separator + "comets_script_2carbons_multiObj.txt";
-		layoutPath = folderPath + File.separator + "comets_layout_2carbons_multiObj.txt";
-		fw = new FileWriter(new File(scriptPath), false);
-		fw.write("load_layout " + layoutPath);
-		fw.close();
-		 */
 	}
 
 	/**
@@ -117,7 +103,7 @@ public class TestFBAModel {
 	//confirm that building the models in setUp() worked
 	//this belongs in an integration test...
 	@Test
-	public void testFBACometsLoaderLoadModelFromFile(){
+	public void testBiomassReactionSetOnLoad(){
 		assertEquals(27,biomassUndeclared.getObjectiveIndex());
 		assertEquals(27,biomassUndeclared.getBiomassReaction());
 		assertEquals(19,biomassDeclared.getObjectiveIndex());
@@ -126,6 +112,7 @@ public class TestFBAModel {
 
 	/**
 	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#run()}.
+	 * Make sure that models run successfully
 	 */
 	@Test
 	public void testRun() {
@@ -133,6 +120,7 @@ public class TestFBAModel {
 		int resUndeclared = biomassUndeclared.run();
 		assertEquals(5,resUndeclared);
 
+		//make sure that a model with a declared biomass reaction runs
 		int resDeclared = biomassDeclared.run();
 		assertEquals(5,resDeclared);
 	}
@@ -143,105 +131,43 @@ public class TestFBAModel {
 	@Test
 	public void testMultiObjective() {
 		try {
-			String res1 = runCometsLayout2Carbons();
-			System.out.println(res1);
-			String res2 = runCometsLayout2CarbonsMultiObj();
-			System.out.println(res2);
+			//This model has two "Biomass" reactions, indexes 3 and 4. These create
+			//an intermediate metabolite which is converted into biomass in Reaction 5.
+			//Reaction 4 is more efficient, so given no constraints Reaction 3
+			//should not be used when maximizing Reaction 5.
+			//First, run it with just the single objective: [5]
+			FBAModel model1 = tcomets.runModelString(testmodel_2carbons, tempdir);
+			double[] fluxes1 = model1.getFluxes();
+			String result1 = "Single Objective Flux Solutions:";
+			for (int i = 0; i < fluxes1.length; i++) {
+				result1 = result1 + " " + String.valueOf(fluxes1[i]);
+			}
+			if (VERBOSE) System.out.println(result1);
+			
+			double err = 1e-9; //allowable error due to rounding etc
+			assertEquals(1.0,fluxes1[4],err); //remember the models start counting at 1 so [4]==5
+			assertEquals(1.0,fluxes1[3],err); //rxn4 is maximized
+			assertEquals(0.0,fluxes1[2],err); //rxn3 is not used
+			
+			//run the model with two objectives: [5 -4]
+			//First maximize biomass. Then minimize use of the efficient pathway
+			FBAModel model2 = tcomets.runModelString(testmodel_2carbons_multiObj, tempdir);
+			double[] fluxes2 = model2.getFluxes();
+			String result2 = "Multi  Objective Flux Solutions:";
+			for (int i = 0; i < fluxes2.length; i++) {
+				result2 = result2 + " " + String.valueOf(fluxes2[i]);
+			}
+			if (VERBOSE) System.out.println(result2);
+			
+			assertEquals(1.0,fluxes2[4],err); //the primary objective should not be affected
+			assertEquals(0.0,fluxes2[3],err); //rxn4 is minimized
+			assertEquals(1.0,fluxes2[2],err); //rxn3 picks up the slack
+
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			fail();
 			e.printStackTrace();
-		} //maximize biomass
-		//String res2 = runCometsLayout2CarbonsMultiObj(); //maximize Carbon1 uptake, then biomass
-		//System.out.println(res2);
-	}
-
-	private String runCometsLayout2Carbons() throws IOException {
-		FBAModel model = tcomets.runModelString(testmodel_2carbons, tempdir);
-		double[] fluxes = model.getFluxes();
-		String result = "Single Objective Flux Solutions:";
-		for (int i = 0; i < fluxes.length; i++) {
-			result = result + " " + String.valueOf(fluxes[i]);
 		}
-		return result;
 	}
-
-	private String runCometsLayout2CarbonsMultiObj() throws IOException {
-		FBAModel model = tcomets.runModelString(testmodel_2carbons_multiObj, tempdir);
-		double[] fluxes = model.getFluxes();
-		String result = "Multi  Objective Flux Solutions:";
-		for (int i = 0; i < fluxes.length; i++) {
-			result = result + " " + String.valueOf(fluxes[i]);
-		}
-		return result;
-	}
-
-	
-	/*
-	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#FBAModel(double[][], double[], double[], int, int)}.
-	 */
-	/*@Test
-	public void testFBAModelDoubleArrayArrayDoubleArrayDoubleArrayIntInt() {
-		//fail("Not yet implemented"); // TODO
-	}
-
-	/**
-	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#FBAModel(double[][], double[], double[], int, int, int)}.
-	 */
-	/*@Test
-	public void testFBAModelDoubleArrayArrayDoubleArrayDoubleArrayIntIntInt() {
-		//fail("Not yet implemented"); // TODO
-	}
-
-	/**
-	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#FBAModel(double[][], double[], double[], int, int, int[], double[], double[], double[], double[], double[], double[], java.lang.String[], java.lang.String[], int, int)}.
-	 */
-	/*@Test
-	public void testFBAModelDoubleArrayArrayDoubleArrayDoubleArrayIntIntIntArrayDoubleArrayDoubleArrayDoubleArrayDoubleArrayDoubleArrayDoubleArrayStringArrayStringArrayIntInt() {
-		//fail("Not yet implemented"); // TODO
-	}
-
-	/**
-	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#FBAModel(double[][], double[], double[], int, int[], double[], double[], double[], double[], double[], double[], java.lang.String[], java.lang.String[], int, int)}.
-	 */
-	/*@Test
-	public void testFBAModelDoubleArrayArrayDoubleArrayDoubleArrayIntIntArrayDoubleArrayDoubleArrayDoubleArrayDoubleArrayDoubleArrayDoubleArrayStringArrayStringArrayIntInt() {
-		//fail("Not yet implemented"); // TODO
-	}
-
-	/**
-	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#getBiomassFluxSolution()}.
-	 */
-	/*@Test
-	public void testGetBiomassFluxSolution() {
-		//fail("Not yet implemented"); // TODO
-	}
-
-	/**
-	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#getBiomassReaction()}.
-	 */
-	/*@Test
-	public void testGetBiomassReaction() {
-		//fail("Not yet implemented"); // TODO
-	}
-
-	/**
-	 * Test method for {@link edu.bu.segrelab.comets.fba.FBAModel#setBiomassReaction(int)}.
-	 */
-	/*@Test
-	public void testSetBiomassReaction() {
-		//fail("Not yet implemented"); // TODO
-	}
-
-	/**
-	 * Test method for {@link edu.bu.segrelab.comets.Model#clone()}.
-	 */
-	/*@Test
-	public void testClone() {
-		//fail("Not yet implemented"); // TODO
-	}
-
-	 */
 
 	/* -------------Testing File Contents ---------------------- */
 
@@ -347,7 +273,7 @@ public class TestFBAModel {
 			"    10   -10.000000   1000.000000\r\n" + 
 			"//\r\n" + 
 			"OBJECTIVE\r\n" + 
-			"    4 -3\r\n" + 
+			"    5 -4\r\n" + 
 			"//\r\n" + 
 			"METABOLITE_NAMES\r\n" + 
 			"    c1\r\n" + 

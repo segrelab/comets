@@ -693,6 +693,9 @@ implements edu.bu.segrelab.comets.CometsConstants
 			// Set number of objectives
 			model.set(GRB.IntAttr.NumObj, nObjs);
 			
+			// Set global sense for ALL objectives
+			model.set(GRB.IntAttr.ModelSense, GRB.MAXIMIZE);
+			
 		      // Set and configure i-th objective
 		      for (int i = 0; i < nObjs; i++) {
 		        model.set(GRB.IntParam.ObjNumber, i);
@@ -705,8 +708,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		        
 		        GRBLinExpr expr = new GRBLinExpr();
 		        expr.addTerm(1.0, rxnFluxes[idxs[i]-1]);
-		        
-		        model.setObjective(expr, GRB.MAXIMIZE);
+		        model.setObjectiveN(expr, i, priorities[i], weights[i], 0, 0, vname);
 		      }
 			
 		} catch (GRBException e) {

@@ -14,11 +14,6 @@ import gurobi.*;
  * @author mquintin
  */
 public class TestGurobiObjectiveFunctions {
-	/* My understanding of the FBAOptimizerGurobi workflow:
-	 * 
-	 * 
-	 * 
-	 */
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {

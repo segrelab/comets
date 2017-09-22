@@ -18,7 +18,9 @@ import edu.bu.segrelab.comets.fba.FBAWorld;
 import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
 
 /**A class to allow modifications to the Comets class in order to facilitate 
- * unit and integration tests
+ * unit and integration tests.
+ * It has the helpful properties that it doesn't need any arguments to be
+ * instantiated, and it doesn't try to run automatically.
  * @author mquintin
  *
  */

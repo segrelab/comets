@@ -1,4 +1,4 @@
-package edu.bu.segrelab.comets.test.integration;
+package edu.bu.segrelab.comets.test.classes;
 
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.fba.FBACometsLoader;

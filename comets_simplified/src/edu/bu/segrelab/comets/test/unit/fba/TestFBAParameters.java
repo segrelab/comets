@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.fba.FBAParameters;
+import edu.bu.segrelab.comets.test.classes.TComets;
 
 /**Test class for {@link FBAParameters}
  * 
@@ -48,7 +49,7 @@ public class TestFBAParameters{
 	 */
 	@Before
 	public void setUp() throws Exception {
-		pParams = new FBAParameters((Comets) null);
+		pParams = new FBAParameters(new TComets());
 	}
 
 	/**
@@ -63,8 +64,6 @@ public class TestFBAParameters{
 	 */
 	@Test
 	public void testLoadParameterState() {
-		//TODO: This is failing because the Comets object given to pParams's constructor is null,
-		//so its fields can't be set back to the defaults
 		pParams.setParameter("randomorder", "true");
 		pParams.loadParameterState();
 		assertTrue(pParams.getRandomOrder());
