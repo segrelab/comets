@@ -117,8 +117,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double packedDensity;
 	private double convectionDiffConst;
 	private double noiseVariance;
-	private int[] objReactions;
-	private boolean[] objMaximize;
+	private int[] objReactions; //index of reactions, in order of priority
+	private boolean[] objMaximize; //is corresponding objective maximized? If not, it's minimized
 	private int biomassReaction;
 	private int objStyle;
 	

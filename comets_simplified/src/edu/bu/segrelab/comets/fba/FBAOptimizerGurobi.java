@@ -88,15 +88,15 @@ implements edu.bu.segrelab.comets.CometsConstants
 	 * @param l lower bounds
 	 * @param u upper bounds
 	 * @param objIdxs list of indexes for objective reactions, from 1 to N, in order of priority with the highest first
-	 * @param maximize list signifying if the corresponding objective rxn should be maximized, otherwise it will be minimized
+	 * @param objMaximize list signifying if the corresponding objective rxn should be maximized, otherwise it will be minimized
 	 */
-	public FBAOptimizerGurobi(double[][] m, double[] l, double[] u, int[] objIdxs, boolean[] maximize)
+	public FBAOptimizerGurobi(double[][] m, double[] l, double[] u, int[] objIdxs, boolean[] objMaximize)
 	{
 		this();
 
 		// this should probably only be bothered with if we're doing max/min, 
 		// but right now this class doesn't know the objective style until run()
-		initializeAbsModel(m, l, u, objIdxs);
+		initializeAbsModel(m, l, u, objIdxs, objMaximize);
 
 		//everything below here is for initializing the basic model
 		stoichMatrix=m;
@@ -135,7 +135,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			numMetabs = m.length;
 			numRxns = m[0].length;
 
-			setObjectiveReaction(numRxns, objIdxs, maximize);
+			setObjectiveReaction(numRxns, objIdxs, objMaximize);
 
 		}
 		catch(GRBException e){
@@ -178,7 +178,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 	 * @param u upper bounds
 	 * @param r the reaction to be maximized (the biomass reaction)
 	 */
-	public void initializeAbsModel(double[][] m, double[] l, double[] u, int[] objIdxs){
+	public void initializeAbsModel(double[][] m, double[] l, double[] u, int[] objIdxs, boolean[] objMaximize){
 		/*
 		 * basically, if we start with this S matrix:
 		 * 
@@ -280,7 +280,8 @@ implements edu.bu.segrelab.comets.CometsConstants
 	}
 
 	private void createObjFuncModelMin(){
-		//now setup the objective. this is only 1's for the dummy variables, hence the forloop start spot
+		//Now setup the objective, which indicates minimization of everything possible. 
+		//This is only 1's for the dummy variables, hence the forloop start spot
 		GRBLinExpr objectiveFunc = new GRBLinExpr();
 		for (int k = nVars/2; k < nVars; k++){
 			objectiveFunc.addTerm(1.0, modelMinVars[k]);		
@@ -329,6 +330,8 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 	}
 
+	//Deprecated(?) 9/23/2017. Use addObjectiveListConstraintModelMin instead
+	@Deprecated
 	private void addBiomassConstraintModelMin(int biomassVarNum){
 		/* adds the biomass constraint -- row three in the example above
 		 * this add a new row to the S matrix with a 1 in the optimized reaction
@@ -355,31 +358,60 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 	}
 	
+	/**Build constraints which will allow us to lock in the value of the objective reactions for modelMin.
+	 * 
+	 * @param objIdxs Index of the reactions in the Gurobi model (1-indexed)
+	 */
 	private void addObjectiveListConstraintModelMin(int[] objIdxs) {
-		//replicates the functionality of addBiomassConstraintModelMin for models with
-		//multiple objective reactions. Priority no longer matters, since these are
-		//all being set to a specific fixed flux.
-		for (int idx : objIdxs) {
-			if (idx < 0) idx = -idx;
-			
+		
+		int nObjs = objIdxs.length;
+		char sense = GRB.EQUAL;
+		double rhs = 0; // this is what changes dynamically
+		double coef = 1;
+
+		for (int i = 0; i < nObjs; i++) {
+			String constraintName = "Obj" + String.valueOf(i);
 			GRBLinExpr objConstraint = new GRBLinExpr();
-			char objSense = GRB.EQUAL;
-			double objRHS = 0; // this is what changes dynamically
-			double objCoef = 1;
-			objConstraint.addTerm(objCoef, modelMinVars[idx - 1]); // need minus one because this will be one-ordered, must have zero-ordered
+			objConstraint.addTerm(coef, modelMinVars[objIdxs[i] - 1]); // need minus one because this will be one-ordered, must have zero-ordered
 
 			//add the constraints to the model
 			try{
-				modelMin.addConstr(objConstraint, objSense, objRHS, biomassConstraintName);
+				modelMin.addConstr(objConstraint, sense, rhs, constraintName);
 				modelMin.update();
 			}		
 			catch(GRBException e){
-				System.out.println("  error in addObjectiveListConstraintModelMin: ");
+				System.out.println("  error in addBiomassConstraintModelMin: ");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
+
 		}
-		
+
+		/*
+		try {
+			// Set number of objectives
+			modelMin.set(GRB.IntAttr.NumObj, nObjs);
+			
+			// Set global sense for ALL objectives
+			modelMin.set(GRB.IntAttr.ModelSense, GRB.EQUAL);
+			
+		      // Set and configure i-th objective
+		      for (int i = 0; i < nObjs; i++) {
+		        modelMin.set(GRB.IntParam.ObjNumber, i);
+
+		        String vname = "Obj" + String.valueOf(i);
+		        modelMin.set(GRB.StringAttr.ObjNName, vname);
+		        
+		        GRBLinExpr expr = new GRBLinExpr();
+		        expr.addTerm(1.0, modelMinVars[objIdxs[i]-1]);
+		        modelMin.setObjectiveN(expr, i, 1, 1, 0, 0, vname);
+		      }
+		      modelMin.update();
+			
+		} catch (GRBException e) {
+	    	System.out.println("Error code: " + e.getErrorCode() + ". " +
+                    e.getMessage());
+		}*/
 	}
 
 	private void addAbsSumConstraintsModelMin(){
@@ -846,17 +878,17 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 	/**
 	 * setObjectiveFluxToSpecificValue is used when minimizing the sum of the absolute value of the fluxes, while keeping the flux
-	 * of the indicated reaction constant.
+	 * of the indicated reactions constant.
 	 * 
 	 * @param objIdx the index in objReactions[] of the reaction being locked
-	 * @param objectiveFlux the amount at which the objective flux reaction, typically biomass, should be fixed 
+	 * @param objectiveFlux the amount at which the objective flux reaction should be fixed 
 	 */
 	private void setObjectiveFluxToSpecificValue(int objIdx, double objectiveFlux){
-		GRBConstr[] biomassFluxVar = new GRBConstr[1]; 
-		int rxnIdx = objReactions[objIdx]-1;
-		// grab the biomass constraint by name (this is the row constraint associated with the objective reaction -- row 3 in the example) 
+		GRBConstr[] objFluxVar = new GRBConstr[1]; 
+		int rxnIdx = objReactions[objIdx];//the index in Gurobi
+		// grab the constraint by name (this is the row constraint associated with the objective reaction -- row 3 in the example) 
 		try{
-			biomassFluxVar[0] = modelMin.getConstrByName(objConstraintNames[objIdx]);
+			objFluxVar[0] = modelMin.getConstrByName(objConstraintNames[objIdx]);
 		}
 		catch(GRBException e){
 			System.out.println("   Error in setObjectiveFluxToSpecificValue");
@@ -867,7 +899,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		v[0] = objectiveFlux;
 		// change the right-hand-side attribute of the 
 		try{
-			modelMin.set(GRB.DoubleAttr.RHS, biomassFluxVar, v);
+			modelMin.set(GRB.DoubleAttr.RHS, objFluxVar, v);
 		}
 		catch(GRBException e){
 			System.out.println("   Error in setObjectiveFluxToSpecificValue");
