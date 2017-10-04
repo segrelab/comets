@@ -1357,11 +1357,13 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						throw new ModelFileException("The neutralDrift should be followed only by the value true or false at line " + lineNum);
 					}
 					neutralDrift = Boolean.parseBoolean(tokens[1]);
-					if ( neutralDrift != true || neutralDrift != false)
-					{
-						reader.close();
-						throw new ModelFileException("The neutral drift value given at line " + lineNum + "should be boolean, true or false.");
-					}
+					//System.out.println(tokens[1]);
+					//System.out.println(neutralDrift);
+					//if ( neutralDrift != true && neutralDrift != false)
+					//{
+					//	reader.close();
+					//	throw new ModelFileException("The neutral drift value given at line " + lineNum + "should be boolean, true or false.");
+					//}
 					
 				}
 				

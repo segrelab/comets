@@ -856,17 +856,26 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			// calculate biomass=(sigma^2*timestep/2)*Gamm(Poiss(2*biomass/sigma^2*timesteo))
 			if(fbaModels[i].getNeutralDrift())
 			{   
-				double poissLambda=2.0*biomass[i]/(cParams.getTimeStep()*fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
-				poissonDist=new PoissonDistribution(poissLambda);
-				int gammaAlpha=poissonDist.sample();
-				System.out.println("gammaAlpha  "+gammaAlpha+"  "+poissLambda);
-				gammaDist=new GammaDistribution(gammaAlpha,1.0);
-				double gammaSample=gammaDist.sample();
-				System.out.println("gammaSample  "+gammaSample);
-				System.out.println("biomass  "+biomass[i]);
-				//biomass[i]=0.5*gammaSample*(cParams.getTimeStep()*fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
-				biomass[i]=gammaSample*biomass[i]/poissLambda;
-				System.out.println("biomass after  "+biomass[i]);
+				double poissLambda=2.0*biomass[i]/(cParams.getTimeStep()*
+						fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
+				
+				if(poissLambda>0)
+				{
+					poissonDist=new PoissonDistribution(poissLambda);
+					int gammaAlpha=poissonDist.sample();
+					
+					if(gammaAlpha>0)
+					{
+						gammaDist=new GammaDistribution(gammaAlpha,1.0);
+						double gammaSample=gammaDist.sample();
+						biomass[i]=0.5*gammaSample*(cParams.getTimeStep()*
+								fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
+					}
+				}
+				else if(poissLambda==0)
+				{
+					biomass[i]=0.0;
+				}
 			}
 			
 			
