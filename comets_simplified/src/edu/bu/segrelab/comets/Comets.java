@@ -89,15 +89,12 @@ public class Comets implements CometsConstants,
 							   CometsLoadListener,
 							   CometsChangeListener
 {
-	private String versionString = "2.5.3, 26 September 2017"; //remove "_x" when merging this back into trunk
+	private String versionString = "2.5.5, 4 October 2017"; //remove "_x" when merging this back into trunk
 	
 	/**
 	 * A debugging tool. If this is set to true, then the only running done
 	 * by each cell just runs through a diffusion routine.
 	 */
-	//public static boolean DIFFUSION_TEST_MODE = false;
-	//public static boolean EXIT_AFTER_SCRIPT = true;
-	//private String versionString = "2.5.5, 04 October 2017";
 	public static boolean DIFFUSION_TEST_MODE = false;
 
 	//More debug/test features
@@ -117,7 +114,7 @@ public class Comets implements CometsConstants,
 	private List<Cell> initCellList, cellList;
 
 	private int mode;
-	private CometsLoader loader = null;
+	protected CometsLoader loader = null;
 	private String loaderClassName;
 	
 	private Deque<World2D> worldUndoDeque;
@@ -131,7 +128,7 @@ public class Comets implements CometsConstants,
 	
 	private CyclicBarrier runBarrier;
 	
-	private String scriptFileName = null;
+	protected String scriptFileName = null;
 	
 	// UI Widgets
 	private JFrame 				cFrame;					// main Frame for the program
@@ -224,10 +221,12 @@ public class Comets implements CometsConstants,
 		
 		
 		// if we have a script file, load and run it, then exit.
-		if (scriptFileName != null)
+		if (scriptFileName != null || DEBUG_COMMAND_LINE_MODE)
 		{
 			cParams.showGraphics(false);
-			runScript(scriptFileName);
+			if (AUTORUN){
+				runScript(scriptFileName);
+			}
 			if (EXIT_AFTER_SCRIPT){
 				exitProgram();
 			}
@@ -427,7 +426,7 @@ public class Comets implements CometsConstants,
 	 * Parses and runs a COMETS script.
 	 * @param filename
 	 */
-    private void runScript(String filename)
+    protected void runScript(String filename)
     {
 		System.out.println("running script file: " + filename);
 		try
