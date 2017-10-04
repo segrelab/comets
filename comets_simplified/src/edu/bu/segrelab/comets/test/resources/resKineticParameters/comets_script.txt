@@ -1,1 +1,1 @@
-load_layout /C:/Users/mquintin/workspace/git/comets_simplified/comets_simplified/bin/edu/bu/segrelab/comets/test/resources/resKineticParameters/comets_layout.txt
+load_layout comets_layout.txt

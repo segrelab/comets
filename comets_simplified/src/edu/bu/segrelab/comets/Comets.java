@@ -89,14 +89,22 @@ public class Comets implements CometsConstants,
 							   CometsLoadListener,
 							   CometsChangeListener
 {
+	private String versionString = "2.5.3, 26 September 2017"; //remove "_x" when merging this back into trunk
+	
 	/**
 	 * A debugging tool. If this is set to true, then the only running done
 	 * by each cell just runs through a diffusion routine.
 	 */
+	//public static boolean DIFFUSION_TEST_MODE = false;
+	//public static boolean EXIT_AFTER_SCRIPT = true;
+	//private String versionString = "2.5.5, 04 October 2017";
 	public static boolean DIFFUSION_TEST_MODE = false;
-	public static boolean EXIT_AFTER_SCRIPT = true;
-	private String versionString = "2.5.5, 04 October 2017";
 
+	//More debug/test features
+	public static boolean AUTORUN = true; //Have the constructor run the script it's given?
+	public static boolean EXIT_AFTER_SCRIPT = true; //Disable to allow debugging & tests
+	public static boolean DEBUG_COMMAND_LINE_MODE = false;
+	
 	// The setup pane 
 	private CometsSimRunner runner;
 	

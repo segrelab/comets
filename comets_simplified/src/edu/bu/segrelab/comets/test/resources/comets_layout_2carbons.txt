@@ -1,12 +1,12 @@
-parameters
+	parameters
 	activateRate = 0.001
 	allowCellOverlap = true
 	deathRate = 0
-	maxCycles = 0
-	maxSpaceBiomass = 2.0002
+	maxCycles = 200
+	maxSpaceBiomass = 0.00022
 	minSpaceBiomass = 2.5e-11
 	pauseOnStep = false
-	randomOrder = false
+	randomOrder = true
 	spaceWidth = 0.01
 	simulateActivation = false
 	timeStep = 0.01
@@ -34,10 +34,10 @@ parameters
 	defaultVmax = 10
 	defaultW = 10
 	writeFluxLog = false
-	fluxLogName = C:\sync\biomes\enz\analysis\rates_and_params\log_flux.m
+	fluxLogName = ./flux.m
 	fluxLogRate = 1
 	writeMediaLog = false
-	mediaLogName = C:\sync\biomes\enz\analysis\rates_and_params\log_media.m
+	mediaLogName = ./media.m
 	mediaLogRate = 1
 	writeBiomassLog = false
 	biomassLogName = ./biomass.m
@@ -47,15 +47,15 @@ parameters
 	totalBiomassLogName = ./total_biomass.m
 	useLogNameTimeStamp = false
 //
-model_file React_enze.txt Reset_enze.txt
+model_file testmodel_2carbons.txt
 	model_world
 		grid_size 1 1
 		world_media
-		PseudoOrganism_Biomass_Mock 0
-		enz[e] 5e-07
-		enz_inactive[e] 0
-		product[e] 0
-		substrate[e] 8e-06
+		c1 0.005
+		c2 0.005
+		n 0.005
+		o 1
+		p 0.005
 	//
 	diffusion_constants 1.000000e-06
 	//
@@ -69,5 +69,5 @@ model_file React_enze.txt Reset_enze.txt
 	//
 //
 initial_pop
-	0 0 1 1
+	0 0 1.000000e-09
 //

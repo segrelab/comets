@@ -47,3 +47,5 @@ tmp/
 
 # Miscellaneous
 # =============
+/.classpath
+/.project
