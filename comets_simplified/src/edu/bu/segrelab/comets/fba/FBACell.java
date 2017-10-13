@@ -871,6 +871,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						biomass[i]=0.5*gammaSample*(cParams.getTimeStep()*
 								fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
 					}
+					else if(gammaAlpha==0)
+					{
+						biomass[i]=0.0;
+					}
 				}
 				else if(poissLambda==0)
 				{
