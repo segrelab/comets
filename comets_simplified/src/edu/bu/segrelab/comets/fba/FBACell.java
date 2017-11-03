@@ -873,7 +873,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					}
 					else if(gammaAlpha==0)
 					{
-						biomass[i]=0.0;
+						biomass[i]=0.5*1.0*(cParams.getTimeStep()*
+								fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
 					}
 				}
 				else if(poissLambda==0)
