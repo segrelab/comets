@@ -1620,6 +1620,7 @@ implements CometsConstants
 
 		double[][][][] deltaDensity = new double[numModels][numCols][numRows][numLayers];
 		double[][][][] biomassDensity = new double[numModels][numCols][numRows][numLayers];
+		double[][][]   totalBiomassDensity = new double[numCols][numRows][numLayers];
 		double[][][][] biomassDensityIntermediate = new double[numModels][numCols][numRows][numLayers];
 		double[][][][] convectionRHS  = new double[numModels][numCols][numRows][numLayers];
 		double[][][][] convectionRHS1 = new double[numModels][numCols][numRows][numLayers];
@@ -1641,10 +1642,12 @@ implements CometsConstants
 			int y = cell.getY();
 			int z = cell.getZ();
 
+			totalBiomassDensity[x][y][z]=0.0;
 			for (int k=0; k<numModels; k++)
 			{
 				biomassDensity[k][x][y][z]=biomass[k];// - deltaBiomass[k];
 				deltaDensity[k][x][y][z]=deltaBiomass[k];
+				totalBiomassDensity[x][y][z]+=biomassDensity[k][x][y][z];
 				//growthRate[k][x][y]=deltaBiomass[k]/(dT*(biomass[k] - deltaBiomass[k]));
 				convectionRHS1[k][y][y][z]=cell.getConvectionRHS1()[k];
 				convectionRHS2[k][x][y][z]=cell.getConvectionRHS2()[k];
@@ -1673,7 +1676,7 @@ implements CometsConstants
 					}
 				}
 
-				convectionRHS[k]=Utility.getConvectionRHS3D(biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
+				convectionRHS[k]=Utility.getConvectionRHS3D(totalBiomassDensity, biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
 				for(int i=0;i<numCols;i++)
 				{
 					for(int j=0;j<numRows;j++)
@@ -1696,7 +1699,7 @@ implements CometsConstants
 					}
 				}
 
-				convectionRHS[k]=Utility.getConvectionRHS3D(biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant());
+				convectionRHS[k]=Utility.getConvectionRHS3D(totalBiomassDensity, biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant());
 				for(int i=0;i<numCols;i++)
 				{
 					for(int j=0;j<numRows;j++)
@@ -1766,7 +1769,7 @@ implements CometsConstants
 						}
 					}
 				}
-				convectionRHS[curModel]=Utility.getConvectionRHS3D(biomassDensity[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant()); 	
+				convectionRHS[curModel]=Utility.getConvectionRHS3D(totalBiomassDensity, biomassDensity[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant()); 	
 				for(int i=0;i<numCols;i++)
 				{
 					for(int j=0;j<numRows;j++)
@@ -1789,7 +1792,7 @@ implements CometsConstants
 					}
 				}
 
-				convectionRHS[curModel]=Utility.getConvectionRHS3D(biomassDensityIntermediate[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant());
+				convectionRHS[curModel]=Utility.getConvectionRHS3D(totalBiomassDensity, biomassDensityIntermediate[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant());
 				for(int i=0;i<numCols;i++)
 				{
 					for(int j=0;j<numRows;j++)

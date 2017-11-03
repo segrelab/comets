@@ -870,10 +870,10 @@ public class Utility implements CometsConstants
 	 * @param biomass
 	 * @return
 	 */
-	public static double[][] getConvectionRHS(double[][] biomassDensity,double[][] convDiffConstField,double packedDensity,boolean[][] barrier,double dX,double elasticModulusConstant,double frictionConstant)
+	public static double[][] getConvectionRHS(double[][] totalBiomassDensity, double[][] biomassDensity,double[][] convDiffConstField,double packedDensity,boolean[][] barrier,double dX,double elasticModulusConstant,double frictionConstant)
 	{   
         double[][] convectionRHS=new double[biomassDensity.length][biomassDensity[0].length];
-        double[][] advection=advection2D(biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
+        double[][] advection=advection2D(totalBiomassDensity, biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
         //double[][] diffusion=diffusionGradDGradRho(biomassDensity,convDiffConstField,barrier,dX,advection)+diffusionDLaplaceRho(biomassDensity,convDiffConstField,barrier,dX,advection);
         double[][] diffusion=diffusionDLaplacianRho2(biomassDensity,convDiffConstField,barrier,dX);
 		for(int i=0;i<biomassDensity.length;i++)
@@ -896,12 +896,12 @@ public class Utility implements CometsConstants
 	 * @param biomass
 	 * @return
 	 */
-	public static double[][] getConvectionRHSc(double[][] biomassDensity,double[][] convDiffConstField,double packedDensity,boolean[][] barrier,double dX,double elasticModulusConstant,double[][] frictionConstant)
+	public static double[][] getConvectionRHSc(double[][] totalBiomassDensity, double[][] biomassDensity,double[][] convDiffConstField,double packedDensity,boolean[][] barrier,double dX,double elasticModulusConstant,double[][] frictionConstant)
 	{   
 				//TODO stuff here
 		//System.out.println("ok1");
         double[][] convectionRHS=new double[biomassDensity.length][biomassDensity[0].length];
-        double[][] advection=advection2Da(biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
+        double[][] advection=advection2Da(totalBiomassDensity, biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
         //double[][] diffusion=diffusionGradDGradRho(biomassDensity,convDiffConstField,barrier,dX,advection)+diffusionDLaplaceRho(biomassDensity,convDiffConstField,barrier,dX,advection);
         //double[][] diffusion=diffusionDLaplacianRho(biomassDensity,convDiffConstField,barrier,dX);
 		for(int i=0;i<biomassDensity.length;i++)
@@ -974,11 +974,11 @@ public class Utility implements CometsConstants
 	 * @param biomass
 	 * @return
 	 */
-	public static double[][][] getConvectionRHS3D(double[][][] biomassDensity,double[][][] convDiffConstField,double packedDensity,boolean[][][] barrier,double dX,double elasticModulusConstant,double frictionConstant)
+	public static double[][][] getConvectionRHS3D(double[][][] totalBiomassDensity, double[][][] biomassDensity,double[][][] convDiffConstField,double packedDensity,boolean[][][] barrier,double dX,double elasticModulusConstant,double frictionConstant)
 	{   
 				
         double[][][] convectionRHS=new double[biomassDensity.length][biomassDensity[0].length][biomassDensity[0][0].length];
-        double[][][] advection=advection3D(biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
+        double[][][] advection=advection3D(totalBiomassDensity, biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
         double[][][] diffusion=diffusionDLaplacianRho3D(biomassDensity,convDiffConstField,barrier,dX);
 		for(int i=0;i<biomassDensity.length;i++)
 		{
@@ -1091,12 +1091,12 @@ public class Utility implements CometsConstants
 	 * @return
 	 */
 	
-	public static double[][] advection2D(double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double frictionConstant,double packedDensity)
+	public static double[][] advection2D(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double frictionConstant,double packedDensity)
 	{
 		int numCols=biomassDensity.length;
 		int numRows=biomassDensity[0].length;
 		double[][] advection=new double[numCols][numRows];
-		double[][] pressure=pressure2D(biomassDensity, elasticModulusConst/frictionConstant, packedDensity, dX);
+		double[][] pressure=pressure2D(totalBiomassDensity, elasticModulusConst/frictionConstant, packedDensity, dX);
 		
 		for(int i=0;i<numCols;i++)
 		{
@@ -1155,13 +1155,13 @@ public class Utility implements CometsConstants
 	 * @return
 	 */
 	
-	public static double[][] advection2Dc(double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double[][] frictionConstant,double packedDensity)
+	public static double[][] advection2Dc(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double[][] frictionConstant,double packedDensity)
 	{
 		//System.out.println("ok2");
 		int numCols=biomassDensity.length;
 		int numRows=biomassDensity[0].length;
 		double[][] advection=new double[numCols][numRows];
-		double[][] pressure=pressure2Dc(biomassDensity, elasticModulusConst,frictionConstant, packedDensity);
+		double[][] pressure=pressure2Dc(totalBiomassDensity, elasticModulusConst,frictionConstant, packedDensity);
 		
 		for(int i=0;i<numCols;i++)
 		{
@@ -1220,13 +1220,13 @@ public class Utility implements CometsConstants
 	 * @return
 	 */
 	
-	public static double[][] advection2Da(double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double[][] frictionConstant,double packedDensity)
+	public static double[][] advection2Da(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double[][] frictionConstant,double packedDensity)
 	{
 		//System.out.println("ok2");
 		int numCols=biomassDensity.length;
 		int numRows=biomassDensity[0].length;
 		double[][] advection=new double[numCols][numRows];
-		double[][] pressure=pressure2Da(biomassDensity, elasticModulusConst,frictionConstant, packedDensity,dX);
+		double[][] pressure=pressure2Da(totalBiomassDensity, elasticModulusConst,frictionConstant, packedDensity,dX);
 		double[][] feConst=frictElast2D(biomassDensity, elasticModulusConst,frictionConstant, packedDensity);
 		
 		for(int i=0;i<numCols;i++)
@@ -1304,13 +1304,13 @@ public class Utility implements CometsConstants
 	 * @return
 	 */
 	
-	public static double[][][] advection3D(double[][][] biomassDensity,boolean[][][] barrier,double dX,double elasticModulusConst, double frictionConstant,double packedDensity)
+	public static double[][][] advection3D(double[][][] totalBiomassDensity, double[][][] biomassDensity,boolean[][][] barrier,double dX,double elasticModulusConst, double frictionConstant,double packedDensity)
 	{
 		int numCols=biomassDensity.length;
 		int numRows=biomassDensity[0].length;
 		int numLayers=biomassDensity[0][0].length;
 		double[][][] advection=new double[numCols][numRows][numLayers];
-		double[][][] pressure=pressure3D(biomassDensity, elasticModulusConst/frictionConstant, packedDensity);
+		double[][][] pressure=pressure3D(totalBiomassDensity, elasticModulusConst/frictionConstant, packedDensity);
 		
 		for(int i=0;i<numCols;i++)
 		{
