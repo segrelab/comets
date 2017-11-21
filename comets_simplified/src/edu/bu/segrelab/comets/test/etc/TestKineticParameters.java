@@ -4,6 +4,7 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ import org.junit.Test;
  * @author mquintin 3/21/2017
  *
  */
+import org.junit.rules.TemporaryFolder;
 
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
@@ -40,6 +42,8 @@ import edu.bu.segrelab.comets.event.CometsLoadListener;
 import edu.bu.segrelab.comets.event.SimulationStateChangeListener;
 import edu.bu.segrelab.comets.fba.FBACometsLoader;
 import edu.bu.segrelab.comets.fba.FBAModel;
+import edu.bu.segrelab.comets.reaction.ReactionModel;
+import edu.bu.segrelab.comets.test.classes.TComets;
 public class TestKineticParameters implements CometsConstants{
 
 	static Comets comets;
@@ -82,6 +86,7 @@ public class TestKineticParameters implements CometsConstants{
 	public void testSubstrateConsumption() {
 		double ds = getCometsDS(comets);
 		//assertEquals(1,2);
+		int x = 1; //breakpoint
 	}
 
 	/**Calculate the substrate consumption rate for the last timestep in the given Comets world
@@ -107,4 +112,56 @@ public class TestKineticParameters implements CometsConstants{
 		double v = kcat * e * s / (km + s);
 		return v;
 	}
+	
+	/**Test a situation where a decaying metabolite is present in very low concentration, such that some steps of
+	 * RK4 may set its velocity to be negative. If not well implemented, this will result in it "slingshotting"
+	 * up to a high concentration
+	 * @throws IOException 
+	 * 
+	 */
+	/*@Test
+	public void testRK4Depletion() throws IOException {
+		TComets tc = new TComets();
+		//TemporaryFolder tempFolder = new TemporaryFolder();
+		//tempFolder.create();
+		//File layoutFile = tempFolder.newFile();
+		//String layoutFilePath = layoutFile.getAbsolutePath();
+		//FileWriter fw = new FileWriter(layoutFilePath);
+		//fw.write(rk4DepletionTestString);
+		//fw.close();
+		tc.createScriptForLayout("rk4testlayout.txt");
+		tc.run();
+	}*/
+	
+	
+	protected static String rk4DepletionTestString = "	parameters\r\n" + 
+			"	maxCycles = 10\r\n" + 
+			"	timeStep = 0.0167\r\n" + 
+			"//\r\n" + 
+			"model_file\r\n" + 
+			"	model_world\r\n" + 
+			"		grid_size 1 1\r\n" + 
+			"		world_media\r\n" + 
+			"		met 1\r\n" + 
+			"	//\r\n" + 
+			"	diffusion_constants 1.000000e-06\r\n" + 
+			"	//\r\n" + 
+			"	media\r\n" + 
+			"	//\r\n" + 
+			"	media_refresh 0\r\n" + 
+			"	//\r\n" + 
+			"	static_media 0 0\r\n" + 
+			"	//\r\n" + 
+			"	barrier\r\n" + 
+			"	//\r\n" + 
+			"//\r\n" + 
+			"initial_pop filled\r\n" + 
+			"//\r\n" + 
+			"reactions\r\n" + 
+			"	reactants\r\n" + 
+			"		1 1 1 1.000000e-01\r\n" + 
+			"	enzymes\r\n" + 
+			"	products\r\n" + 
+			"//\r\n" + 
+			"";
 }

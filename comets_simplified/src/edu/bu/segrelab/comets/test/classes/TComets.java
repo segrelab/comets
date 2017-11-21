@@ -55,7 +55,7 @@ public class TComets extends Comets {
 	 * @param layoutFileName 
 	 * @throws IOException
 	 */
-	public void createScriptForLayout(String layoutFileName) throws IOException {
+	public String createScriptForLayout(String layoutFileName) throws IOException {
 		URL scriptFolderURL = TestKineticParameters.class.getResource("../resources/");
 		String folderPath = scriptFolderURL.getPath();
 		String scriptPath = folderPath + File.separator + "comets_script_temp.txt";
@@ -64,6 +64,7 @@ public class TComets extends Comets {
 		fw.write("load_layout " + layoutPath);
 		fw.close();
 		scriptFileName = scriptPath;
+		return scriptFileName;
 	}
 	
 	public void run() {runScript(scriptFileName);}
@@ -100,5 +101,9 @@ public class TComets extends Comets {
 		
 		FBAModel model = runModelFile(modelFilePath);
 		return model;
+	}
+	
+	public void setScriptFileName(String s) {
+		this.scriptFileName = s;
 	}
 }

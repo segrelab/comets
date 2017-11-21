@@ -9,6 +9,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import edu.bu.segrelab.comets.CometsConstants;
+import edu.bu.segrelab.comets.test.classes.TComets;
 /**A class for miscellaneous testing and experimentation
  * 
  * @author mquintin
@@ -60,4 +63,15 @@ public class TestScratchpad {
 		
 	}
 
+	@Test
+	public void testNoisyExternalReactionRates() {
+		/*The external reaction products in a certain layout are showing 
+		 * a noisy timecourse when I expect them to be relatively smooth.
+		 * This function is to explore what's going on.
+		 */
+		TComets tc = new TComets();
+		tc.setScriptFileName("C:/sync/biomes/cellulose/optima/temp/comets_script.txt");
+		//CometsConstants.DEBUG = true;
+		tc.run();
+	}
 }

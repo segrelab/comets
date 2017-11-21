@@ -89,7 +89,7 @@ public class Comets implements CometsConstants,
 							   CometsLoadListener,
 							   CometsChangeListener
 {
-	private String versionString = "2.5.3, 26 September 2017"; //remove "_x" when merging this back into trunk
+	private String versionString = "2.5.4, 21 November 2017"; 
 	
 	/**
 	 * A debugging tool. If this is set to true, then the only running done

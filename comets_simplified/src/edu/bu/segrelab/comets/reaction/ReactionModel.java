@@ -9,6 +9,7 @@ import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.fba.FBAParameters;
+import edu.bu.segrelab.comets.reaction.ExternalReactionCalculator.CalcStatus;
 /**A class to hold the information necessary to run extracellular reactions
  * 
  * @author mquintin
@@ -49,7 +50,7 @@ public class ReactionModel extends Model implements CometsConstants {
 		this.world = world;
 	}
 
-	@Override
+	/*@Override
 	public int run() {
 		if (!isSetUp) return 0; //don't do anything if there aren't reactions to run
 		
@@ -70,14 +71,14 @@ public class ReactionModel extends Model implements CometsConstants {
 					double timestep_seconds = world.getComets().getParameters().getTimeStep() * 60 * 60;
 					ExternalReactionCalculator calc = 
 							new ExternalReactionCalculator(rxnMedia,exRxnEnzymes,exRxnRateConstants,exRxnStoich,exRxnParams,timestep_seconds);
-					double[] result = calc.rk4();
+					double[] result = runRK4(calc,0);
 					
 					if (DEBUG){
-						String resStr = "";
+								String resStr = "";
 						for (double d : result) resStr = resStr + " " + String.valueOf(d);
 						System.out.println("Extracellular reaction results: " + resStr);
 					}
-					
+										
 					//check if a metabolite has run out, and split the step into substeps if so
 					boolean depleted = false;
 					for (int i = 0; i < result.length; i++)
@@ -119,9 +120,9 @@ public class ReactionModel extends Model implements CometsConstants {
 		//step 1
 		calc.timestep = ts/2;
 		
-		double[] res1 = calc.rk4();
+		double[] res1 = runRK4(calc,iteration);
 		
-		boolean depleted = false;
+		/*boolean depleted = false;
 		for (int i = 0; i < res1.length; i++){
 			if (res1[i] < 0){
 				depleted = true;
@@ -131,7 +132,7 @@ public class ReactionModel extends Model implements CometsConstants {
 		if (depleted){
 			res1 = runSubstep(initMedia, res1, calc, iteration +1);
 			calc.timestep = ts/2;
-		}
+		}/
 		
 		for (int i = 0; i < res1.length; i++){
 			if (res1[i] < 0){
@@ -141,8 +142,8 @@ public class ReactionModel extends Model implements CometsConstants {
 		
 		//step2
 		calc.concentrations = res1;
-		double[] res2 = calc.rk4();
-		
+		double[] res2 = runRK4(calc,iteration);
+		/*
 		depleted = false;
 		for (int i = 0; i < res2.length; i++){
 			if (res2[i] < 0){
@@ -154,7 +155,7 @@ public class ReactionModel extends Model implements CometsConstants {
 			res2 = runSubstep(res1, res2, calc, iteration +1);
 			calc.timestep = ts/2;
 		}
-		
+		/
 		for (int i = 0; i < res2.length; i++){
 			if (res2[i] < 0){
 				res2[i] = 0;
@@ -164,6 +165,46 @@ public class ReactionModel extends Model implements CometsConstants {
 		return res2;
 	}
 	
+	/*private double[] runRK4(ExternalReactionCalculator calc, int iteration) {
+		FBAParameters params = (FBAParameters) world.getComets().getPackageParameters();
+		double ts = calc.timestep;
+		double[] res = new double[0];
+		res = calc.rk4();
+		while (calc.getStatus() == CalcStatus.UNSTABLE_DEPLETION 
+				&& iteration < params.getNumExRxnSubsteps()) {
+			res = runSubstep(rxnMedia, result, calc, 0)
+			
+		}
+			
+		
+		//run two consecutive half-steps
+		//step 1
+		calc.timestep = ts/2;
+		
+		double[] res1 = runRK4(calc,iteration);
+		
+		/*boolean depleted = false;
+		for (int i = 0; i < res1.length; i++){
+			if (res1[i] < 0){
+				depleted = true;
+				break;
+			}
+		}
+		if (depleted){
+			res1 = runSubstep(initMedia, res1, calc, iteration +1);
+			calc.timestep = ts/2;
+		}/
+		
+		for (int i = 0; i < res1.length; i++){
+			if (res1[i] < 0){
+				res1[i] = 0;
+			}
+		}
+		
+		
+		return null;
+	}*/
+
 	/**The World may have sorted its media field. This function returns indexes to map
 	 * the new media order to the order media are listed in the ReactionModel's fields
 	 * 
@@ -398,5 +439,121 @@ public class ReactionModel extends Model implements CometsConstants {
 	}
 
 	public String[] getInitialMetNames() {return initialMetNames;}
+	
+	@Override
+	public int run() {
+		if (!isSetUp) return 0; //don't do anything if there aren't reactions to run
+		
+		int[] worldIdxs = getMediaIdxs(); //locations of the media in the world's lists
+		int[] dims = world.getDims();
+		double timestep_seconds = world.getComets().getParameters().getTimeStep() * 60 * 60;
+		int maxIterations = ((FBAParameters) world.getComets().getPackageParameters()).getNumExRxnSubsteps();
+		//loop over all cells
+		for (int x = 0; x < dims[0]; x++){
+			for (int y = 0; y < dims[1]; y++){
+				for (int z = 0; z < dims[2]; z++){
+					//pull the concentrations of the media involved in the reactions
+					double[] worldMedia = world.getMediaAt(x, y, z);
+					double[] rxnMedia = new double[worldIdxs.length];
+					
+					for (int i = 0; i < worldIdxs.length; i++){
+						rxnMedia[i] = worldMedia[worldIdxs[i]];
+					}
+					
+					//do the math
+					double[] result = runAsSingleStep(rxnMedia, exRxnEnzymes, exRxnRateConstants, exRxnStoich, exRxnParams, timestep_seconds, 0, maxIterations);
+
+					if (DEBUG){
+								String resStr = "";
+						for (double d : result) resStr = resStr + " " + String.valueOf(d);
+						System.out.println("Extracellular reaction results: " + resStr);
+					}
+					
+					
+					//apply the changed media to the appropriate position in the full media list
+					for (int i = 0; i < worldIdxs.length; i++){
+						worldMedia[worldIdxs[i]] = result[i];
+					}
+					
+					world.setMedia(x, y, z, worldMedia); //update the World.media
+				}
+			}
+		}
+		return 1;
+	}
+	
+	
+	/**Run the RK4 algorithm on the given reaction set. If the result is unstable
+	 * or has depleted media components, run the set as two consecutive substeps.
+	 * 
+	 * @param rxnMedia
+	 * @param exRxnEnzymes
+	 * @param exRxnRateConstants
+	 * @param exRxnStoich
+	 * @param exRxnParams
+	 * @param timestep_seconds
+	 * @param iteration
+	 * @param maxIterations
+	 * @return
+	 */
+	protected double[] runAsSingleStep(double[] rxnMedia, int[] exRxnEnzymes, double[] exRxnRateConstants,
+			double[][] exRxnStoich, double[][] exRxnParams, double timestep_seconds, int iteration, int maxIterations) {
+		ExternalReactionCalculator calc = 
+				new ExternalReactionCalculator(rxnMedia,exRxnEnzymes,exRxnRateConstants,exRxnStoich,exRxnParams,timestep_seconds);
+		CalcStatus status = calc.getStatus();
+		double[] result = new double[rxnMedia.length];
+
+		if (iteration >= maxIterations) result = calc.rk4();
+		else {
+			while (status != CalcStatus.CALC_OK && iteration < maxIterations) {
+				switch (status) {
+				case PENDING:
+					result = calc.rk4();
+					break;
+				case UNSTABLE_DEPLETION:
+					result = runAsSubsteps(rxnMedia, exRxnEnzymes, exRxnRateConstants,
+							exRxnStoich, exRxnParams, timestep_seconds, iteration, maxIterations);
+					break;
+				case DEPLETED:
+					result = runAsSubsteps(rxnMedia, exRxnEnzymes, exRxnRateConstants,
+							exRxnStoich, exRxnParams, timestep_seconds, iteration, maxIterations);
+					break;
+				case CALC_OK:
+					break;
+				default:
+					break;
+				}
+				iteration += 1;
+				status = calc.getStatus();
+			}
+		}
+		//set any negative or very low concentrations to 0
+		double minConcentration = ((FBAParameters) world.getComets().getPackageParameters()).getMinConcentration();
+		for (int i = 0; i < result.length; i++){
+			if (result[i] < minConcentration || Double.isNaN(result[i])){
+				result[i] = 0.0;
+			}
+		}
+		if (CometsConstants.DEBUG) {
+			String line = "ExRxn Media: ";
+			for (int i = 0; i < result.length; i++) {
+				line = line.concat(String.valueOf(result[i]));
+				line = line.concat(" ");
+			}
+			System.out.println(line);
+		}
+		
+		return result;
+	}
+	
+	protected double[] runAsSubsteps(double[] rxnMedia, int[] exRxnEnzymes, double[] exRxnRateConstants,
+			double[][] exRxnStoich, double[][] exRxnParams, double timestep_seconds, int iteration, int maxIterations) {
+		double substep_seconds = timestep_seconds/2.0;
+		double[] res1 = runAsSingleStep(rxnMedia, exRxnEnzymes, exRxnRateConstants, exRxnStoich, exRxnParams,
+				substep_seconds, iteration +1, maxIterations);
+		double[] res2 = runAsSingleStep(res1, exRxnEnzymes, exRxnRateConstants, exRxnStoich, exRxnParams,
+				substep_seconds, iteration +1, maxIterations);
+		return res2;
+	}
 	
 }

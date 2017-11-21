@@ -18,6 +18,15 @@ public class ExternalReactionCalculator{
 	double[][] params; //either the Michaelis constant or the reaction order
 	double timestep; //in *SECONDS*, whereas Comets stores the timestep in hours
 	
+	protected enum CalcStatus{
+		PENDING, //is in process or hasn't run yet
+		CALC_OK, //execution successful
+		UNSTABLE_DEPLETION, //a reactant is draining too fast, causing instability
+		//SUBSTEPS_MAXIMIZED, //Calculation isn't OK, but we've iterated the max number of times
+		DEPLETED; //at least one concentration is negative
+	}
+	private CalcStatus status = CalcStatus.PENDING;
+	
 	public ExternalReactionCalculator(double[] concentrations, int[] exRxnEnzymes, double[] exRxnRateConstants, double[][]stoich, double[][] params, double timestep_seconds){
 		this.concentrations = concentrations;
 		this.exRxnEnzymes = exRxnEnzymes;
@@ -155,6 +164,7 @@ public class ExternalReactionCalculator{
 	 * @return
 	 */
 	public double[] rk4(){
+		status = CalcStatus.PENDING;
 		int nmets = concentrations.length;
 		int nrxns = stoich.length;
 		//delta_y1 = delta_t * f(t0, y0)
@@ -169,6 +179,11 @@ public class ExternalReactionCalculator{
 			}
 			delta *= timestep;
 			dy1[i] = delta; //units are mmol
+			
+			if (delta < -2 * concentrations[i]) {
+				//The reaction is running too fast, which will cause an instability
+				status = CalcStatus.UNSTABLE_DEPLETION;
+			}
 		}
 		
 		//delta_y2 = delta_t * f(t0 + 1/2 delta_t, y0 + 1/2 delta_y1)
@@ -221,10 +236,12 @@ public class ExternalReactionCalculator{
 		
 		//y_final = y0 + some linear combination of the deltas
 		double[] yf = new double[nmets];
-		for (int i = 0; i < nmets; i++)
+		for (int i = 0; i < nmets; i++) {
 			//yf = y0 + (1/6)(delta_y1 + 2*delta_y2 + 2*delta_y3 + delta_y4)
 			yf[i] = concentrations[i] + ((dy1[i] + (2*dy2[i]) + (2*dy3[i]) + dy4[i])/6);
+		}
 		
+		if (status == CalcStatus.PENDING) status = CalcStatus.CALC_OK;
 		return yf;
 	}
 		
@@ -251,4 +268,5 @@ public class ExternalReactionCalculator{
 		return res;
 	}*/
 
+	public CalcStatus getStatus() {return status;}
 }

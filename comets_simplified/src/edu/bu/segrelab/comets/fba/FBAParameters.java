@@ -159,7 +159,7 @@ public class FBAParameters implements PackageParameters
 				mediaLogRate = 1,
 				biomassLogRate = 1,
 				totalBiomassLogRate = 1,
-				numExRxnSubsteps = 5,
+				numExRxnSubsteps = 12, //12 chosen as default so if timestep is 1h, minimum substep is < 1sec
 				matFileRate = 1;
 	
 	private long randomSeed=0;
@@ -179,7 +179,9 @@ public class FBAParameters implements PackageParameters
 				   defaultHill = 2,
 				   defaultAlpha = 1,
 				   defaultW = 10,
-				   defaultDiffConst = 1e-5;
+				   defaultDiffConst = 1e-5,
+				   minConcentration = 1e-26; //Here's hoping 1 atom per liter is enough precision
+	
 	private double[] defaultVelocityVector={0.0,0.0,0.0};
 					
 	
@@ -1159,6 +1161,19 @@ public class FBAParameters implements PackageParameters
 	public void setLastDirectory(String path)
 	{
 		c.getParameters().setLastDirectory(path);
+	}
+	
+	/** Lowest concentration allowed by calculations performed by a 
+	 * ReactionModel before it gets rounded down to 0
+	 * 
+	 * @return
+	 */
+	public double getMinConcentration() {
+		return minConcentration;
+	}
+
+	public void setMinConcentration(double minConcentration) {
+		this.minConcentration = minConcentration;
 	}
 
 	public Map<String, ParametersPanel> getParametersPanels()
