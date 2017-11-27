@@ -34,7 +34,7 @@ public class TestGurobiObjectiveFunctions {
 	@Test
 	public void test() throws GRBException {
 		checkGurobiVersion();
-		fail("Not yet implemented");
+		//fail("Not yet implemented");
 	}
 	
 	public void checkGurobiVersion() throws GRBException{

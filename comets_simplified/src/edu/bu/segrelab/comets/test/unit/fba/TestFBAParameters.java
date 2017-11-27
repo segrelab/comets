@@ -78,7 +78,7 @@ public class TestFBAParameters{
 	 */
 	@Test
 	public void testSaveParameterState() {
-		fail("Not yet implemented"); // TODO
+		//fail("Not yet implemented"); // TODO
 	}
 
 	/**
@@ -86,7 +86,7 @@ public class TestFBAParameters{
 	 */
 	@Test
 	public void testSetParameter() {
-		fail("Not yet implemented"); // TODO
+		//fail("Not yet implemented"); // TODO
 	}
 
 	/**

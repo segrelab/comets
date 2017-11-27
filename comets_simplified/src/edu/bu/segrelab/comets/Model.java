@@ -3,6 +3,8 @@
  */
 package edu.bu.segrelab.comets;
 
+
+
 import javax.swing.JComponent;
 /**
  * The abstract base class for a model to be used in COMETS simulations. Any package

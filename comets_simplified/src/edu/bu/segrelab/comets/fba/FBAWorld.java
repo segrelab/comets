@@ -2250,6 +2250,7 @@ public class FBAWorld extends World2D
 		
 		double[][][] deltaDensity = new double[numModels][numCols][numRows];
 		double[][][] biomassDensity = new double[numModels][numCols][numRows];
+		double[][] totalBiomassDensity = new double[numCols][numRows];
 		double[][][] biomassDensityIntermediate = new double[numModels][numCols][numRows];
 		double[][][] convectionRHS  = new double[numModels][numCols][numRows];
 		double[][][] convectionRHS1 = new double[numModels][numCols][numRows];
@@ -2269,9 +2270,11 @@ public class FBAWorld extends World2D
 			
 			int x = cell.getX();
 			int y = cell.getY();
+			totalBiomassDensity[x][y]=0.0;
 			for (int k=0; k<numModels; k++)
 			{
 				biomassDensity[k][x][y]=biomass[k];// - deltaBiomass[k];
+				totalBiomassDensity[x][y]+=biomassDensity[k][x][y];
 				deltaDensity[k][x][y]=deltaBiomass[k];
 				//growthRate[k][x][y]=deltaBiomass[k]/(dT*(biomass[k] - deltaBiomass[k]));
 				convectionRHS1[k][x][y]=cell.getConvectionRHS1()[k];
@@ -2302,9 +2305,9 @@ public class FBAWorld extends World2D
 					}
 				}
 				if (frictionContext){
-					convectionRHS[k]=Utility.getConvectionRHSc(biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),frictionField); 	
+					convectionRHS[k]=Utility.getConvectionRHSc(totalBiomassDensity, biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),frictionField); 	
 				}else{
-					convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
+					convectionRHS[k]=Utility.getConvectionRHS(totalBiomassDensity,biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
 				}
 				for(int i=0;i<numCols;i++)
 				{
@@ -2327,9 +2330,9 @@ public class FBAWorld extends World2D
 					}
 				}
 				if (frictionContext){
-					convectionRHS[k]=Utility.getConvectionRHSc(biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),frictionField); 	
+					convectionRHS[k]=Utility.getConvectionRHSc(totalBiomassDensity, biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),frictionField); 	
 				}else{
-					convectionRHS[k]=Utility.getConvectionRHS(biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
+					convectionRHS[k]=Utility.getConvectionRHS(totalBiomassDensity, biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
 				}
 				for(int i=0;i<numCols;i++)
 				{
@@ -2403,7 +2406,7 @@ public class FBAWorld extends World2D
 						convDiffConstField[i][j]=((FBAModel)models[curModel]).getConvDiffConstant();
 					}
 				}
-				convectionRHS[curModel]=Utility.getConvectionRHS(biomassDensity[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant()); 	
+				convectionRHS[curModel]=Utility.getConvectionRHS(totalBiomassDensity, biomassDensity[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant()); 	
 				for(int i=0;i<numCols;i++)
 				{
 					for(int j=0;j<numRows;j++)
@@ -2425,7 +2428,7 @@ public class FBAWorld extends World2D
 					}
 				}
 				
-				convectionRHS[curModel]=Utility.getConvectionRHS(biomassDensityIntermediate[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant());
+				convectionRHS[curModel]=Utility.getConvectionRHS(totalBiomassDensity, biomassDensityIntermediate[curModel],convDiffConstField,((FBAModel)models[curModel]).getPackedDensity(),barrierState,dX,((FBAModel)models[curModel]).getElasticModulusConstant(),((FBAModel)models[curModel]).getFrictionConstant());
 				for(int i=0;i<numCols;i++)
 				{
 					for(int j=0;j<numRows;j++)
