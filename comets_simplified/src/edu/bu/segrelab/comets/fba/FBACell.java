@@ -854,7 +854,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			
 			//Neutral drift block. Get the sigmas from the model and 
 			// calculate biomass=(sigma^2*timestep/2)*Gamm(Poiss(2*biomass/sigma^2*timesteo))
-			if(fbaModels[i].getNeutralDrift())
+			if(fbaModels[i].getNeutralDrift() && deltaBiomass[i]>0.0)
 			{   
 				double poissLambda=2.0*biomass[i]/(cParams.getTimeStep()*
 						fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
@@ -873,8 +873,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					}
 					else if(gammaAlpha==0)
 					{
-						biomass[i]=0.5*1.0*(cParams.getTimeStep()*
-								fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
+						biomass[i]=0.0;
 					}
 				}
 				else if(poissLambda==0)
@@ -882,6 +881,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					biomass[i]=0.0;
 				}
 			}
+			
 			
 			
 			if (biomass[i] < cParams.getMinSpaceBiomass())

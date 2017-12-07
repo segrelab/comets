@@ -2308,6 +2308,7 @@ public class FBAWorld extends World2D
 					convectionRHS[k]=Utility.getConvectionRHSc(totalBiomassDensity, biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),frictionField); 	
 				}else{
 					convectionRHS[k]=Utility.getConvectionRHS(totalBiomassDensity,biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
+					//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 
 				}
 				for(int i=0;i<numCols;i++)
 				{
@@ -2333,6 +2334,7 @@ public class FBAWorld extends World2D
 					convectionRHS[k]=Utility.getConvectionRHSc(totalBiomassDensity, biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),frictionField); 	
 				}else{
 					convectionRHS[k]=Utility.getConvectionRHS(totalBiomassDensity, biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 	
+					//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k], biomassDensityIntermediate[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant());
 				}
 				for(int i=0;i<numCols;i++)
 				{
@@ -2754,7 +2756,7 @@ public class FBAWorld extends World2D
 			    	convection2DBiomass();
 			    	break;
 				default :
-					System.out.println("No biomass diffusion! Set the diffusion parameter to 'CN', 'EP' or 'Convection2D'");
+					System.out.println("No biomass diffusion! Set the diffusion parameter to 'Diffusion 2D(Crank-Nicolson)', 'Diffusion 2D(Eight Point)' or 'Convection 2D'");
 					break;
 			}
 		//}
