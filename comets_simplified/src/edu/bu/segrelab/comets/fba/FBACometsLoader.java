@@ -1057,7 +1057,9 @@ CometsConstants
 				}
 			}
 
-			models[i] = FBAModel.loadModelFromFile(f.getPath());
+			//Redundant code. Should always load through this.loadModelFromFile
+			// -MQ 12/7/2017
+			/*models[i] = FBAModel.loadModelFromFile(f.getPath());
 			models[i].setFlowDiffusionConstant(pParams.getFlowDiffRate());
 			models[i].setGrowthDiffusionConstant(pParams.getGrowthDiffRate());
 			models[i].setDefaultHill(pParams.getDefaultHill());
@@ -1065,7 +1067,7 @@ CometsConstants
             models[i].setDefaultVmax(pParams.getDefaultVmax());
             models[i].setDefaultAlpha(pParams.getDefaultAlpha());
             models[i].setDefaultW(pParams.getDefaultW());
-            models[i] = FBAModel.loadModelFromFile(f.getPath());
+            //models[i] = FBAModel.loadModelFromFile(f.getPath());
 			
 			System.out.println("Done!\n Testing default parameters...");
 			int result = models[i].run();
@@ -1076,6 +1078,9 @@ CometsConstants
 				System.out.println("(might be an error?)");
 			System.out.println("objective solution = " + models[i].getObjectiveSolutions());
 			System.out.flush();
+			*/
+			models[i] = loadModelFromFile(c,f.getPath());
+			
 		}
 
 		return LoaderState.OK;
@@ -2800,7 +2805,7 @@ CometsConstants
 		//return null;
 	}
 
-	public Model loadModelFromFile(Comets c, String path)
+	public FBAModel loadModelFromFile(Comets c, String path)
 	{
 		FBAModel model = null;
 		if (pParams == null)
@@ -2822,6 +2827,14 @@ CometsConstants
 			model = FBAModel.loadModelFromFile(f.getPath());
 			model.setFlowDiffusionConstant(pParams.getFlowDiffRate());
 			model.setGrowthDiffusionConstant(pParams.getGrowthDiffRate());
+			
+			//do these params ever get used?
+			model.setDefaultHill(pParams.getDefaultHill());
+            model.setDefaultKm(pParams.getDefaultKm());
+            model.setDefaultVmax(pParams.getDefaultVmax());
+            model.setDefaultAlpha(pParams.getDefaultAlpha());
+            model.setDefaultW(pParams.getDefaultW());
+			
 			System.out.println("Done!\n Testing default parameters...");
 			int result = model.run();
 			System.out.print("Done!\nOptimizer status code = " + result + " ");
