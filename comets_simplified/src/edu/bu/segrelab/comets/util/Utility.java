@@ -1102,6 +1102,19 @@ public class Utility implements CometsConstants
 		{
 			for(int j=0;j<numRows;j++)
 			{
+				if(totalBiomassDensity[i][j]>0.0)
+				{
+				pressure[i][j]=pressure[i][j]*(biomassDensity[i][j]/totalBiomassDensity[i][j]);
+				}
+				
+			}
+		}
+	
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
 				advection[i][j]=0.0;
 				//Do x direction first
 				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
@@ -1138,6 +1151,17 @@ public class Utility implements CometsConstants
 				{
 					advection[i][j]+=(pressure[i][j+1]-2.0*pressure[i][j]+pressure[i][j-1])/(dX*dX);
 				}
+				
+				/*
+				if(totalBiomassDensity[i][j]==0.0)
+				{
+					advection[i][j]=0.0;
+				}
+				else
+				{
+					advection[i][j]=advection[i][j]*(biomassDensity[i][j]/totalBiomassDensity[i][j]);
+				}
+				*/
 			}
 		}
 		return advection;
