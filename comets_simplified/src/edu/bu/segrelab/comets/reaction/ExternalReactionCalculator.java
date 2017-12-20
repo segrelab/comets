@@ -241,6 +241,13 @@ public class ExternalReactionCalculator{
 			yf[i] = concentrations[i] + ((dy1[i] + (2*dy2[i]) + (2*dy3[i]) + dy4[i])/6);
 		}
 		
+		//check for any values < 0
+		boolean neg = false;
+		for (double d:yf) {
+			if (d < 0) neg = true;
+		}
+		if (neg) status = CalcStatus.DEPLETED;
+		
 		if (status == CalcStatus.PENDING) status = CalcStatus.CALC_OK;
 		return yf;
 	}
