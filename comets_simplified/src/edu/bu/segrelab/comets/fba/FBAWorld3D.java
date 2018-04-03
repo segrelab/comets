@@ -134,6 +134,8 @@ implements CometsConstants
 		diffuseBiomassIn = new boolean[numCols][numRows][numLayers][numModels];
 		diffuseBiomassOut = new boolean[numCols][numRows][numLayers][numModels];
 		nutrientDiffConsts = new double[numMedia];
+		diffusionRHS1=new double[numCols][numRows][numLayers][numMedia];
+		diffusionRHS2=new double[numCols][numRows][numLayers][numMedia];
 		/*
 		 * Initialize everything so that it can diffuse everywhere,
 		 * and the startingMedia is uniform across the grid.
@@ -146,6 +148,7 @@ implements CometsConstants
 				{
 					for (int k = 0; k < numMedia; k++)
 					{
+						//System.out.println("OK  " +i +j +l +k+"  "+diffusionRHS1[i][j][l][k]);
 						media[i][j][l][k] = startingMedia[k];
 						diffusionRHS1[i][j][l][k] = 0;
 						diffusionRHS2[i][j][l][k] = 0;

@@ -772,7 +772,8 @@ CometsConstants
 						world3D = new FBAWorld3D(c, mediaNames, mediaConc, models);
 
 						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
-						if (initialMediaNames != null) world.setInitialMediaNames(initialMediaNames);
+						//System.out.println(initialMediaNames[0]);
+						if (initialMediaNames != null) world3D.setInitialMediaNames(initialMediaNames);
 						if (mediaRefresh != null)
 						{
 							world3D.setMediaRefreshAmount(mediaRefresh);

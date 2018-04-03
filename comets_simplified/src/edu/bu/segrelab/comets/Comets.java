@@ -89,7 +89,7 @@ public class Comets implements CometsConstants,
 							   CometsLoadListener,
 							   CometsChangeListener
 {
-	private String versionString = "2.5.12, 20 December 2017";
+	private String versionString = "2.5.13, 3 April 2018";
 	
 	/**
 	 * A debugging tool. If this is set to true, then the only running done
