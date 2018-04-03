@@ -76,6 +76,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 
 		} catch (GRBException e) {
+			System.out.println("Error in FBAOptimizerGurobi private constructor method");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -139,6 +140,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 		}
 		catch(GRBException e){
+			System.out.println("Error in FBAOptimizerGurobi public constructor method");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -241,6 +243,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			modelMin = new GRBModel(envMin);
 		}
 		catch (GRBException e) {
+			System.out.println("Error in FBAOptimizerGurobi.createEmptyModelMin");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -272,7 +275,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			modelMin.update();
 		}		
 		catch(GRBException e){
-			System.out.println("  error in createVarsModelMin: ");
+			System.out.println("Error in FBAOptimizerGurobi.createVarsModelMin");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -291,7 +294,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 		catch(GRBException e)
 		{
-			System.out.println("  error in createObjFuncModelMin: ");
+			System.out.println("Error in FBAOptimizerGurobi.createObjFuncModelMin");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -324,7 +327,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			modelMin.update();
 		}		
 		catch(GRBException e){
-			System.out.println("  error in addOrigConstrainsModelMin: ");
+			System.out.println("Error in FBAOptimizerGurobi.addOrigConstraintsModelMin");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -352,7 +355,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			modelMin.update();
 		}		
 		catch(GRBException e){
-			System.out.println("  error in addBiomassConstraintModelMin: ");
+			System.out.println("Error in FBAOptimizerGurobi.addBiomassConstraintModelMin");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -380,7 +383,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 				modelMin.update();
 			}		
 			catch(GRBException e){
-				System.out.println("  error in addBiomassConstraintModelMin: ");
+				System.out.println("Error in FBAOptimizerGurobi.addBiomassConstraintModelMin");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
@@ -449,7 +452,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			modelMin.update();
 		}		
 		catch(GRBException e){
-			System.out.println("  error in addAbsSumConstraintsModelMin: ");
+			System.out.println("Error in FBAOptimizerGurobi.addAbsSumConstraintsModelMin");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}		
@@ -480,6 +483,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			}
 			catch(GRBException e)
 			{
+				System.out.println("Error in FBAOptimizerGurobi.setExchLowerBounds, exch loop");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
@@ -491,6 +495,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 		catch(GRBException e)
 		{
+			System.out.println("Error in FBAOptimizerGurobi.setExchLowerBounds, update step");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -518,6 +523,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 		catch(GRBException e)
 		{
+			System.out.println("Error in FBAOptimizerGurobi.setExchLowerBoundsModelMin");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -545,6 +551,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			}
 			catch(GRBException e)
 			{
+				System.out.println("Error in FBAOptimizerGurobi.setExchUpperBounds, exch loop");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
@@ -555,6 +562,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 		catch(GRBException e)
 		{
+			System.out.println("Error in FBAOptimizerGurobi.setExchUpperBounds, update step");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -579,6 +587,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			}
 			catch(GRBException e)
 			{
+				System.out.println("Error in FBAOptimizerGurobi.setLowerBounds");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
@@ -602,6 +611,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			}
 			catch(GRBException e)
 			{
+				System.out.println("Error in FBAOptimizerGurobi.getLowerBounds");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
@@ -630,6 +640,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			}
 			catch(GRBException e)
 			{
+				System.out.println("Error in FBAOptimizerGurobi.setUpperBounds");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
@@ -653,6 +664,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			}
 			catch(GRBException e)
 			{
+				System.out.println("Error in FBAOptimizerGurobi.getUpperBounds");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
@@ -744,6 +756,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		      }
 			
 		} catch (GRBException e) {
+			System.out.println("Error in FBAOptimizerGurobi.setObjectiveReaction");
 	    	System.out.println("Error code: " + e.getErrorCode() + ". " +
                     e.getMessage());
 		}
@@ -814,6 +827,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 				}
 			}
 			catch(GRBException e){
+				System.out.println("Error in FBAOptimizerGurobi.run, case MAXIMIZE_OBJECTIVE_FLUX");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
@@ -851,6 +865,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 			}
 			catch(GRBException e){
+				System.out.println("Error in FBAOptimizerGurobi.run, case MAX_OBJECTIVE_MIN_TOTAL ");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
@@ -891,7 +906,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			objFluxVar[0] = modelMin.getConstrByName(objConstraintNames[objIdx]);
 		}
 		catch(GRBException e){
-			System.out.println("   Error in setObjectiveFluxToSpecificValue");
+			System.out.println("Error in FBAOptimizerGurobi.setObjectiveFluxToSpecificValue, attempting modelMin.getConstrByName");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -903,6 +918,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 		catch(GRBException e){
 			System.out.println("   Error in setObjectiveFluxToSpecificValue");
+			System.out.println("Error in FBAOptimizerGurobi.setObjectiveFluxToSpecificValue, attempting to modelMin.set");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -957,6 +973,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 				return rxnFluxes[objreact-1].get(GRB.DoubleAttr.X);
 		}
 		catch(GRBException e){
+			System.out.println("Error in FBAOptimizerGurobi.getObjectiveSolution");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -989,6 +1006,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 				return rxnFluxes[objreact-1].get(GRB.DoubleAttr.X);
 		}
 		catch(GRBException e){
+			System.out.println("Error in FBAOptimizerGurobi.getObjectiveFluxSolution");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -1029,6 +1047,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 		catch(GRBException e)
 		{
+			System.out.println("Error in FBAOptimizerGurobi.setObjectiveUpperBound");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -1056,6 +1075,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 		catch(GRBException e)
 		{
+			System.out.println("Error in FBAOptimizerGurobi.setObjectiveLowerBound");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
@@ -1086,6 +1106,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			}
 		}
 		catch(GRBException e){
+			System.out.println("Error in FBAOptimizerGurobi.clone");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
 					e.getMessage());
 		}
