@@ -820,7 +820,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 					}
 					ret=0;
 				} else {
-					System.out.println("   Model is not feasible");
+					System.out.println("MAXIMIZE_OBJECTIVE_FLUX: Model is not feasible");
 					for(int i=0;i<rxnFluxes.length;i++){
 						fluxesModel[i]=0;
 					}
@@ -844,25 +844,39 @@ implements edu.bu.segrelab.comets.CometsConstants
 				model.optimize();
 
 				rxnFluxes=model.getVars();
+				int optimstatus = model.get(GRB.IntAttr.Status);
+				if (optimstatus == GRB.Status.OPTIMAL) {
+					// now fix the objectives in the min abs. sum. model, then run that one.
+					for (int i = 0; i < objReactions.length; i++) {
+						double maximizedObjective = rxnFluxes[objReactions[i]-1].get(GRB.DoubleAttr.X);
+						setObjectiveFluxToSpecificValue(i,maximizedObjective);
+					}
+					modelMin.optimize();
 
-				// now fix the objectives in the min abs. sum. model, then run that one.
-				for (int i = 0; i < objReactions.length; i++) {
-					double maximizedObjective = rxnFluxes[objReactions[i]-1].get(GRB.DoubleAttr.X);
-					setObjectiveFluxToSpecificValue(i,maximizedObjective);
-				}
-				modelMin.optimize();
+					status = model.get(GRB.IntAttr.Status);
 
-				status = model.get(GRB.IntAttr.Status);
-
-
-				// save the new fluxes.
-				modelMinVars =modelMin.getVars();
-				for (int k = 0; k < modelMinVars.length / 2; k++){
-					fluxesModel[k] = modelMinVars[k].get(GRB.DoubleAttr.X);
-				}
-
-				ret=0;
-
+					int optimstatus_minflux = model.get(GRB.IntAttr.Status);
+					if (optimstatus_minflux == GRB.Status.OPTIMAL) {
+						// save the new fluxes.
+						modelMinVars =modelMin.getVars();
+						for (int k = 0; k < modelMinVars.length / 2; k++){
+							fluxesModel[k] = modelMinVars[k].get(GRB.DoubleAttr.X);
+						}
+						ret=0;
+					}else {
+						//Do nothing, the maximization is OK
+						System.out.println("MAX_OBJECTIVE_MIN_TOTAL: Min_total, Model is not feasible");
+						//for(int i=0;i<rxnFluxes.length;i++){
+						//	fluxesModel[i]=0;
+						//}
+					}
+				}else {
+					//Do nothing, the maximization is OK
+					System.out.println("MAX_OBJECTIVE_MIN_TOTAL: Max_obj, Model is not feasible");
+					//for(int i=0;i<rxnFluxes.length;i++){
+					//	fluxesModel[i]=0;
+					//}
+				}	
 			}
 			catch(GRBException e){
 				System.out.println("Error in FBAOptimizerGurobi.run, case MAX_OBJECTIVE_MIN_TOTAL ");
