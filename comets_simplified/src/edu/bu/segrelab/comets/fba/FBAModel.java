@@ -124,11 +124,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	
 	private double defaultLB = 0,
 				   defaultUB = 0,
-				   defaultKm = 0,
-				   defaultVmax = 0,
-				   defaultHill = 0,
-				   defaultAlpha = 0,
-				   defaultW = 0,
+				   defaultKm = -1, //if kinetic params are <0, use the default in the Package Params
+				   defaultVmax = -1,
+				   defaultHill = -1,
+				   defaultAlpha = -1,
+				   defaultW = -1,
 				   defaultMetabDiffConst = 0;
 	
 	private boolean active;     // true is model is active growing, if false the model is asleep 
@@ -392,51 +392,26 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	
 	public void setDefaultKm(double defKm)
 	{
-		for (int i=0; i<exchKm.length; i++)
-		{
-			if (exchKm[i] == defaultKm)
-				exchKm[i] = defKm;
-		}
 		this.defaultKm = defKm;
 	}
 	
 	public void setDefaultVmax(double defVmax)
 	{
-		for (int i=0; i<exchVmax.length; i++)
-		{
-			if (exchVmax[i] == defaultVmax)
-				exchVmax[i] = defVmax;
-		}
 		this.defaultVmax = defVmax;
 	}
 	
 	public void setDefaultHill(double defHill)
 	{
-		for (int i=0; i<exchHillCoeff.length; i++)
-		{
-			if (exchHillCoeff[i] == defaultHill)
-				exchHillCoeff[i] = defHill;
-		}
 		this.defaultHill = defHill;
 	}
 	
 	public void setDefaultAlpha(double defAlpha)
 	{
-		for (int i=0; i<exchAlpha.length; i++)
-		{
-			if (exchAlpha[i] == defaultAlpha)
-				exchAlpha[i] = defAlpha;
-		}
 		this.defaultAlpha = defAlpha;
 	}
 	
 	public void setDefaultW(double defW)
 	{
-		for (int i=0; i<exchW.length; i++)
-		{
-			if (exchW[i] == defaultW)
-				exchW[i] = defW;
-		}
 		this.defaultW = defW;
 	}
 	
@@ -458,6 +433,37 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		return exchKm;
 	}
 	
+	/**
+	 * Replaces negative values in the KM vector with the appropriate
+	 * default value, first checking the FBAModel's default then the
+	 * FBAParamters's default
+	 * @return The Michaelis constants for each exchange reaction
+	 */
+	public double[] getExchangeKmWithDefaults()
+	{
+		double[] res = new double[exchKm.length];
+		for (int i = 0; i < exchKm.length; i++) {
+			res[i] = getExchangeKm(i);
+		}
+		return res;
+	}
+	
+	/**
+	 * 
+	 * @param i index of the exchange reaction
+	 * @return the Michaelis constant for the specified reaction
+	 */
+	public double getExchangeKm(int i) {
+		double d = exchKm[i];
+		if (d < 0) { //use Model's default
+			d = defaultKm;
+			if (d < 0) { //use Package default
+				d = FBAParameters.getDefaultKm();
+			}
+		}
+		return d;
+	}
+	
 	public void setExchangeKm(final double[] exchKm)
 	{
 		if (this.numExch == exchKm.length)
@@ -465,11 +471,42 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	}
 	
 	/**
-	 * @return the Michaelis-Mented Vmax values for each exchange reaction
+	 * @return the Michaelis-Menten Vmax values for each exchange reaction
 	 */
 	public double[] getExchangeVmax()
 	{
 		return exchVmax;
+	}
+	
+	/**
+	 * Replaces negative values in the Vmax vector with the appropriate
+	 * default value, first checking the FBAModel's default then the
+	 * FBAParamters's default
+	 * @return The Vmax for each exchange reaction
+	 */
+	public double[] getExchangeVmaxWithDefaults()
+	{
+		double[] res = new double[exchVmax.length];
+		for (int i = 0; i < exchVmax.length; i++) {
+			res[i] = getExchangeVmax(i);
+		}
+		return res;
+	}
+	
+	/**
+	 * 
+	 * @param i index of the exchange reaction
+	 * @return the Michaelis-Menten Vmax for the specified reaction
+	 */
+	public double getExchangeVmax(int i) {
+		double d = exchVmax[i];
+		if (d < 0) { //use Model's default
+			d = defaultVmax;
+			if (d < 0) { //use Package default
+				d = FBAParameters.getDefaultVmax();
+			}
+		}
+		return d;
 	}
 	
 	public void setExchangeVmax(final double[] exchVmax)
@@ -486,6 +523,37 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	{
 		return exchHillCoeff;
 	}
+	
+	/**
+	 * Replaces negative values in the Hill vector with the appropriate
+	 * default value, first checking the FBAModel's default then the
+	 * FBAParamters's default
+	 * @return The Hill Coefficient for each exchange reaction
+	 */
+	public double[] getExchangeHillCoefficientsWithDefaults()
+	{
+		double[] res = new double[exchHillCoeff.length];
+		for (int i = 0; i < exchHillCoeff.length; i++) {
+			res[i] = getExchangeHillCoefficient(i);
+		}
+		return res;
+	}
+	
+	/**
+	 * 
+	 * @param i index of the exchange reaction
+	 * @return the Hill coefficient for the specified reaction
+	 */
+	public double getExchangeHillCoefficient(int i) {
+		double d = exchHillCoeff[i];
+		if (d < 0) { //use Model's default
+			d = defaultHill;
+			if (d < 0) { //use Package default
+				d = FBAParameters.getDefaultHill();
+			}
+		}
+		return d;
+	}
 
 	public void setExchangeHillCoefficients(final double[] exchHillCoeff)
 	{
@@ -498,6 +566,37 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	{
 		return exchAlpha;
 	}
+	
+	/**
+	 * Replaces negative values in the Alpha vector with the appropriate
+	 * default value, first checking the FBAModel's default then the
+	 * FBAParamters's default
+	 * @return The Michaelis constants for each exchange reaction
+	 */
+	public double[] getExchangeAlphaCoefficientsWithDefaults()
+	{
+		double[] res = new double[exchAlpha.length];
+		for (int i = 0; i < exchAlpha.length; i++) {
+			res[i] = getExchangeAlphaCoefficient(i);
+		}
+		return res;
+	}
+	
+	/**
+	 * 
+	 * @param i index of the exchange reaction
+	 * @return the Alpha coefficient for the specified reaction
+	 */
+	public double getExchangeAlphaCoefficient(int i) {
+		double d = exchAlpha[i];
+		if (d < 0) { //use Model's default
+			d = defaultAlpha;
+			if (d < 0) { //use Package default
+				d = FBAParameters.getDefaultAlpha();
+			}
+		}
+		return d;
+	}
 
 	public void setExchangeAlphaCoefficients(final double[] exchAlphaCoeff)
 	{
@@ -508,6 +607,37 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	public double[] getExchangeWCoefficients()
 	{
 		return exchW;
+	}
+	
+	/**
+	 * Replaces negative values in the W vector with the appropriate
+	 * default value, first checking the FBAModel's default then the
+	 * FBAParamters's default
+	 * @return The W coefficients for each exchange reaction
+	 */
+	public double[] getExchangeWCoefficientsWithDefaults()
+	{
+		double[] res = new double[exchW.length];
+		for (int i = 0; i < exchW.length; i++) {
+			res[i] = getExchangeWCoefficient(i);
+		}
+		return res;
+	}
+	
+	/**
+	 * 
+	 * @param i index of the exchange reaction
+	 * @return the W coefficient for the specified reaction
+	 */
+	public double getExchangeWCoefficient(int i) {
+		double d = exchW[i];
+		if (d < 0) { //use Model's default
+			d = defaultW;
+			if (d < 0) { //use Package default
+				d = FBAParameters.getDefaultW();
+			}
+		}
+		return d;
 	}
 	
 	public void setExchangeWCoefficients(final double[] exchW)
@@ -1049,11 +1179,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			double[] exchVmax = null;
 			double[] exchHillCoeff = null;
 			
-			double defaultAlpha = 0,
-				   defaultW = 0,
-				   defaultKm = 0,
-				   defaultVmax = 0,
-				   defaultHill = 0,
+			double defaultAlpha = -1,
+				   defaultW = -1,
+				   defaultKm = -1,
+				   defaultVmax = -1,
+				   defaultHill = -1,
 				   defaultLB = -1000,
 				   defaultUB = 1000,
 				   defaultDiff = 1e-6,
@@ -1747,7 +1877,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					exchAlpha = new double[numExch];
 					for (int i=0; i<numExch; i++)
 					{
-						exchAlpha[i] = defaultAlpha;
+						exchAlpha[i] = -1; //when -1 is found here, the code should lookup the model's defaultAlpha
+											//we don't just set it now because it may be changed by the user
 					}
 					String alphaLine = null;
 					blockOpen = true;
@@ -1817,7 +1948,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					exchW = new double[numExch];
 					for (int i=0; i<numExch; i++)
 					{
-						exchW[i] = defaultW;
+						exchW[i] = -1;
 					}
 					String wLine = null;
 					blockOpen = true;
@@ -1888,7 +2019,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					exchKm = new double[numExch];
 					for (int i=0; i<numExch; i++)
 					{
-						exchKm[i] = defaultKm;
+						exchKm[i] = -1;
 					}
 					String kmLine = null;
 					blockOpen = true;
@@ -1957,7 +2088,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 					exchVmax = new double[numExch];
 					for (int i=0; i<numExch; i++)
-						exchVmax[i] = defaultVmax;
+						exchVmax[i] = -1;
 						
 					String vMaxLine = null;
 					blockOpen = true;
@@ -2025,7 +2156,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					exchHillCoeff = new double[numExch];
 					for (int i=0; i<numExch; i++)
 					{
-						exchHillCoeff[i] = defaultHill;
+						exchHillCoeff[i] = -1;
 					}
 					String hillLine = null;
 					blockOpen = true;

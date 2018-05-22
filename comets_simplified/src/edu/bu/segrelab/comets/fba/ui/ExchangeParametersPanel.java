@@ -7,6 +7,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.BorderFactory;
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -14,6 +15,7 @@ import javax.swing.JPanel;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.fba.FBAParameters;
+import edu.bu.segrelab.comets.fba.FBAParameters.ExchangeStyle;
 import edu.bu.segrelab.comets.ui.DoubleField;
 import edu.bu.segrelab.comets.ui.ParametersPanel;
 
@@ -31,13 +33,18 @@ public class ExchangeParametersPanel extends JPanel
 								W_LBL 			  = "Default W: ",
 								EXCH_LBL 		  = "Metabolite uptake style: ",
 								BORDER			  = "Metabolite Uptake Parameters",
-								NAME			  = "Exchange";
+								NAME			  = "Exchange",
+								MODEL_OVERRIDE    = "Override models' individual defaults?";
+	
 	
 	private DoubleField vMaxField,
 						kmField,
 						hillField,
 						alphaField,
 						wField;
+	
+	private JCheckBox monodOverrideCheckBox,
+					  pseudoOverrideCheckBox;
 	
 	private JLabel vMaxLbl,
 				   kmLbl,
@@ -47,7 +54,9 @@ public class ExchangeParametersPanel extends JPanel
 				   standardExLbl,
 				   monodExLbl,
 				   pseudoMonodExLbl,
-				   exchStyleLbl;
+				   exchStyleLbl,
+				   monodOverrideLbl,
+				   pseudoOverrideLbl;
 
 	private JComboBox exchStyleComboBox;
 
@@ -121,6 +130,14 @@ public class ExchangeParametersPanel extends JPanel
 		gbc.anchor = GridBagConstraints.WEST;
 		this.add(hillField, gbc);
 		
+		gbc.gridx = 0;
+		gbc.gridy = 5;
+		gbc.anchor = GridBagConstraints.EAST;
+		this.add(monodOverrideLbl, gbc);
+		gbc.gridx = 1;
+		gbc.anchor = GridBagConstraints.WEST;
+		this.add(monodOverrideCheckBox, gbc);
+		
 		// some overlap, but only one set will be visible at a time
 		
 		gbc.gridx = 0;
@@ -138,6 +155,14 @@ public class ExchangeParametersPanel extends JPanel
 		gbc.gridx = 1;
 		gbc.anchor = GridBagConstraints.WEST;
 		this.add(wField, gbc);
+		
+		gbc.gridx = 0;
+		gbc.gridy = 4;
+		gbc.anchor = GridBagConstraints.EAST;
+		this.add(pseudoOverrideLbl, gbc);
+		gbc.gridx = 1;
+		gbc.anchor = GridBagConstraints.WEST;
+		this.add(pseudoOverrideCheckBox, gbc);
 	}
 
 	private void bindEvents()
@@ -167,16 +192,20 @@ public class ExchangeParametersPanel extends JPanel
 		vMaxField = new DoubleField(fbaParams.getDefaultVmax(), 6, false);
 		kmField = new DoubleField(fbaParams.getDefaultKm(), 6, false);
 		hillField = new DoubleField(fbaParams.getDefaultHill(), 6, false);
+		monodOverrideCheckBox = new JCheckBox();
 		
 		vMaxLbl = new JLabel(VMAX_LBL, JLabel.LEFT);
 		kmLbl = new JLabel(K_LBL, JLabel.LEFT);
 		hillLbl = new JLabel(HILL_LBL, JLabel.LEFT);
+		monodOverrideLbl = new JLabel(MODEL_OVERRIDE, JLabel.LEFT);
 		
 		alphaField = new DoubleField(fbaParams.getDefaultAlpha(), 6, false);
 		wField = new DoubleField(fbaParams.getDefaultW(), 6, false);
+		pseudoOverrideCheckBox = new JCheckBox();
 		
 		alphaLbl = new JLabel(ALPHA_LBL, JLabel.LEFT);
 		wLbl = new JLabel(W_LBL, JLabel.LEFT);
+		pseudoOverrideLbl = new JLabel(MODEL_OVERRIDE, JLabel.LEFT);
 
 		exchStyleLbl = new JLabel(EXCH_LBL, JLabel.LEFT);
 
@@ -197,24 +226,36 @@ public class ExchangeParametersPanel extends JPanel
 		vMaxLbl.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.MONOD);
 		kmLbl.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.MONOD);
 		hillLbl.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.MONOD);
+		monodOverrideCheckBox.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.MONOD);
+		monodOverrideLbl.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.MONOD);
 		
 		pseudoMonodExLbl.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.PSEUDO_MONOD);
 		alphaField.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.PSEUDO_MONOD);
 		wField.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.PSEUDO_MONOD);
 		alphaLbl.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.PSEUDO_MONOD);
 		wLbl.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.PSEUDO_MONOD);
-
+		pseudoOverrideCheckBox.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.PSEUDO_MONOD);
+		pseudoOverrideLbl.setVisible(exchangeStyle == FBAParameters.ExchangeStyle.PSEUDO_MONOD);
 	}
 	
 	@Override
 	public void applyChanges()
 	{
 		fbaParams.setExchangeStyle((FBAParameters.ExchangeStyle)exchStyleComboBox.getSelectedItem());
-		fbaParams.setDefaultVmax(vMaxField.getDoubleValue());
-		fbaParams.setDefaultKm(kmField.getDoubleValue());
-		fbaParams.setDefaultHill(hillField.getDoubleValue());
-		fbaParams.setDefaultAlpha(alphaField.getDoubleValue());
-		fbaParams.setDefaultW(wField.getDoubleValue());
+		
+		boolean monodOverride = false;
+		boolean pseudoOverride = false;
+		if (fbaParams.getExchangeStyle() == ExchangeStyle.MONOD) monodOverride = monodOverrideCheckBox.isSelected();
+		if (fbaParams.getExchangeStyle() == ExchangeStyle.PSEUDO_MONOD) pseudoOverride = monodOverrideCheckBox.isSelected();
+		
+		fbaParams.setDefaultVmax(vMaxField.getDoubleValue(),monodOverride);
+		fbaParams.setDefaultKm(kmField.getDoubleValue(),monodOverride);
+		fbaParams.setDefaultHill(hillField.getDoubleValue(),monodOverride);
+		fbaParams.setDefaultAlpha(alphaField.getDoubleValue(),pseudoOverride);
+		fbaParams.setDefaultW(wField.getDoubleValue(),pseudoOverride);
+		fbaParams.monodOverride(monodOverride);
+		fbaParams.pseudoOverride(pseudoOverride);
+		
 	}
 
 	@Override
@@ -228,6 +269,8 @@ public class ExchangeParametersPanel extends JPanel
 		hillField.setValue(fbaParams.getDefaultHill());
 		alphaField.setValue(fbaParams.getDefaultAlpha());
 		wField.setValue(fbaParams.getDefaultW());
+		monodOverrideCheckBox.setSelected(fbaParams.getMonodOverride());
+		pseudoOverrideCheckBox.setSelected(fbaParams.getPseudoOverride());
 		
 		updateWidgetView(exchangeStyle);
 	}

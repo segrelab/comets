@@ -30,18 +30,18 @@ public class FBAParameters implements PackageParameters
 	{
 		MATLAB("Matlab"),
 		COMETS("COMETS");
-		
+
 		private String name;
 		private LogFormat(String name)
 		{
 			this.name = name;
 		}
-		
+
 		public String toString()
 		{
 			return name;
 		}
-		
+
 		public static LogFormat findByName(String name)
 		{
 			for (LogFormat format : LogFormat.values())
@@ -52,7 +52,7 @@ public class FBAParameters implements PackageParameters
 			return null;
 		}
 	}
-	
+
 	public enum BiomassMotionStyle
 	{
 		DIFFUSION_CN("Diffusion 2D(Crank-Nicolson)"),
@@ -61,18 +61,18 @@ public class FBAParameters implements PackageParameters
 		CONVECTION_2D("Convection 2D"),
 		CONVECTION_3D("Convection 3D");
 		//LEVEL_SET("Level Set Relaxation");
-		
+
 		private String name;
 		private BiomassMotionStyle(String name)
 		{
 			this.name = name;
 		}
-		
+
 		public String getName()
 		{
 			return name;
 		}
-		
+
 		public String toString()
 		{
 			return name;
@@ -85,7 +85,7 @@ public class FBAParameters implements PackageParameters
 			if (name.equalsIgnoreCase("Diffusion (Crank-Nicolson)")){
 				return DIFFUSION_CN;
 			}
-			
+
 			for (BiomassMotionStyle style : BiomassMotionStyle.values())
 			{
 				if (style.toString().equalsIgnoreCase(name))
@@ -100,18 +100,18 @@ public class FBAParameters implements PackageParameters
 		STANDARD("Standard FBA"),
 		MONOD("Monod Style"),
 		PSEUDO_MONOD("Pseudo-Monod Style");
-		
+
 		private String name;
 		private ExchangeStyle(String name)
 		{
 			this.name = name;
 		}
-		
+
 		public String getName()
 		{
 			return name;
 		}
-		
+
 		public String toString()
 		{
 			return getName();
@@ -127,71 +127,73 @@ public class FBAParameters implements PackageParameters
 			return null;
 		}
 	}
-	
+
 	/*---------------------- some constants ----------------------*/
 	public static final int MATLAB_FORMAT = 0;				// Matlab log file format
 	public static final int COMETS_FORMAT = 1;				// "COMETS" log file format (something I whipped up)
-	
+
 	public static final int BIOMASS_DIFFUSION = 6;
 	public static final int BIOMASS_LEVEL_SET = 7;
-	
+
 	/*------------------------ FBAComets Parameters -------------------------*/
 	private boolean writeFluxLog,
-					writeMediaLog,
-					writeBiomassLog,
-					writeTotalBiomassLog,
-					writeMatFile,
-					useLogNameTimeStamp,
-					randomOrder = true; //shuffle the order each model in a cell is run
-	
+	writeMediaLog,
+	writeBiomassLog,
+	writeTotalBiomassLog,
+	writeMatFile,
+	useLogNameTimeStamp,
+	randomOrder = true, //shuffle the order each model in a cell is run
+	monodOverride,
+	pseudoOverride; 
+
 	private String fluxLogName,
-				   mediaLogName,
-				   biomassLogName,
-				   totalBiomassLogName,
-				   matFileName;
-	
+	mediaLogName,
+	biomassLogName,
+	totalBiomassLogName,
+	matFileName;
+
 	private String manifestFileName = "COMETS_manifest.txt";
 	private final String nopathManifestFileName="COMETS_manifest.txt";
-	
+
 	private int numRunThreads = 1,
-				numDiffPerStep = 10,
-				fluxLogRate = 1,
-				mediaLogRate = 1,
-				biomassLogRate = 1,
-				totalBiomassLogRate = 1,
-				numExRxnSubsteps = 12, //12 chosen as default so if timestep is 1h, minimum substep is < 1sec
-				matFileRate = 1;
-	
+			numDiffPerStep = 10,
+			fluxLogRate = 1,
+			mediaLogRate = 1,
+			biomassLogRate = 1,
+			totalBiomassLogRate = 1,
+			numExRxnSubsteps = 12, //12 chosen as default so if timestep is 1h, minimum substep is < 1sec
+			matFileRate = 1;
+
 	private long randomSeed=0;
-	
+
 	private ExchangeStyle exchangeStyle = ExchangeStyle.STANDARD;
-	
+
 	private BiomassMotionStyle biomassMotionStyle = BiomassMotionStyle.DIFFUSION_CN;
-	
+
 	private LogFormat biomassLogFormat = LogFormat.MATLAB,
-					  mediaLogFormat = LogFormat.MATLAB,
-					  fluxLogFormat = LogFormat.MATLAB;
-	
-	private double growthDiffRate = 1e-7,
-				   flowDiffRate = 1e-7,
-				   defaultVmax = 10,
-				   defaultKm = 5,
-				   defaultHill = 2,
-				   defaultAlpha = 1,
-				   defaultW = 10,
-				   defaultDiffConst = 1e-5,
-				   minConcentration = 1e-26; //Here's hoping 1 atom per liter is enough precision
-	
+			mediaLogFormat = LogFormat.MATLAB,
+			fluxLogFormat = LogFormat.MATLAB;
+
+	private static double growthDiffRate = 1e-7,
+			flowDiffRate = 1e-7,
+			defaultVmax = 10,
+			defaultKm = 5,
+			defaultHill = 2,
+			defaultAlpha = 1,
+			defaultW = 10,
+			defaultDiffConst = 1e-5,
+			minConcentration = 1e-26; //Here's hoping 1 atom per liter is enough precision
+
 	private double[] defaultVelocityVector={0.0,0.0,0.0};
-					
-	
+
+
 	private Map<String, ParametersPanel> parametersPanels;
-	
+
 	private Map<String, Object> paramValues;
 	private Map<String, ParameterType> paramTypes;
 
 	private Comets c;
-	
+
 	/**
 	 * Initializes the <code>FBAParameters</code> with the default values.
 	 * @param c
@@ -205,18 +207,18 @@ public class FBAParameters implements PackageParameters
 		writeTotalBiomassLog = false;
 		writeMatFile = false;
 		useLogNameTimeStamp = true;
-		
+
 		fluxLogName = "flux_log.txt";
 		mediaLogName = "media_log.txt";
 		biomassLogName = "biomass_log.txt";
 		matFileName = "comets_log.mat";
 		totalBiomassLogName = "total_biomass_log.txt";
-		
+
 		paramValues = new HashMap<String, Object>();
 		paramTypes = new HashMap<String, ParameterType>();
-		
+
 		saveParameterState();
-		
+
 		parametersPanels = new HashMap<String, ParametersPanel>();
 		DiffusionParametersPanel dpp = new DiffusionParametersPanel(this);
 		ExchangeParametersPanel epp = new ExchangeParametersPanel(this);
@@ -232,107 +234,107 @@ public class FBAParameters implements PackageParameters
 	{
 		paramValues.put("writefluxlog", new Boolean(writeFluxLog));
 		paramTypes.put("writefluxlog", ParameterType.BOOLEAN);
-		
+
 		paramValues.put("writemedialog", new Boolean(writeMediaLog));
 		paramTypes.put("writemedialog", ParameterType.BOOLEAN);
-		
+
 		paramValues.put("writebiomasslog", new Boolean(writeBiomassLog));
 		paramTypes.put("writebiomasslog", ParameterType.BOOLEAN);
-		
+
 		paramValues.put("writetotalbiomasslog", new Boolean(writeTotalBiomassLog));
 		paramTypes.put("writetotalbiomasslog", ParameterType.BOOLEAN);
-		
+
 		paramValues.put("writematfile", new Boolean(writeMatFile));
 		paramTypes.put("writematfile", ParameterType.BOOLEAN);
-		
+
 		paramValues.put("uselognametimestamp", new Boolean(useLogNameTimeStamp));
 		paramTypes.put("uselognametimestamp", ParameterType.BOOLEAN);
 
 		paramValues.put("fluxlogname", fluxLogName);
 		paramTypes.put("fluxlogname", ParameterType.STRING);
-		
+
 		paramValues.put("medialogname", mediaLogName);
 		paramTypes.put("medialogname", ParameterType.STRING);
-		
+
 		paramValues.put("biomasslogname", biomassLogName);
 		paramTypes.put("biomasslogname", ParameterType.STRING);
-		
+
 		paramValues.put("totalbiomasslogname", totalBiomassLogName);
 		paramTypes.put("totalbiomasslogname", ParameterType.STRING);
-		
+
 		paramValues.put("matfilename", matFileName);
 		paramTypes.put("matfilename", ParameterType.STRING);
-		
+
 		paramValues.put("fluxlogformat", fluxLogFormat);
 		paramTypes.put("fluxlogformat", ParameterType.STRING);
-		
+
 		paramValues.put("medialogformat", mediaLogFormat);
 		paramTypes.put("medialogformat", ParameterType.STRING);
-		
+
 		paramValues.put("biomasslogformat", biomassLogFormat);
 		paramTypes.put("biomasslogformat", ParameterType.STRING);
-		
+
 		paramValues.put("numrunthreads", new Integer(numRunThreads));
 		paramTypes.put("numrunthreads", ParameterType.INT);
-		
+
 		paramValues.put("growthdiffrate", new Double(growthDiffRate));
 		paramTypes.put("growthdiffrate", ParameterType.DOUBLE);
-		
+
 		paramValues.put("flowdiffrate", new Double(flowDiffRate));
 		paramTypes.put("flowdiffrate", ParameterType.DOUBLE);		
-		
+
 		paramValues.put("exchangestyle", exchangeStyle);
 		paramTypes.put("exchangestyle", ParameterType.STRING);
-		
+
 		paramValues.put("biomassmotionstyle", biomassMotionStyle);
 		paramTypes.put("biomassmotionstyle", ParameterType.STRING);
-		
+
 		paramValues.put("defaultvmax", new Double(defaultVmax));
 		paramTypes.put("defaultvmax", ParameterType.DOUBLE);
-		
+
 		paramValues.put("defaultkm", new Double(defaultKm));
 		paramTypes.put("defaultkm", ParameterType.DOUBLE);
-		
+
 		paramValues.put("defaulthill", new Double(defaultHill));
 		paramTypes.put("defaulthill", ParameterType.DOUBLE);
-		
+
 		paramValues.put("defaultalpha", new Double(defaultAlpha));
 		paramTypes.put("defaultalpha", ParameterType.DOUBLE);
-		
+
 		paramValues.put("defaultw", new Double(defaultW));
 		paramTypes.put("defaultw", ParameterType.DOUBLE);
-		
+
 		paramValues.put("fluxlograte", new Integer(fluxLogRate));
 		paramTypes.put("fluxlograte", ParameterType.INT);
-		
+
 		paramValues.put("medialograte", new Integer(mediaLogRate));
 		paramTypes.put("medialograte", ParameterType.INT);
-		
+
 		paramValues.put("biomasslograte", new Integer(biomassLogRate));
 		paramTypes.put("biomasslograte", ParameterType.INT);
-		
+
 		paramValues.put("totalbiomasslograte", new Integer(totalBiomassLogRate));
 		paramTypes.put("totalbiomasslograte", ParameterType.INT);
-		
+
 		paramValues.put("matfilerate", new Integer(matFileRate));
 		paramTypes.put("matfilerate", ParameterType.INT);
-		
+
 		paramValues.put("defaultdiffconst", new Double(defaultDiffConst));
 		paramTypes.put("defaultdiffconst", ParameterType.DOUBLE);
-		
+
 		paramValues.put("numdiffperstep", new Integer(numDiffPerStep));
 		paramTypes.put("numdiffperstep", ParameterType.INT);
-		
+
 		paramValues.put("numexrxnsubsteps", new Integer(numExRxnSubsteps));
 		paramTypes.put("numexrxnsubsteps", ParameterType.INT);
-		
+
 		paramValues.put("randomseed", new Long(randomSeed));
 		paramTypes.put("randomseed", ParameterType.LONG);
-		
+
 		paramValues.put("randomorder", new Boolean(randomOrder));
 		paramTypes.put("randomorder", ParameterType.BOOLEAN);
 	}
-	
+
 	public void loadParameterState()
 	{
 		writeFluxLog(((Boolean)paramValues.get("writefluxlog")).booleanValue());
@@ -347,26 +349,26 @@ public class FBAParameters implements PackageParameters
 		setTotalBiomassLogName((String)paramValues.get("totalbiomasslogname"));
 		setMatFileName((String)paramValues.get("matfilename"));
 		setRandomOrder(((Boolean)paramValues.get("randomorder")).booleanValue());
-		
+
 		if(paramValues.get("fluxlogformat") instanceof String)
 			setFluxLogFormat(LogFormat.findByName((String)paramValues.get("fluxlogformat")));
 		else
-		    setFluxLogFormat((LogFormat)paramValues.get("fluxlogformat"));
+			setFluxLogFormat((LogFormat)paramValues.get("fluxlogformat"));
 
 		//setMediaLogFormat((LogFormat)paramValues.get("medialogformat"));
-		
+
 		if(paramValues.get("medialogformat") instanceof String)
 			setMediaLogFormat(LogFormat.findByName((String)paramValues.get("medialogformat")));
 		else
-		    setMediaLogFormat((LogFormat)paramValues.get("medialogformat"));
+			setMediaLogFormat((LogFormat)paramValues.get("medialogformat"));
 
 		//setBiomassLogFormat((LogFormat)paramValues.get("biomasslogformat"));
-		
+
 		if(paramValues.get("biomasslogformat") instanceof String)
 			setBiomassLogFormat(LogFormat.findByName((String)paramValues.get("biomasslogformat")));
 		else
-		    setBiomassLogFormat((LogFormat)paramValues.get("biomasslogformat"));
-		
+			setBiomassLogFormat((LogFormat)paramValues.get("biomasslogformat"));
+
 		setNumRunThreads(((Integer)paramValues.get("numrunthreads")).intValue());
 		setGrowthDiffRate(((Double)paramValues.get("growthdiffrate")).doubleValue());
 		setFlowDiffRate(((Double)paramValues.get("flowdiffrate")).doubleValue());
@@ -375,15 +377,15 @@ public class FBAParameters implements PackageParameters
 		if(paramValues.get("exchangestyle") instanceof String)
 			setExchangeStyle((ExchangeStyle.findByName((String)paramValues.get("exchangestyle"))));
 		else 
-		    setExchangeStyle(((ExchangeStyle)paramValues.get("exchangestyle")));
-		
+			setExchangeStyle(((ExchangeStyle)paramValues.get("exchangestyle")));
+
 		//setBiomassMotionStyle((BiomassMotionStyle)paramValues.get("biomassmotionstyle"));
-		
+
 		if(paramValues.get("biomassmotionstyle") instanceof String)
 			setBiomassMotionStyle(BiomassMotionStyle.findByName((String)paramValues.get("biomassmotionstyle")));
 		else
-		    setBiomassMotionStyle((BiomassMotionStyle)paramValues.get("biomassmotionstyle"));
-		
+			setBiomassMotionStyle((BiomassMotionStyle)paramValues.get("biomassmotionstyle"));
+
 		setDefaultVmax(((Double)paramValues.get("defaultvmax")).doubleValue());
 		setDefaultKm(((Double)paramValues.get("defaultkm")).doubleValue());
 		setDefaultHill(((Double)paramValues.get("defaulthill")).doubleValue());
@@ -398,132 +400,132 @@ public class FBAParameters implements PackageParameters
 		setDefaultDiffusionConstant(((Double)paramValues.get("defaultdiffconst")).doubleValue());
 		setRandomSeed(((Long)paramValues.get("randomseed")).longValue());
 	}
-	
+
 	public ParameterState setParameter(String p, String v)
 	{
 		ParameterType t = paramTypes.get(p);
 		if (t == null)
 			return ParameterState.NOT_FOUND;
-		
+
 		switch(t)
 		{
-			case BOOLEAN :
-				if (!v.equalsIgnoreCase("false") && !v.equalsIgnoreCase("true"))
-					return ParameterState.WRONG_TYPE;
-				paramValues.put(p, new Boolean(Boolean.parseBoolean(v)));
-				break;
-			case DOUBLE :
-				try
-				{
-					paramValues.put(p, Double.parseDouble(v));
-				}
-				catch (NumberFormatException e)
-				{
-					return ParameterState.WRONG_TYPE;
-				}
-				break;
-			case INT :
-				try
-				{
-					paramValues.put(p, Integer.parseInt(v));
-				}
-				catch (NumberFormatException e)
-				{
-					return ParameterState.WRONG_TYPE;
-				}
-				break;
-			case LONG :
-					try
-					{
-						paramValues.put(p, Long.parseLong(v));
-					}
-					catch (NumberFormatException e)
-					{
-						return ParameterState.WRONG_TYPE;
-					}
-					break;
-			case STRING :
-				paramValues.put(p, v);
-				break;
-			default :
-				break;
-//			case LOG_FORMAT :
-//				LogFormat format = LogFormat.findByName(v);
-//				if (format == null)
-//					return ParameterState.WRONG_TYPE;
-//				else
-//					paramValues.put(p, format);
-//				break;
-//			case BIOMASS_MOTION_STYLE :
-//				BiomassMotionStyle biomassStyle = BiomassMotionStyle.findByName(v);
-//				if (biomassStyle == null)
-//					return ParameterState.WRONG_TYPE;
-//				else
-//					paramValues.put(p, biomassStyle);
-//				break;
-//			case EXCHANGE_STYLE :
-//				ExchangeStyle exchStyle = ExchangeStyle.findByName(v);
-//				if (exchStyle == null)
-//					return ParameterState.WRONG_TYPE;
-//				break;
+		case BOOLEAN :
+			if (!v.equalsIgnoreCase("false") && !v.equalsIgnoreCase("true"))
+				return ParameterState.WRONG_TYPE;
+			paramValues.put(p, new Boolean(Boolean.parseBoolean(v)));
+			break;
+		case DOUBLE :
+			try
+			{
+				paramValues.put(p, Double.parseDouble(v));
+			}
+			catch (NumberFormatException e)
+			{
+				return ParameterState.WRONG_TYPE;
+			}
+			break;
+		case INT :
+			try
+			{
+				paramValues.put(p, Integer.parseInt(v));
+			}
+			catch (NumberFormatException e)
+			{
+				return ParameterState.WRONG_TYPE;
+			}
+			break;
+		case LONG :
+			try
+			{
+				paramValues.put(p, Long.parseLong(v));
+			}
+			catch (NumberFormatException e)
+			{
+				return ParameterState.WRONG_TYPE;
+			}
+			break;
+		case STRING :
+			paramValues.put(p, v);
+			break;
+		default :
+			break;
+			//			case LOG_FORMAT :
+			//				LogFormat format = LogFormat.findByName(v);
+			//				if (format == null)
+			//					return ParameterState.WRONG_TYPE;
+			//				else
+			//					paramValues.put(p, format);
+			//				break;
+			//			case BIOMASS_MOTION_STYLE :
+			//				BiomassMotionStyle biomassStyle = BiomassMotionStyle.findByName(v);
+			//				if (biomassStyle == null)
+			//					return ParameterState.WRONG_TYPE;
+			//				else
+			//					paramValues.put(p, biomassStyle);
+			//				break;
+			//			case EXCHANGE_STYLE :
+			//				ExchangeStyle exchStyle = ExchangeStyle.findByName(v);
+			//				if (exchStyle == null)
+			//					return ParameterState.WRONG_TYPE;
+			//				break;
 		}
 		return ParameterState.OK;
 	}
-	
+
 	public double getDefaultDiffusionConstant()
 	{
 		return defaultDiffConst;
 	}
-	
+
 	public double[] getDefaultVelocityVector()
 	{
 		return defaultVelocityVector;
 	}
-	
+
 	public void setDefaultDiffusionConstant(double d)
 	{
 		if (d < 0)
 			return;
-		
+
 		defaultDiffConst = d;
-//		Model[] models = c.getModels();
-//		for (int i=0; i<models.length; i++)
-//		{
-//			((FBAModel)models[i]).setDefaultMetabDiffConst(d);
-//		}
+		//		Model[] models = c.getModels();
+		//		for (int i=0; i<models.length; i++)
+		//		{
+		//			((FBAModel)models[i]).setDefaultMetabDiffConst(d);
+		//		}
 		if (c.getWorld() != null)
 			((FBAWorld)c.getWorld()).setDefaultMediaDiffusionConstant(d);
 	}
-	
+
 	public void setDefaultVelocityVector(double Vx, double Vy, double Vz)
 	{
 		defaultVelocityVector[0] = Vx;
 		defaultVelocityVector[1] = Vy;
 		defaultVelocityVector[2] = Vz;
 	}
-	
+
 	public int getNumDiffusionsPerStep()
 	{
 		return numDiffPerStep;
 	}
-	
+
 	public void setNumDiffusionsPerStep(int n)
 	{
 		if (n >= 0)
 			numDiffPerStep = n;
 	}
-	
+
 	public int getNumExRxnSubsteps()
 	{
 		return numExRxnSubsteps; 
 	}
-	
+
 	public void setNumExRxnSubsteps(int n)
 	{
 		if (n > 1) numExRxnSubsteps = n;
 		else numExRxnSubsteps = 1;
 	}
-	
+
 	/**
 	 * @return the number of simulation steps that occur between every flux log write
 	 */
@@ -531,7 +533,7 @@ public class FBAParameters implements PackageParameters
 	{
 		return fluxLogRate; 
 	}
-	
+
 	/**
 	 * Sets the number of steps that occur between every flux log write. If <code>i</code>
 	 * is less than zero, nothing is changed.
@@ -542,7 +544,7 @@ public class FBAParameters implements PackageParameters
 		if (i > 0)
 			fluxLogRate = i;
 	}
-	
+
 	/**
 	 * @return the number of simulation steps that occur between every media log write
 	 */
@@ -561,7 +563,7 @@ public class FBAParameters implements PackageParameters
 		if (i > 0)
 			mediaLogRate = i;
 	}
-	
+
 	/**
 	 * @return the number of simulation steps that occur between every biomass log write
 	 */
@@ -580,7 +582,7 @@ public class FBAParameters implements PackageParameters
 		if (i > 0)
 			biomassLogRate = i;
 	}
-	
+
 	/**
 	 * @return the number of simulation steps that occur between every total 
 	 * biomass log write
@@ -600,7 +602,7 @@ public class FBAParameters implements PackageParameters
 		if (i > 0)
 			totalBiomassLogRate = i;
 	}
-	
+
 	/**
 	 * @return the number of simulation steps that occur between every .mat file log write
 	 */
@@ -608,7 +610,7 @@ public class FBAParameters implements PackageParameters
 	{
 		return matFileRate; 
 	}
-	
+
 	/**
 	 * Sets the number of steps that occur between every .mat file log write. If 
 	 * <code>i</code> is less than zero, nothing is changed.
@@ -619,61 +621,90 @@ public class FBAParameters implements PackageParameters
 		if (i > 0)
 			matFileRate = i;
 	}
-	
+
 	/**
 	 * @return the default Vmax for the Michaelis-Menten style media uptake
 	 */
-	public double getDefaultVmax() 
+	public static double getDefaultVmax() 
 	{ 
 		return defaultVmax; 
 	}
-	
+
 	/**
 	 * Sets the default Vmax for the Michaelis-Mented style media uptake
 	 * @param d if less than or equal to zero, nothing is changed
 	 */
-	public void setDefaultVmax(double d)
+	public static void setDefaultVmax(double d)
 	{
 		if (d <= 0)
 			return;
-		
 		defaultVmax = d;
-		Model[] models = c.getModels();
-		for (int i=0; i<models.length; i++)
-		{
-			((FBAModel)models[i]).setDefaultVmax(d);
+	}
+
+	/**
+	 * Sets the default Vmax for the Michaelis-Mented style media uptake
+	 * @param d if less than or equal to zero, nothing is changed
+	 * @param applyToModels if true then the default Vmax in models will be overridden
+	 */
+	public void setDefaultVmax(double d, boolean applyToModels)
+	{
+		if (d <= 0)
+			return;
+		defaultVmax = d;
+		if (applyToModels) {
+			Model[] models = c.getModels();
+			for (int i=0; i<models.length; i++)
+			{
+				((FBAModel)models[i]).setDefaultVmax(d);
+			}
 		}
 	}
-	
+
+
 	/**
 	 * @return the default Km for the Michaelis-Menten style media uptake
 	 */
-	public double getDefaultKm() 
+	public static double getDefaultKm() 
 	{ 
 		return defaultKm; 
 	}
+
 
 	/**
 	 * Sets the default Km for the Michaelis-Menten style media uptake
 	 * @param d if less than zero, nothing is changed
 	 */
-	public void setDefaultKm(double d)
+	public static void setDefaultKm(double d)
+	{
+		if (d < 0)
+			return;
+		defaultKm = d;
+	}
+
+	/**
+	 * Sets the default Km for the Michaelis-Menten style media uptake
+	 * @param d if less than zero, nothing is changed
+	 * @param applyToModels if true then the default KM in models will be overridden
+	 */
+	public void setDefaultKm(double d, boolean applyToModels)
 	{
 		if (d < 0)
 			return;
 
 		defaultKm = d;
-		Model[] models = c.getModels();
-		for (int i=0; i<models.length; i++)
-		{
-			((FBAModel)models[i]).setDefaultKm(d);
+		if (applyToModels) {
+			Model[] models = c.getModels();
+			for (int i=0; i<models.length; i++)
+			{
+				((FBAModel)models[i]).setDefaultKm(d);
+			}
 		}
 	}
-	
+
 	/**
 	 * @return the default Hill parameter for the Monod style media uptake
 	 */
-	public double getDefaultHill() 
+	public static double getDefaultHill() 
 	{ 
 		return defaultHill; 
 	}
@@ -682,53 +713,85 @@ public class FBAParameters implements PackageParameters
 	 * Sets the default Hill parameter for the Monod style media uptake
 	 * @param d if less than or equal to zero, nothing is changed
 	 */
-	public void setDefaultHill(double d)
+	public static void setDefaultHill(double d)
 	{
 		if (d <= 0)
 			return;
 		defaultHill = d;
-		Model[] models = c.getModels();
-		for (int i=0; i<models.length; i++)
-		{
-			((FBAModel)models[i]).setDefaultHill(d);
-		}
-
 	}
 
-	public double getDefaultAlpha()
+	/**
+	 * Sets the default Hill parameter for the Monod style media uptake
+	 * @param d if less than or equal to zero, nothing is changed
+	 * @param applyToModels if true then the default coefficient in models will be overridden
+	 */
+	public void setDefaultHill(double d, boolean applyToModels)
+	{
+		if (d <= 0)
+			return;
+		defaultHill = d;
+		if (applyToModels) {
+			Model[] models = c.getModels();
+			for (int i=0; i<models.length; i++)
+			{
+				((FBAModel)models[i]).setDefaultHill(d);
+			}
+		}
+	}
+
+	public static double getDefaultAlpha()
 	{
 		return defaultAlpha;
 	}
-	
-	public void setDefaultAlpha(double d)
+
+	public static void setDefaultAlpha(double d)
 	{
 		if (d <= 0)
 			return;
 		defaultAlpha = d;
-		Model[] models = c.getModels();
-		for (int i=0; i<models.length; i++)
-		{
-			((FBAModel)models[i]).setDefaultAlpha(d);
+	}
+
+
+	public void setDefaultAlpha(double d, boolean applyToModels)
+	{
+		if (d <= 0)
+			return;
+		if (applyToModels) {
+			defaultAlpha = d;
+			Model[] models = c.getModels();
+			for (int i=0; i<models.length; i++)
+			{
+				((FBAModel)models[i]).setDefaultAlpha(d);
+			}
 		}
 	}
-	
-	public double getDefaultW()
+
+	public static double getDefaultW()
 	{
 		return defaultW;
 	}
-	
-	public void setDefaultW(double d)
+
+	public static void setDefaultW(double d)
 	{
 		if (d <= 0)
 			return;
 		defaultW = d;
-		Model[] models = c.getModels();
-		for (int i=0; i<models.length; i++)
-		{
-			((FBAModel)models[i]).setDefaultW(d);
+	}
+
+	public void setDefaultW(double d, boolean applyToModels)
+	{
+		if (d <= 0)
+			return;
+		defaultW = d;
+		if (applyToModels) {
+			Model[] models = c.getModels();
+			for (int i=0; i<models.length; i++)
+			{
+				((FBAModel)models[i]).setDefaultW(d);
+			}
 		}
 	}
-	
+
 	/**
 	 * Returns the current style of media exchange occuring within the model
 	 * @return either <code>STANDARD_EXCHANGE</code>, <code>MM_EXCHANGE</code>, or
@@ -750,12 +813,12 @@ public class FBAParameters implements PackageParameters
 	{ 
 		return biomassMotionStyle;
 	}
-	
+
 	public void setBiomassMotionStyle(BiomassMotionStyle style)
 	{
 		biomassMotionStyle = style;
 	}
-	
+
 	/**
 	 * @return the default growth diffusion rate (e.g., the biomass diffusion that occurs due
 	 * to growth)
@@ -764,7 +827,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		return growthDiffRate; 
 	}
-	
+
 	/**
 	 * Sets the default growth diffusion rate (e.g., the biomass diffusion that occurs due
 	 * to growth)
@@ -784,7 +847,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		return flowDiffRate; 
 	}
-	
+
 	/**
 	 * Sets the default flow diffusion rate (e.g., the biomass diffusion that occurs
 	 * regardless of growth)
@@ -795,7 +858,7 @@ public class FBAParameters implements PackageParameters
 		if (f >= 0)
 			flowDiffRate = f;
 	}
-	
+
 	/**
 	 * @return true if a unique time stamp should be appended to the end of the log file name
 	 */
@@ -803,7 +866,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		return useLogNameTimeStamp; 
 	}
-	
+
 	/**
 	 * Set whether or not a unique time stamp should be appended to the end of each log file name.
 	 * @param b if true, add a time stamp to the end of each log file.
@@ -812,7 +875,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		useLogNameTimeStamp = b; 
 	}
-	
+
 	/**
 	 * @return true if a biomass log will be written
 	 */
@@ -830,7 +893,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		writeBiomassLog = b; 
 	}
-	
+
 	/**
 	 * @return true if a media log will be written.
 	 */
@@ -848,7 +911,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		writeMediaLog = b; 
 	}
-	
+
 	/**
 	 * @return true if a flux log will be written
 	 */
@@ -877,7 +940,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		fluxLogName = name; 
 	}
-	
+
 	/**
 	 * @return the name of the flux log file.
 	 */
@@ -885,7 +948,7 @@ public class FBAParameters implements PackageParameters
 	{
 		return fluxLogName; 
 	}
-	
+
 	/**
 	 * Sets the format of the flux log file. Currently only supports either
 	 * MATLAB_FORMAT or COMETS_FORMAT, others are ignored.
@@ -895,7 +958,7 @@ public class FBAParameters implements PackageParameters
 	{
 		fluxLogFormat = format;
 	}
-	
+
 	/**
 	 * Returns the current flux log file format
 	 * @return either MATLAB_FORMAT or COMETS_FORMAT
@@ -904,7 +967,7 @@ public class FBAParameters implements PackageParameters
 	{
 		return fluxLogFormat; 
 	}
-	
+
 	/** Gets the name of the manifest file
 	 *  without the path prepended.
 	 * 
@@ -913,7 +976,7 @@ public class FBAParameters implements PackageParameters
 	{
 		return nopathManifestFileName;
 	}
-	
+
 	/** Gets the name of the manifest file
 	 * 
 	 */
@@ -921,7 +984,7 @@ public class FBAParameters implements PackageParameters
 	{
 		return manifestFileName;
 	}
-	
+
 	/** Sets the name of the manifest file
 	 * @param fileName
 	 */
@@ -929,7 +992,7 @@ public class FBAParameters implements PackageParameters
 	{
 		manifestFileName = fileName;
 	}
-	
+
 	/**
 	 * Sets the name of the media log file, if one is going to be written.
 	 * <br>
@@ -947,7 +1010,7 @@ public class FBAParameters implements PackageParameters
 	 * @param name the name of the media log file.
 	 */
 	public void setMediaLogName(String name) { mediaLogName = name; }
-	
+
 	/**
 	 * @return the name of the media log file.
 	 */
@@ -955,7 +1018,7 @@ public class FBAParameters implements PackageParameters
 	{
 		return mediaLogName; 
 	}
-	
+
 	/**
 	 * Sets the format of the media log file. Currently only supports either
 	 * MATLAB_FORMAT or COMETS_FORMAT, others are ignored.
@@ -965,7 +1028,7 @@ public class FBAParameters implements PackageParameters
 	{
 		mediaLogFormat = format; 
 	}
-	
+
 	/**
 	 * Returns the current media log file format
 	 * @return either MATLAB_FORMAT or COMETS_FORMAT
@@ -974,7 +1037,7 @@ public class FBAParameters implements PackageParameters
 	{
 		return mediaLogFormat; 
 	}
-	
+
 	/**
 	 * Sets the name of the biomass log file, if one is going to be written.
 	 * <br>
@@ -985,7 +1048,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		biomassLogName = name; 
 	}
-	
+
 	/**
 	 * @return the name of the biomass log file.
 	 */
@@ -1003,7 +1066,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		biomassLogFormat = format; 
 	}
-	
+
 	/**
 	 * Returns the current biomass log file format
 	 * @return either MATLAB_FORMAT or COMETS_FORMAT
@@ -1020,7 +1083,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		return writeTotalBiomassLog; 
 	}
-	
+
 	/**
 	 * Tells COMETS to write a total biomass log or not, tracking the sum total
 	 * biomass at every time point. See the COMETS documentation for format
@@ -1031,7 +1094,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		writeTotalBiomassLog = b; 
 	}
-	
+
 	/**
 	 * @return the current file name for the total biomass log
 	 */
@@ -1039,7 +1102,7 @@ public class FBAParameters implements PackageParameters
 	{
 		return totalBiomassLogName; 
 	}
-	
+
 	/**
 	 * Sets the name of the total biomass log file, if one is going to be written.
 	 * If there is no string (or an empty string), nothing is changed.
@@ -1052,7 +1115,7 @@ public class FBAParameters implements PackageParameters
 		if (s.length() > 0)
 			totalBiomassLogName = s;
 	}
-	
+
 
 	/**
 	 * @return true if a .mat file log will be written
@@ -1061,7 +1124,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		return writeMatFile; 
 	}
-	
+
 	/**
 	 * Tells COMETS to write a .mat file log or not. 
 	 * See the COMETS documentation for format
@@ -1072,7 +1135,7 @@ public class FBAParameters implements PackageParameters
 	{ 
 		writeMatFile = b; 
 	}
-	
+
 	/**
 	 * @return the current file name for the .mat file log
 	 */
@@ -1080,7 +1143,7 @@ public class FBAParameters implements PackageParameters
 	{
 		return matFileName; 
 	}
-	
+
 	/**
 	 * Sets the name of the .mat log file, if one is going to be written.
 	 * If there is no string (or an empty string), nothing is changed.
@@ -1093,8 +1156,8 @@ public class FBAParameters implements PackageParameters
 		if (s.length() > 0)
 			matFileName = s;
 	}
-	
-	
+
+
 	/**
 	 * @return the number of FBA run threads to be used in simulation
 	 */
@@ -1102,8 +1165,8 @@ public class FBAParameters implements PackageParameters
 	{
 		return numRunThreads; 
 	}
-	
-	
+
+
 	/**
 	 * Sets the number of FBA run threads. When greater than 1, each thread will act
 	 * as a worker during the simulation, calculating FBA solutions on any incomplete 
@@ -1119,17 +1182,17 @@ public class FBAParameters implements PackageParameters
 			n = 1;
 		numRunThreads = n;
 	}
-	
+
 	/**
 	 * Returns the seed of the random number generator.
 	 * @return
 	 */
-	
+
 	public long getRandomSeed()
 	{
 		return randomSeed;
 	}
-	
+
 	/** 
 	 * Sets the seed
 	 * @param seed
@@ -1138,7 +1201,7 @@ public class FBAParameters implements PackageParameters
 	{
 		randomSeed=seed;
 	}
-	
+
 	/** Should the models in a cell be run in a random order?
 	 * @return the randomOrder
 	 */
@@ -1152,7 +1215,7 @@ public class FBAParameters implements PackageParameters
 	public void setRandomOrder(boolean randomOrder) {
 		this.randomOrder = randomOrder;
 	}
-	
+
 	public String getLastDirectory()
 	{
 		return c.getParameters().getLastDirectory();
@@ -1162,7 +1225,7 @@ public class FBAParameters implements PackageParameters
 	{
 		c.getParameters().setLastDirectory(path);
 	}
-	
+
 	/** Lowest concentration allowed by calculations performed by a 
 	 * ReactionModel before it gets rounded down to 0
 	 * 
@@ -1172,15 +1235,15 @@ public class FBAParameters implements PackageParameters
 		return minConcentration;
 	}
 
-	public void setMinConcentration(double minConcentration) {
-		this.minConcentration = minConcentration;
+	public void setMinConcentration(double min) {
+		minConcentration = min;
 	}
 
 	public Map<String, ParametersPanel> getParametersPanels()
 	{
 		return parametersPanels;
 	}
-	
+
 	public void dumpToFile(PrintWriter writer)
 	{
 		for (String name : paramValues.keySet())
@@ -1200,5 +1263,23 @@ public class FBAParameters implements PackageParameters
 	{
 		return paramTypes.get(param.toLowerCase());
 	}
+	
+	/**
+	 * Should models' default KM, Vmax, and Hill Coeff be 
+	 * overwritten by the parameters panel?
+	 * @param b
+	 */
+	public void monodOverride(boolean b) { monodOverride = b; }
+	
+	public boolean getMonodOverride() { return monodOverride; }
+	
+	/**
+	 * Should models' default Alpha and W coeffs be
+	 * overwritten by the parameters panel?
+	 * @param b
+	 */
+	public void pseudoOverride(boolean b) { pseudoOverride = b; }
+	
+	public boolean getPseudoOverride() { return pseudoOverride; }
 
 }

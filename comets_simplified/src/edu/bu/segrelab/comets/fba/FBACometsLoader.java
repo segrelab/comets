@@ -2829,13 +2829,6 @@ CometsConstants
 			model.setFlowDiffusionConstant(pParams.getFlowDiffRate());
 			model.setGrowthDiffusionConstant(pParams.getGrowthDiffRate());
 			
-			//do these params ever get used?
-			model.setDefaultHill(pParams.getDefaultHill());
-            model.setDefaultKm(pParams.getDefaultKm());
-            model.setDefaultVmax(pParams.getDefaultVmax());
-            model.setDefaultAlpha(pParams.getDefaultAlpha());
-            model.setDefaultW(pParams.getDefaultW());
-			
 			System.out.println("Done!\n Testing default parameters...");
 			int result = model.run();
 			System.out.print("Done!\nOptimizer status code = " + result + " ");

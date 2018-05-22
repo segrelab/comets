@@ -720,21 +720,21 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		switch (pParams.getExchangeStyle())
 		{
 			case MONOD :
-				double[] kmArr = model.getExchangeKm();
-				double[] vMaxArr = model.getExchangeVmax();
-				double[] hillCoeffArr = model.getExchangeHillCoefficients();
+				double[] kmArr = model.getExchangeKmWithDefaults();
+				double[] vMaxArr = model.getExchangeVmaxWithDefaults();
+				double[] hillCoeffArr = model.getExchangeHillCoefficientsWithDefaults();
 
 //				double[] vTilde = new double[hillCoeffArr.length];
 
 				for (int j=0; j<lb.length; j++)
 				{
-					double km = pParams.getDefaultKm();
+					double km = FBAParameters.getDefaultKm();
 					if (kmArr != null && kmArr.length > j && kmArr[j] > 0)
 						km = kmArr[j];
-					double vMax = pParams.getDefaultVmax();
+					double vMax = FBAParameters.getDefaultVmax();
 					if (vMaxArr != null && vMaxArr.length > j && vMaxArr[j] > 0)
 						vMax = vMaxArr[j];
-					double hill = pParams.getDefaultHill();
+					double hill = FBAParameters.getDefaultHill();
 					if (hillCoeffArr != null && hillCoeffArr.length > j && hillCoeffArr[j] > 0)
 						hill = hillCoeffArr[j];
 
@@ -771,8 +771,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				
 				
 			case PSEUDO_MONOD :
-				double[] alphaArr = model.getExchangeAlphaCoefficients();
-				double[] wArr = model.getExchangeWCoefficients();
+				double[] alphaArr = model.getExchangeAlphaCoefficientsWithDefaults();
+				double[] wArr = model.getExchangeWCoefficientsWithDefaults();
 				
 				for (int j=0; j<lb.length; j++)
 				{
