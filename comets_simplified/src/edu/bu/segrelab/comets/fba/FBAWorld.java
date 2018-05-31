@@ -2940,12 +2940,11 @@ public class FBAWorld extends World2D
 					break;
 					
 				default:
-					/* print all fluxes from each cell.
+					/* print all fluxes from each cell
 					 * format:
 					 * timepoint\n
-					 * x y fluxes_species_0 fluxes_species_1 ... fluxes_species_n\n
-					 * x y fluxes_species_0 fluxes_species_1 ... fluxes_species_n\n
-					 * ...
+					 * x y speciesNum1 flux1 flux2 ... fluxn\n
+					 * x y speciesNum2 flux1 flux2 ... fluxn\n
 					 */
 					fluxLogWriter.println(currentTimePoint);
 					it = c.getCells().iterator();
@@ -2958,15 +2957,15 @@ public class FBAWorld extends World2D
 							continue;
 						else
 						{
-							fluxLogWriter.print(cell.getX() + " " + cell.getY());
-							for (int i=0; i<fluxes.length; i++)
+							for (int i=0; i<fluxes.length; i++) //fluxes[i][j] denotes flux j in species i
 							{
+								fluxLogWriter.print((cell.getX() +1) + " " + (cell.getY() + 1) + " " + (i + 1));
 								for (int j=0; j<fluxes[i].length; j++)
 								{
 									fluxLogWriter.print(" " + nf.format(fluxes[i][j]));
 								}
+								fluxLogWriter.print("\n");
 							}
-							fluxLogWriter.print("\n");
 						}
 					}
 					break;
