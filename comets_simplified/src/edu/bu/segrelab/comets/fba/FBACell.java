@@ -822,7 +822,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	
 	private double calcMichaelisMentenRate(double mediaConc, double km, double vMax, double hill)
 	{
-		System.out.println(mediaConc+" " +vMax+"  "+km );
+		
 		return mediaConc * vMax / (km + mediaConc);
 	}
 	
@@ -862,22 +862,22 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			{   
 				double poissLambda=2.0*biomass[i]/(cParams.getTimeStep()*
 						fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
-				System.out.println("Start");
+				//System.out.println("Start");
 				if(poissLambda>0)
 				{
-					System.out.println("Step0  "+ poissLambda);
+					//System.out.println("Step0  "+ poissLambda);
 					//poissonDist=new PoissonDistribution(poissLambda);
 					poissonDist=new Poisson(poissLambda);
 					//int gammaAlpha=poissonDist.sample();
 					double gammaAlpha=poissonDist.random();
-					System.out.println("Step1  "+ gammaAlpha);
+					//System.out.println("Step1  "+ gammaAlpha);
 					if(gammaAlpha>0)
 					{
 						//gammaDist=new GammaDistribution(gammaAlpha,1.0);
 						gammaDist=new Gamma(gammaAlpha,1.0);
 						//double gammaSample=gammaDist.sample();
 						double gammaSample=gammaDist.random();
-						System.out.println("Step2  "+ gammaSample);
+						//System.out.println("Step2  "+ gammaSample);
 						biomass[i]=0.5*gammaSample*(cParams.getTimeStep()*
 								fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
 					}
@@ -890,7 +890,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				{
 					biomass[i]=0.0;
 				}
-				System.out.println("End");
+				//System.out.println("End");
 			}
 			
 			
