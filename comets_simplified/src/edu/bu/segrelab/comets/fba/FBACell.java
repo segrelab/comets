@@ -11,6 +11,7 @@ import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Utility;
 
 import org.apache.commons.math3.distribution.*;
+import jdistlib.*;
 
 /**
  * FBACell
@@ -44,9 +45,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private FBAParameters pParams;
 	
 	//Distributions for neutral drift of the biomass.   
-	private PoissonDistribution poissonDist;
-	private GammaDistribution gammaDist;
-	
+//	private PoissonDistribution poissonDist;
+	private Poisson poissonDist;
+//	private GammaDistribution gammaDist;
+	private Gamma gammaDist;
 	/**
 	 * Creates a new <code>FBACell</code> with randomized biomass from 0->1 g for each species.
 	 * @param x the new cell's column
@@ -762,6 +764,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						//If lb is negative, take absolute minimum of lb or monod:
 						else
 						{
+							//System.out.println(media[j]+" "+cParams.getSpaceVolume()+" "+km+" "+vMax);
 							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
 						}
 					}
@@ -819,6 +822,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	
 	private double calcMichaelisMentenRate(double mediaConc, double km, double vMax, double hill)
 	{
+		System.out.println(mediaConc+" " +vMax+"  "+km );
 		return mediaConc * vMax / (km + mediaConc);
 	}
 	
@@ -858,16 +862,22 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			{   
 				double poissLambda=2.0*biomass[i]/(cParams.getTimeStep()*
 						fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
-				
+				System.out.println("Start");
 				if(poissLambda>0)
 				{
-					poissonDist=new PoissonDistribution(poissLambda);
-					int gammaAlpha=poissonDist.sample();
-					
+					System.out.println("Step0  "+ poissLambda);
+					//poissonDist=new PoissonDistribution(poissLambda);
+					poissonDist=new Poisson(poissLambda);
+					//int gammaAlpha=poissonDist.sample();
+					double gammaAlpha=poissonDist.random();
+					System.out.println("Step1  "+ gammaAlpha);
 					if(gammaAlpha>0)
 					{
-						gammaDist=new GammaDistribution(gammaAlpha,1.0);
-						double gammaSample=gammaDist.sample();
+						//gammaDist=new GammaDistribution(gammaAlpha,1.0);
+						gammaDist=new Gamma(gammaAlpha,1.0);
+						//double gammaSample=gammaDist.sample();
+						double gammaSample=gammaDist.random();
+						System.out.println("Step2  "+ gammaSample);
 						biomass[i]=0.5*gammaSample*(cParams.getTimeStep()*
 								fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
 					}
@@ -880,6 +890,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				{
 					biomass[i]=0.0;
 				}
+				System.out.println("End");
 			}
 			
 			
