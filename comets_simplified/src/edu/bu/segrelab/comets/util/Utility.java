@@ -1091,11 +1091,11 @@ public class Utility implements CometsConstants
 	 * @return
 	 */
 	
-	public static double[][] advection2D(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double frictionConstant,double packedDensity)
+	public static double[][][] velocity2D(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double frictionConstant,double packedDensity)
 	{
 		int numCols=biomassDensity.length;
 		int numRows=biomassDensity[0].length;
-		double[][] advection=new double[numCols][numRows];
+		double[][][] velocity=new double[numCols][numRows][2];
 		double[][] pressure=pressure2D(totalBiomassDensity, elasticModulusConst/frictionConstant, packedDensity, dX);
 		
 		for(int i=0;i<numCols;i++)
@@ -1115,56 +1115,90 @@ public class Utility implements CometsConstants
 		{
 			for(int j=0;j<numRows;j++)
 			{
-				advection[i][j]=0.0;
+				velocity[i][j][0]=0.0;
+				velocity[i][j][1]=0.0;
 				//Do x direction first
 				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
 				{
-					advection[i][j]+=0.0;
+					velocity[i][j][0]=0.0;
 				}
 				else if(i==0 || barrier[i-1][j])
 				{
-					advection[i][j]+=(pressure[i+1][j]-pressure[i][j])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i+1][j]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
 				}
 				else if(i==(numCols-1) || barrier[i+1][j])
 				{
-					advection[i][j]+=(pressure[i-1][j]-pressure[i][j])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i-1][j]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
 				}
 				else
 				{
-					advection[i][j]+=(pressure[i+1][j]-2.0*pressure[i][j]+pressure[i-1][j])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i+1][j]-pressure[i-1][j])/(2.0*dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
 				}
 				
 				//Then do y direction
 				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) ||(j!=0 && j!=(numCols-1) && barrier[i][j-1] && barrier[i][j+1]))
 				{
-					advection[i][j]+=0.0;
+					velocity[i][j][1]=0.0;
 				}
 				else if(j==0 || barrier[i][j-1])
 				{
-					advection[i][j]+=(pressure[i][j+1]-pressure[i][j])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j+1]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
 				}
 				else if(j==(numRows-1) || barrier[i][j+1])
 				{
-					advection[i][j]+=(pressure[i][j-1]-pressure[i][j])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j-1]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
 				}
 				else
 				{
-					advection[i][j]+=(pressure[i][j+1]-2.0*pressure[i][j]+pressure[i][j-1])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j+1]-pressure[i][j-1])/(2.0*dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
 				}
-				
-				/*
-				if(totalBiomassDensity[i][j]==0.0)
-				{
-					advection[i][j]=0.0;
-				}
-				else
-				{
-					advection[i][j]=advection[i][j]*(biomassDensity[i][j]/totalBiomassDensity[i][j]);
-				}
-				*/
+				velocity[i][j][0]=-1.0*velocity[i][j][0];
+				velocity[i][j][1]=-1.0*velocity[i][j][1];
 			}
 		}
-		return advection;
+		return velocity;
 	}
 	/**
 	 * Approximates the advective term in the 2D convection model of growth. It calculates the 
@@ -1859,36 +1893,7 @@ public class Utility implements CometsConstants
 		}
 		return diffusion;
 	}
-	
 
-	/**
-	 * Calculates the pressure according to the Farrel et. al. model: PRL 111, 168101(2013).
-	 * @param biomass
-	 * @return
-	 */
-	public static double[][] pressure2D(double[][] biomass,double elasticModulusConst,double packDensity,double dX)
-	{
-		double[][] pressure=new double[biomass.length][biomass[0].length];
-		for(int i=0;i<biomass.length;i++)
-		{
-			for(int j=0;j<biomass[0].length;j++)
-			{
-				//pressure[i][j]=elasticModulusConst*biomass[i][j];
-				
-				if(biomass[i][j]>packDensity*dX*dX)
-				{
-					pressure[i][j]=elasticModulusConst*Math.pow(1.0-packDensity*dX*dX/biomass[i][j],1.5);
-				}
-				else
-				{
-					pressure[i][j]=0.0;
-				}
-				
-				//System.out.println("pressure"+"    "+i+","+j+"   "+pressure[i][j]);
-			}
-		}		
-		return pressure;
-	}
 	
 	/**
 	 * Calculates the pressure according to the Farrel et. al. model: PRL 111, 168101(2013).
@@ -3010,6 +3015,247 @@ public class Utility implements CometsConstants
 		System.out.println("x: " + total);
 		System.out.println("diff: " + totalDiff);
 		
+	}
+
+	/**
+	 * Calculates the pressure according to the Farrel et. al. model: PRL 111, 168101(2013).
+	 * @param biomass
+	 * @return
+	 */
+	public static double[][] pressure2D(double[][] biomass,double elasticModulusConst,double packDensity,double dX)
+	{
+		double[][] pressure=new double[biomass.length][biomass[0].length];
+		for(int i=0;i<biomass.length;i++)
+		{
+			for(int j=0;j<biomass[0].length;j++)
+			{
+				//pressure[i][j]=elasticModulusConst*biomass[i][j];
+				
+				if(biomass[i][j]>packDensity*dX*dX)
+				{
+					pressure[i][j]=elasticModulusConst*Math.pow(1.0-packDensity*dX*dX/biomass[i][j],1.5);
+				}
+				else
+				{
+					pressure[i][j]=0.0;
+				}
+				
+				//System.out.println("pressure"+"    "+i+","+j+"   "+pressure[i][j]);
+			}
+		}		
+		return pressure;
+	}
+
+	/**
+	 * Approximates the advective term in the 2D convection model of growth. It calculates the 
+	 * finite differences approximation of the Laplacian of the 2D pressure field. The boundary conditions are 
+	 * Neumann.
+	 * @param biomassDensity
+	 * @param barrier
+	 * @param dX
+	 * @param elasticModulusConst
+	 * @param frictionConstant
+	 * @param packedDensity
+	 * @return
+	 */
+	
+	public static double[][] advection2D(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double frictionConstant,double packedDensity)
+	{
+		int numCols=biomassDensity.length;
+		int numRows=biomassDensity[0].length;
+		double[][] advection=new double[numCols][numRows];
+		double[][] pressure=pressure2D(totalBiomassDensity, elasticModulusConst/frictionConstant, packedDensity, dX);
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				if(totalBiomassDensity[i][j]>0.0)
+				{
+				pressure[i][j]=pressure[i][j]*(biomassDensity[i][j]/totalBiomassDensity[i][j]);
+				}
+				
+			}
+		}
+	
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				advection[i][j]=0.0;
+				//Do x direction first
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+					advection[i][j]+=0.0;
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					advection[i][j]+=(pressure[i+1][j]-pressure[i][j])/(dX*dX);
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					advection[i][j]+=(pressure[i-1][j]-pressure[i][j])/(dX*dX);
+				}
+				else
+				{
+					advection[i][j]+=(pressure[i+1][j]-2.0*pressure[i][j]+pressure[i-1][j])/(dX*dX);
+				}
+				
+				//Then do y direction
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) ||(j!=0 && j!=(numCols-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					advection[i][j]+=0.0;
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					advection[i][j]+=(pressure[i][j+1]-pressure[i][j])/(dX*dX);
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					advection[i][j]+=(pressure[i][j-1]-pressure[i][j])/(dX*dX);
+				}
+				else
+				{
+					advection[i][j]+=(pressure[i][j+1]-2.0*pressure[i][j]+pressure[i][j-1])/(dX*dX);
+				}
+				
+				/*
+				if(totalBiomassDensity[i][j]==0.0)
+				{
+					advection[i][j]=0.0;
+				}
+				else
+				{
+					advection[i][j]=advection[i][j]*(biomassDensity[i][j]/totalBiomassDensity[i][j]);
+				}
+				*/
+			}
+		}
+		return advection;
+	}
+
+	/**
+	 * Approximates the advective term in the 2D convection model of growth. It calculates the 
+	 * finite differences approximation of the Laplacian of the 2D pressure field. The boundary conditions are 
+	 * Neumann. This one is if the friction is in a spatial field context. 
+	 * @param biomassDensity
+	 * @param barrier
+	 * @param dX
+	 * @param elasticModulusConst
+	 * @param frictionConstant
+	 * @param packedDensity
+	 * @return
+	 */
+	
+	public static double[][][] velocity2D(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double[][] frictionConstant,double packedDensity)
+	{
+		int numCols=biomassDensity.length;
+		int numRows=biomassDensity[0].length;
+		double[][][] velocity=new double[numCols][numRows][2];
+		double[][] pressure=pressure2D(totalBiomassDensity, elasticModulusConst, packedDensity, dX);
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				if(totalBiomassDensity[i][j]>0.0)
+				{
+				pressure[i][j]=pressure[i][j]*(biomassDensity[i][j]/(frictionConstant[i][j]*totalBiomassDensity[i][j]));
+				}
+				
+			}
+		}
+	
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				velocity[i][j][0]=0.0;
+				velocity[i][j][1]=0.0;
+				//Do x direction first
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+					velocity[i][j][0]=0.0;
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i+1][j]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i-1][j]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
+				}
+				else
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i+1][j]-pressure[i-1][j])/(2.0*dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
+				}
+				
+				//Then do y direction
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) ||(j!=0 && j!=(numCols-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					velocity[i][j][1]=0.0;
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j+1]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j-1]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
+				}
+				else
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j+1]-pressure[i][j-1])/(2.0*dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
+				}
+				velocity[i][j][0]=-1.0*velocity[i][j][0];
+				velocity[i][j][1]=-1.0*velocity[i][j][1];
+			}
+		}
+		return velocity;
 	}
 	
 }

@@ -94,6 +94,7 @@ public class FBAWorld extends World2D
 	private PrintWriter mediaLogWriter,	
 						fluxLogWriter,
 						biomassLogWriter,
+						velocityLogWriter,
 						totalBiomassLogWriter;
 	
 	private MatFileIncrementalWriter matFileWriter;
@@ -394,6 +395,33 @@ public class FBAWorld extends World2D
 			}
 		}
 		
+		// Init velocity log and write the first line
+				if (pParams.writeVelocityLog())
+				{
+					String name = adjustLogFileName(pParams.getVelocityLogName(), timeStamp);
+					try
+					{
+						velocityLogWriter = new PrintWriter(new FileWriter(new File(name)));
+						writeVelocityLog();
+						//Write the file name in the manifest file.
+						try
+						{
+							FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+							manifestWriter.write("VelocityFileName: "+name+System.getProperty("line.separator"));
+							manifestWriter.close();
+						}
+						catch (IOException e)
+						{
+							System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+						}		
+					}
+					catch (IOException e)
+					{
+						System.out.println("Unable to initialize velocity log file '" + name + "'\nContinuing without saving log.");
+						velocityLogWriter = null;
+					}
+				}
+		
 		// Init the total biomass log and write the first line
 		if (pParams.writeTotalBiomassLog())
 		{
@@ -659,6 +687,11 @@ public class FBAWorld extends World2D
 		{
 			biomassLogWriter.flush();
 			biomassLogWriter.close();
+		}
+		if (velocityLogWriter != null)
+		{
+			velocityLogWriter.flush();
+			velocityLogWriter.close();
 		}
 	}
 	
@@ -3090,6 +3123,8 @@ public class FBAWorld extends World2D
 			writeMediaLog();
 		if (pParams.writeBiomassLog() && currentTimePoint % pParams.getBiomassLogRate() == 0)
 			writeBiomassLog();
+		if (pParams.writeVelocityLog() && currentTimePoint % pParams.getVelocityLogRate() == 0)
+			writeVelocityLog();
 		if (pParams.writeTotalBiomassLog() && currentTimePoint % pParams.getTotalBiomassLogRate() == 0)
 			writeTotalBiomassLog();
 		if (pParams.writeMatFile() && currentTimePoint % pParams.getMatFileRate() == 0)
@@ -3368,6 +3403,123 @@ public class FBAWorld extends World2D
 		}
 	}
 
+	/**
+	 * Writes to the currently initialized velocity log, if it is the right time. See documentation
+	 * for the formats.
+	 */
+	private void writeVelocityLog()
+	{
+		if (velocityLogWriter != null && (currentTimePoint == 1 || currentTimePoint % pParams.getVelocityLogRate() == 0)) // log writer is initialized
+		{			
+			double velocities[][][][]=new double[numModels][numCols][numRows][2];
+			double[][][] biomassDensity = new double[numModels][numCols][numRows];
+			double[][] totalBiomassDensity = new double[numCols][numRows];
+			double[][][] frictionField = new double[numModels][numCols][numRows];
+			//NumberFormat nf = NumberFormat.getInstance();
+			//nf.setGroupingUsed(false);
+			//nf.setMaximumFractionDigits(4);
+			NumberFormat nf = new DecimalFormat("0.##########E0");
+			Iterator<Cell> it = c.getCells().iterator();
+			double dX = cParams.getSpaceWidth();
+			
+			while (it.hasNext())
+			{
+				FBACell cell = (FBACell)it.next();
+				double[] biomass = cell.getBiomass();  // total biomass
+				
+				int x = cell.getX();
+				int y = cell.getY();
+				totalBiomassDensity[x][y]=0.0;
+				for (int k=0; k<numModels; k++)
+				{
+					biomassDensity[k][x][y]=biomass[k];// - deltaBiomass[k];
+					totalBiomassDensity[x][y]+=biomassDensity[k][x][y];
+				}
+			}
+			
+			for (int k=0; k<numModels; k++)
+			{
+				for (int i=0; i<numCols; i++)
+				{
+					for (int j=0; j<numRows; j++)
+					{
+						if(frictionContext){
+							frictionField[k][i][j] = substrates[substrateLayout[i][j]-1].getBiomassDiff(k);
+						}
+					}
+				}
+				if (frictionContext)
+				{
+					velocities[k]= Utility.velocity2D(totalBiomassDensity, biomassDensity[k],barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(), frictionField[k],((FBAModel)models[k]).getPackedDensity());
+				}
+				else
+				{
+					velocities[k]= Utility.velocity2D(totalBiomassDensity, biomassDensity[k],barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(), ((FBAModel)models[k]).getFrictionConstant(),((FBAModel)models[k]).getPackedDensity());
+				System.out.println("OK here"+velocities[k][1][1][1]);
+				}
+			}			
+
+			switch(pParams.getVelocityLogFormat())
+			{
+				case MATLAB:
+					/*
+					 * Matlab .m file format:
+					 * velocities{time}{x}{y}{species} = [array]
+					 * so it'll be one bigass structure.
+					 */
+					
+					for (int k=0; k<numModels; k++)
+					{
+						for (int i=0; i<numCols; i++)
+						{
+							for (int j=0; j<numRows; j++)
+							{
+								if (velocities[k] != null && totalBiomassDensity[i][j] != 0.0)
+								{
+									velocityLogWriter.write("velocities{" + (currentTimePoint) + "}{" + (k+1) + "}{" + (i+1) + "}{" + (j+1) + "} = [");
+									for (int l=0; l<2; l++)
+									{
+										velocityLogWriter.write(nf.format(velocities[k][i][j][l]) + " ");
+									}
+									velocityLogWriter.write("];\n");
+								}
+							}
+						}
+					}		
+					break;
+					
+				default:
+					/* print all velocities from each cell
+					 * format:
+					 * timepoint\n
+					 * x y speciesNum1 flux1 flux2 ... fluxn\n
+					 * x y speciesNum2 flux1 flux2 ... fluxn\n
+					 */
+					velocityLogWriter.println(currentTimePoint);
+					for (int k=0; k<numModels; k++)
+					{
+						for (int i=0; i<numCols; i++)
+						{
+							for (int j=0; j<numRows; j++)
+							{
+								if (velocities[k] != null && totalBiomassDensity[i][j] != 0.0)
+								{
+									velocityLogWriter.print((i +1) + " " + (j + 1) + " " + (k + 1));
+									for (int l=0; l<2; l++)
+									{
+										velocityLogWriter.print(" " + nf.format(velocities[k][i][j][l]));
+									}
+									velocityLogWriter.print("\n");
+								}
+							}
+						}
+					}
+					break;
+			}
+			velocityLogWriter.flush();
+		}
+	}
+	
 	/**
 	 * Writes to the total biomass log if it's at the correct time point. See documentation
 	 * for formats.

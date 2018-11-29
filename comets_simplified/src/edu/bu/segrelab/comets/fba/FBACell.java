@@ -1,5 +1,9 @@
 package edu.bu.segrelab.comets.fba;
 
+
+
+import java.io.*;
+
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsParameters;
@@ -49,6 +53,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private Poisson poissonDist;
 //	private GammaDistribution gammaDist;
 	private Gamma gammaDist;
+	
+	private PrintWriter PoissWriter;
 	/**
 	 * Creates a new <code>FBACell</code> with randomized biomass from 0->1 g for each species.
 	 * @param x the new cell's column
@@ -848,7 +854,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	{
 		this.deltaBiomass = deltaBiomass;
 		this.fluxes = fluxes;
-		
 		// apply biomass death rate, regardless of whether growth is feasible.
 		int numDead = 0;
 		for (int i=0; i<biomass.length; i++)
@@ -862,7 +867,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			{   
 				double poissLambda=2.0*biomass[i]/(cParams.getTimeStep()*
 						fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
-				//System.out.println("Start");
+				//System.out.println(poissLambda);
+				//poissLambda=30000;
 				if(poissLambda>0)
 				{
 					//System.out.println("Step0  "+ poissLambda);
@@ -870,7 +876,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					poissonDist=new Poisson(poissLambda);
 					//int gammaAlpha=poissonDist.sample();
 					double gammaAlpha=poissonDist.random();
-					//System.out.println("Step1  "+ gammaAlpha);
+					//gammaAlpha=30000;
 					if(gammaAlpha>0)
 					{
 						//gammaDist=new GammaDistribution(gammaAlpha,1.0);
@@ -880,6 +886,18 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						//System.out.println("Step2  "+ gammaSample);
 						biomass[i]=0.5*gammaSample*(cParams.getTimeStep()*
 								fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
+						//String filename="Gamma.txt";
+						//try {
+						//	PoissWriter= new PrintWriter(new FileWriter(new File(filename),true));
+						//} catch (IOException e) {
+							// TODO Auto-generated catch block
+						//	e.printStackTrace();
+						//}
+						//PoissWriter.print(gammaSample);
+						//PoissWriter.println();
+						//PoissWriter.flush();
+						//PoissWriter.close();
+						//System.out.println("Step1  "+ gammaAlpha);
 					}
 					else if(gammaAlpha==0)
 					{

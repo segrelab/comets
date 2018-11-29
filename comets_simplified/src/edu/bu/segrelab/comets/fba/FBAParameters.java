@@ -139,6 +139,7 @@ public class FBAParameters implements PackageParameters
 	private boolean writeFluxLog,
 	writeMediaLog,
 	writeBiomassLog,
+	writeVelocityLog,
 	writeTotalBiomassLog,
 	writeMatFile,
 	useLogNameTimeStamp,
@@ -149,6 +150,7 @@ public class FBAParameters implements PackageParameters
 	private String fluxLogName,
 	mediaLogName,
 	biomassLogName,
+	velocityLogName,
 	totalBiomassLogName,
 	matFileName;
 
@@ -160,6 +162,7 @@ public class FBAParameters implements PackageParameters
 			fluxLogRate = 1,
 			mediaLogRate = 1,
 			biomassLogRate = 1,
+			velocityLogRate = 1,
 			totalBiomassLogRate = 1,
 			numExRxnSubsteps = 12, //12 chosen as default so if timestep is 1h, minimum substep is < 1sec
 			matFileRate = 1;
@@ -172,7 +175,8 @@ public class FBAParameters implements PackageParameters
 
 	private LogFormat biomassLogFormat = LogFormat.MATLAB,
 			mediaLogFormat = LogFormat.MATLAB,
-			fluxLogFormat = LogFormat.MATLAB;
+			fluxLogFormat = LogFormat.MATLAB,
+			velocityLogFormat = LogFormat.MATLAB;
 
 	private static double growthDiffRate = 1e-7,
 			flowDiffRate = 1e-7,
@@ -204,6 +208,7 @@ public class FBAParameters implements PackageParameters
 		writeFluxLog = false;
 		writeMediaLog = false;
 		writeBiomassLog = false;
+		writeVelocityLog = false;
 		writeTotalBiomassLog = false;
 		writeMatFile = false;
 		useLogNameTimeStamp = true;
@@ -211,6 +216,7 @@ public class FBAParameters implements PackageParameters
 		fluxLogName = "flux_log.txt";
 		mediaLogName = "media_log.txt";
 		biomassLogName = "biomass_log.txt";
+		velocityLogName = "velocity_log.txt";
 		matFileName = "comets_log.mat";
 		totalBiomassLogName = "total_biomass_log.txt";
 
@@ -241,6 +247,9 @@ public class FBAParameters implements PackageParameters
 		paramValues.put("writebiomasslog", new Boolean(writeBiomassLog));
 		paramTypes.put("writebiomasslog", ParameterType.BOOLEAN);
 
+		paramValues.put("writevelocitylog", new Boolean(writeVelocityLog));
+		paramTypes.put("writevelocitylog", ParameterType.BOOLEAN);
+		
 		paramValues.put("writetotalbiomasslog", new Boolean(writeTotalBiomassLog));
 		paramTypes.put("writetotalbiomasslog", ParameterType.BOOLEAN);
 
@@ -259,6 +268,9 @@ public class FBAParameters implements PackageParameters
 		paramValues.put("biomasslogname", biomassLogName);
 		paramTypes.put("biomasslogname", ParameterType.STRING);
 
+		paramValues.put("velocitylogname", velocityLogName);
+		paramTypes.put("velocitylogname", ParameterType.STRING);
+		
 		paramValues.put("totalbiomasslogname", totalBiomassLogName);
 		paramTypes.put("totalbiomasslogname", ParameterType.STRING);
 
@@ -273,6 +285,9 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("biomasslogformat", biomassLogFormat);
 		paramTypes.put("biomasslogformat", ParameterType.STRING);
+		
+		paramValues.put("velocitylogformat", velocityLogFormat);
+		paramTypes.put("velocitylogformat", ParameterType.STRING);
 
 		paramValues.put("numrunthreads", new Integer(numRunThreads));
 		paramTypes.put("numrunthreads", ParameterType.INT);
@@ -312,6 +327,9 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("biomasslograte", new Integer(biomassLogRate));
 		paramTypes.put("biomasslograte", ParameterType.INT);
+		
+		paramValues.put("velocitylograte", new Integer(velocityLogRate));
+		paramTypes.put("velocitylograte", ParameterType.INT);
 
 		paramValues.put("totalbiomasslograte", new Integer(totalBiomassLogRate));
 		paramTypes.put("totalbiomasslograte", ParameterType.INT);
@@ -340,12 +358,14 @@ public class FBAParameters implements PackageParameters
 		writeFluxLog(((Boolean)paramValues.get("writefluxlog")).booleanValue());
 		writeMediaLog(((Boolean)paramValues.get("writemedialog")).booleanValue());
 		writeBiomassLog(((Boolean)paramValues.get("writebiomasslog")).booleanValue());
+		writeVelocityLog(((Boolean)paramValues.get("writevelocitylog")).booleanValue());
 		writeTotalBiomassLog(((Boolean)paramValues.get("writetotalbiomasslog")).booleanValue());
 		writeMatFile(((Boolean)paramValues.get("writematfile")).booleanValue());
 		useLogNameTimeStamp(((Boolean)paramValues.get("uselognametimestamp")).booleanValue());
 		setFluxLogName((String)paramValues.get("fluxlogname"));
 		setMediaLogName((String)paramValues.get("medialogname"));
 		setBiomassLogName((String)paramValues.get("biomasslogname"));
+		setVelocityLogName((String)paramValues.get("velocitylogname"));
 		setTotalBiomassLogName((String)paramValues.get("totalbiomasslogname"));
 		setMatFileName((String)paramValues.get("matfilename"));
 		setRandomOrder(((Boolean)paramValues.get("randomorder")).booleanValue());
@@ -368,7 +388,12 @@ public class FBAParameters implements PackageParameters
 			setBiomassLogFormat(LogFormat.findByName((String)paramValues.get("biomasslogformat")));
 		else
 			setBiomassLogFormat((LogFormat)paramValues.get("biomasslogformat"));
-
+		
+		if(paramValues.get("velocitylogformat") instanceof String)
+			setVelocityLogFormat(LogFormat.findByName((String)paramValues.get("velocitylogformat")));
+		else
+			setVelocityLogFormat((LogFormat)paramValues.get("velocitylogformat"));
+		
 		setNumRunThreads(((Integer)paramValues.get("numrunthreads")).intValue());
 		setGrowthDiffRate(((Double)paramValues.get("growthdiffrate")).doubleValue());
 		setFlowDiffRate(((Double)paramValues.get("flowdiffrate")).doubleValue());
@@ -394,6 +419,7 @@ public class FBAParameters implements PackageParameters
 		setFluxLogRate(((Integer)paramValues.get("fluxlograte")).intValue());
 		setMediaLogRate(((Integer)paramValues.get("medialograte")).intValue());
 		setBiomassLogRate(((Integer)paramValues.get("biomasslograte")).intValue());
+		setVelocityLogRate(((Integer)paramValues.get("velocitylograte")).intValue());
 		setTotalBiomassLogRate(((Integer)paramValues.get("totalbiomasslograte")).intValue());
 		setMatFileRate(((Integer)paramValues.get("matfilerate")).intValue());
 		setNumDiffusionsPerStep(((Integer)paramValues.get("numdiffperstep")).intValue());
@@ -583,6 +609,25 @@ public class FBAParameters implements PackageParameters
 			biomassLogRate = i;
 	}
 
+	/**
+	 * @return the number of simulation steps that occur between every flux log write
+	 */
+	public int getVelocityLogRate() 
+	{
+		return velocityLogRate; 
+	}
+
+	/**
+	 * Sets the number of steps that occur between every flux log write. If <code>i</code>
+	 * is less than zero, nothing is changed.
+	 * @param i
+	 */
+	public void setVelocityLogRate(int i)
+	{
+		if (i > 0)
+			velocityLogRate = i;
+	}
+	
 	/**
 	 * @return the number of simulation steps that occur between every total 
 	 * biomass log write
@@ -930,6 +975,7 @@ public class FBAParameters implements PackageParameters
 		writeFluxLog = b; 
 	}
 
+	
 	/**
 	 * Sets the name of the flux log file, if one is going to be written.
 	 * <br>
@@ -968,6 +1014,63 @@ public class FBAParameters implements PackageParameters
 		return fluxLogFormat; 
 	}
 
+	/**
+	 * @return true if a velocity log will be written
+	 */
+	public boolean writeVelocityLog() 
+	{ 
+		return writeVelocityLog; 
+	}
+
+	/**
+	 * Tells COMETS to write a velocity log or not. See the COMETS documentation for format
+	 * details.
+	 * @param b if true, write a velocity log file
+	 */
+	public void writeVelocityLog(boolean b) 
+	{
+		writeVelocityLog = b; 
+	}
+	
+	/**
+	 * Sets the name of the flux log file, if one is going to be written.
+	 * <br>
+	 * See documentation for the format.
+	 * @param name the name of the flux log file.
+	 */
+	public void setVelocityLogName(String name)
+	{ 
+		velocityLogName = name; 
+	}
+
+	/**
+	 * @return the name of the flux log file.
+	 */
+	public String getVelocityLogName()
+	{
+		return velocityLogName; 
+	}
+
+	/**
+	 * Sets the format of the velocity log file. Currently only supports either
+	 * MATLAB_FORMAT or COMETS_FORMAT, others are ignored.
+	 * @param format
+	 */
+	public void setVelocityLogFormat(LogFormat format) 
+	{
+		velocityLogFormat = format;
+	}
+
+	/**
+	 * Returns the current velocity log file format
+	 * @return either MATLAB_FORMAT or COMETS_FORMAT
+	 */
+	public LogFormat getVelocityLogFormat()
+	{
+		return velocityLogFormat; 
+	}
+
+	
 	/** Gets the name of the manifest file
 	 *  without the path prepended.
 	 * 
