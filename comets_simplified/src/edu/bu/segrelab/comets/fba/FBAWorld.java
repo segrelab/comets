@@ -83,6 +83,8 @@ public class FBAWorld extends World2D
 
 	private long currentTimePoint;				// current simulation time cycle
 	private FBAModel[] models;					// FBA models in this system
+	private double[] freshMedia;				// fresh media composition (starting) // DJORDJE 
+
 	
 	private List<int[]> modelExchList;			// indices of the exchange reactions for each model
 	private SpaceInfoPanel infoPanel;			// the info panel for the spaces in the world
@@ -193,7 +195,14 @@ public class FBAWorld extends World2D
 
 		// applies all models to the world - puts names, etc, in the right order,
 		// and sets media diffusion constants where appropriate
-		changeModelsInWorld(models, models);
+		changeModelsInWorld(models, models);		
+
+		// We need to know the composition of the fresh media, needed for batch dilutions
+		freshMedia = new double[numMedia];
+		for (int k = 0; k < numMedia; k++)
+		{	
+			freshMedia[k] = media[0][0][k];
+		}
 		threadLock = 0;
 	}
 	
@@ -268,8 +277,9 @@ public class FBAWorld extends World2D
 		circleSet = null;
 
 		// applies all models to the world - puts names, etc, in the right order,
-		// and sets media diffusion constants where appropriate
+		// and sets media diffusion constants where appropriate. 
 		changeModelsInWorld(models, models);
+		
 		threadLock = 0;
 	}
 	
@@ -1481,7 +1491,7 @@ public class FBAWorld extends World2D
 		else
 			return BOUNDS_ERROR;
 	}
-	
+
 	@Override
 	/**
 	 * Updates the world whenever a size (number of columns or rows) occurs. Any new
@@ -4481,6 +4491,51 @@ public class FBAWorld extends World2D
 		if(numMedia == diffConsts.length)
 			this.nutrientDiffConsts = diffConsts;
 	}
+	
+	/*
+	 * This performs a dilution of the simulation (both cells and media). 
+	 * - Either bacterial "cells" are sampled (line starting with samplePopulation...) or 
+	 *   more simply, biomass is diluted. The latter one is active for now. 
+	 * todo: Implement parameter specifying how the dilution should be done. 
+	 */
+	public void batchDilute(double dilution, double cellBiomass)
+	{			
+		// get each model's biomass after dilution
+		double[] totalBiomass = calculateTotalBiomass();
+		double[] dilutedBiomass = new double[models.length];
+		
+		for (int i = 0; i < models.length; i++)
+			if (totalBiomass[i] > 0.0)
+				//dilutedBiomass[i] = samplePopulation((int)Math.floor(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
+				dilutedBiomass[i] = totalBiomass[i]*dilution; // jean
+			else
+				dilutedBiomass[i] = 0.0;
+		// cell where new biomass will be located
+		int seedCell = (int)Math.floor(c.getCells().size()/2);
+
+		// update cells
+		for (int i = 0; i < c.getCells().size(); i++)
+		{
+			Cell cell = (Cell) c.getCells().get(i);
+
+			// change biomass
+			double[] noBiomass = new double[models.length]; 
+			if (i==seedCell)
+				cell.setBiomass(dilutedBiomass);
+			else 				
+				cell.setBiomass(noBiomass);
+						
+			// compute new amount of media components in cell and set it 
+			double[] media = getMediaAt(cell.getX(), cell.getY());
+			
+			for (int j = 0; j < media.length; j++) {
+				media[j] = (media[j]*dilution) + (freshMedia[j]*(1-dilution));
+			}
+			
+			// and update media 
+			setMedia(cell.getX(), cell.getY(), media);
+		}
+	}		
 	
 	public void setSubstrateDiffusion(double[][] substrateDiffConsts)
 	{

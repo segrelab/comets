@@ -6,6 +6,8 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -19,6 +21,8 @@ import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+
+import org.apache.commons.lang3.ArrayUtils;
 
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.ui.DoubleField;
@@ -47,7 +51,6 @@ import com.sun.xml.internal.ws.util.StringUtils;
  * Note that this class depends on the availability of the GLPK-java package, which must be
  * accessible either through the classpath or the library path. Be sure to add glpk-java.jar
  * to the classpath and, if on a POSIX-based system (Mac or Linux), add the path to the 
- * installed glpk and jni libraries in -Djava.library.path
  * 
  * @author Bill Riehl briehl@bu.edu; Ilija Dukovski ilija.dukovski@gmail.com
  * created 3 Mar 2010, modified 11 Mar 2014
@@ -89,6 +92,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private int numMetabs;
 	private int numExch;
 	private boolean runSuccess;
+	private String modelID; // DJORDJE 
+	public int mutationCount; 
 	
 	private int[] exch; // indices of exchange fluxes.
 	// As in the GLPK model idiom,
@@ -202,15 +207,25 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	
 		switch(optim){
 		case GUROBI:
-			fbaOptimizer=new FBAOptimizerGurobi( m, l, u, objs, objsMax);
+			fbaOptimizer=new FBAOptimizerGurobi(m, l, u, objs, objsMax);
 			break;
 		case GLPK:
 			fbaOptimizer=new FBAOptimizerGLPK(m,l,u,objs);
 		default:
 			break;
 		}
-		numMetabs = m.length;
-		numRxns = m[0].length;
+		
+		Double mtb = m[m.length-1][0];
+		numMetabs = mtb.intValue();
+		
+		numRxns = 1;
+		for (int i = 0; i < m.length; i++) {
+            if (m[i][1] > numRxns) {
+            	Double k = m[i][1];
+                numRxns = k.intValue();
+            }
+		}
+
 		setBaseBounds(l, u);
 		setObjectiveReactions(objs);
 		setObjectiveMaximize(objsMax);
@@ -275,24 +290,26 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		exchRxnNames = new String[numExch];
 		exchMetabNames = new String[numExch];
 		
-		for (int i=0; i<numExch; i++)
-		{
-			exchRxnNames[i] = rxnNames[exch[i]-1];
-
-			// to find the metabolite index (and thus its name) we need to
-			// use the exchange reaction index to hunt down the right row, then
-			// find the nonzero element.
+		int[] exch_tmp = exch.clone();
+		int cnt = 0;		
+		for (int i=0; i<m.length; i++)
+		{		
+			/* look for reaction in exch_tmp; if found, remove from exch_tmp 
+			 * and add rxn and metab to their respective arrays
+			 */			
+			Double curr_rxn = m[i][1];
+			Double curr_mtb = m[i][0];
 			
-			// assume the first one we come across is the answer.
-			// because that's how it freaking should be.
-			for (int j=0; j<numMetabs; j++)
+			int is_exch = Arrays.binarySearch(exch_tmp, curr_rxn.intValue());
+			if (is_exch >= 0)
 			{
-				if (m[j][exch[i]-1] != 0)
-				{
-					exchMetabNames[i] = metabNames[j];
-					break;
-				}
-			}
+				int rxn = curr_rxn.intValue();
+				int mtb = curr_mtb.intValue();
+				ArrayUtils.removeElement(exch_tmp, rxn); 
+				exchRxnNames[cnt] = rxnNames[rxn-1];
+				exchMetabNames[cnt] = metabNames[mtb-1];
+				cnt++;
+			}				
 		}
 			
 		baseExchLB = new double[numExch];
@@ -1012,6 +1029,28 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
         return ret;
 	}
 
+	// DJORDJE 
+	public void setModelID(String modelName)
+	{
+		this.modelID = modelName;
+	}
+	
+	public String getModelID()
+	{
+		return modelID; 
+	}
+	
+	/*public void setMutationCount(int mutCount)
+	{
+		this.mutationCount = mutCount;
+	}
+	
+	public int getMutationCount()
+	{
+		return mutationCount; 
+	}
+	/
+	
 	
 	/**
 	 * @return The fluxes from the most recent FBA run
@@ -1158,6 +1197,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		{
 			int lineNum = 0;
 			BufferedReader reader = new BufferedReader(new FileReader(filename));
+			int lines_sparse_s = 0;
+			BufferedReader reader_2 = new BufferedReader(new FileReader(filename));
 			int numMets = 0;  // number of rows in S-matrix
 			int numRxns = 0;  // number of cols in S-matrix
 			double[][] S = null;
@@ -1195,12 +1236,23 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   neutralDriftSigma=0.0;
 			
 			boolean blockOpen = false;
-			
+
 			boolean neutralDrift = false;
+
+			// First, identify lines where S matrix starts and ends, to code it as a sparse matrix 			
+			String line_2 = null;
+			while ((line_2 = reader_2.readLine()) != null)
+			{
+				lines_sparse_s++;
+				if (line_2.contains("BOUNDS")) {
+					break;
+				}				
+			}
+			lines_sparse_s = lines_sparse_s-3;
+			reader_2.close();
 			
 			// first thing we need is the S-matrix. That **has** to be the first
-			// data block, since it sets the scale for every other array here.
-			
+			// data block, since it sets the scale for every other array here.	
 			String line = null;
 			while ((line = reader.readLine()) != null)
 			{
@@ -1241,7 +1293,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					}
 					
 					// initialize the S-matrix
-					S = new double[numMets][numRxns];
+					S = new double[lines_sparse_s][3];
 					
 					String matLine = null;
 					
@@ -1257,7 +1309,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 					while (!(matLine = reader.readLine().trim()).equalsIgnoreCase("//"))
 					{
-						lineNum++;
 						if (matLine.length() == 0)
 							continue;
 						
@@ -1279,12 +1330,19 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						}
 						
 						double stoic = Double.parseDouble(parsed[2]);
-						S[x-1][y-1] = stoic;
+						
+						S[lineNum-1][0] = x;
+						S[lineNum-1][1] = y;
+						S[lineNum-1][2] = stoic;
+
+						lineNum++;
+
 					}
 					lineNum++;
 					
 					blockOpen = false;
 					// done!
+					// System.out.println("number of rows of S is " + S.length);
 				}
 
 				
@@ -2954,4 +3012,29 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		this.biomassReaction = biomassReaction;
 	}
 
+	/**
+	 * Mutation method 
+	 */
+	public void mutateModel()
+	{		
+		double[] lBounds = getBaseLowerBounds();
+		double[] uBounds = getBaseUpperBounds();
+		
+		// figure out which reactions have nonzero bounds
+		ArrayList<Integer> nonzeroRxns = new ArrayList<Integer>();
+		for (int j = 0; j < lBounds.length; j++) {
+			if (lBounds[j] != 0 || uBounds[j] != 0)
+				nonzeroRxns.add(j);
+		}
+		
+		// select randomly one of these reactions
+		int mutReaction = nonzeroRxns.get(new Random().nextInt(nonzeroRxns.size()));
+		//System.out.println("mutated reaction: " + mutReaction);
+		
+		// and update the mutModel model bounds
+		lBounds[mutReaction] = 0;
+		uBounds[mutReaction] = 0;
+		setBaseLowerBounds(lBounds);
+		setBaseUpperBounds(uBounds);		
+	}
 }

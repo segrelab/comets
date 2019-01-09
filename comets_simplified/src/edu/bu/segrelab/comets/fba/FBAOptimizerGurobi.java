@@ -1,6 +1,9 @@
 package edu.bu.segrelab.comets.fba;
 
 import gurobi.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Collections;
 
 /**
  * This class provides the GUROBI optimizer functionality for the FBAModel class.
@@ -97,52 +100,76 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 		// this should probably only be bothered with if we're doing max/min, 
 		// but right now this class doesn't know the objective style until run()
-		initializeAbsModel(m, l, u, objIdxs, objMaximize);
 
-		//everything below here is for initializing the basic model
-		stoichMatrix=m;
+		sortByColumn(m, 0);
+		initializeAbsModel(m, l, u, objIdxs, objMaximize);
+		
+		// everything below here is for initializing the basic model
+		// stoichMatrix=m;
 		fluxesModel = new double[l.length];
 		double[] objective=new double[l.length];
 		char[] types=new char[l.length]; // continuous vs. binary, etc
-		//make vector of zeros for the objective, which will get filled in with a '1' later
-		//all our variables (fluxes) are always continuous
+
+		// make vector of zeros for the objective, which will get filled in with a '1' later
+		// all our variables (fluxes) are always continuous
 		for(int i=0;i<l.length;i++){
 			objective[i]=0;
 			types[i]=GRB.CONTINUOUS;
 		}
 
 		try{
+			// add variables to model
 			rxnFluxes = model.addVars(l, u, objective, types, null);
 			//must either update() or optimize() for changes to take effect
 			model.update();
+						
+			// as we ordered m by metabolites, we can do 
+			Double mtb = m[m.length-1][0];		
+			numMetabs = mtb.intValue(); 
+			numRxns = l.length;
+			
+			double[] rhsValues=new double[numMetabs]; // right-hand-side values, usually zero (Sv=0)
+			char[] senses=new char[numMetabs]; // represents equals, less than, etc. this is equals for most of ours (Sv EQUALS 0)
+			rxnExpressions=new GRBLinExpr[numMetabs]; //generate expressions to represent each matrix row
+						
+			// add terms to the left-hand-side expressions
+			// note that it will work only if metabolites are in ascending order in sparse S 
+			int met_count = 0; // metabolite count 
+			for (int k = 0; k < m.length; k++){
+				
+				// get metabolite and variable (rxn) in current row of sparse m
+				Double cr = m[k][0];
+				int cMet = cr.intValue();
 
-			double[] rhsValues=new double[m.length]; // right-hand-side values, usually zero (Sv=0)
-			char[] senses=new char[m.length]; // represents equals, less than, etc. this is equals for most of ours (Sv EQUALS 0)
-			rxnExpressions=new GRBLinExpr[m.length]; //generate expressions to represent each matrix row
+				Double cc = m[k][1];
+				int cVar = cc.intValue();
 
-			//this makes each expression, which corresponds to a row of Sv = 0. 
-			// e.g. if S = [[-1 0 -1], [1 -1 0]] then 
-			// rxnExpression[0] is basically  -1*v1 + 0*v2 + -1*v3 = 0.0
-			for(int i=0;i<m.length;i++){
-				rxnExpressions[i]=new GRBLinExpr();
-				rxnExpressions[i].addTerms(m[i], rxnFluxes);
-				senses[i]=GRB.EQUAL;
-				rhsValues[i]=0.0;
+				// System.out.println("cMet: " + cMet + ", CVar:" + cVar);			
+
+				// if new metabolite, move cMet and create new GrbLinExpr for next metabolite
+				if (met_count+1 == cMet){
+					met_count++;
+					rxnExpressions[cMet-1] = new GRBLinExpr();
+				}
+				
+				// add current term to constraints array 
+				rxnExpressions[cMet-1].addTerm(m[k][2], rxnFluxes[cVar-1]);
+				
+				// for these expressions, all senses are =, all rhs are 0
+				senses[cMet-1] = GRB.EQUAL;
+				rhsValues[cMet-1] = 0;
 			}
 
-			model.addConstrs( rxnExpressions, senses, rhsValues, null);
+			model.addConstrs(rxnExpressions, senses, rhsValues, null);
 			model.update();
-
-			numMetabs = m.length;
-			numRxns = m[0].length;
-
+							
 			setObjectiveReaction(numRxns, objIdxs, objMaximize);
-
+			
 		}
 		catch(GRBException e){
 			System.out.println("Error in FBAOptimizerGurobi public constructor method");
 			System.out.println("Error code: " + e.getErrorCode() + ". " +
-					e.getMessage());
+                    e.getMessage());
 		}
 	}
 	
@@ -300,27 +327,77 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 	}
 
+	/* 
+	 * method to sort a double 2D array according to one column (used for m) (djordje)
+	 */
+	private void sortByColumn (double arr[][], int col) 
+	{
+		Arrays.sort(arr, new Comparator <double[]>() {
+			
+			@Override
+			public int compare(final double[] a, final double[] b) {
+				return Double.compare(a[0], b[0]);
+			}
+		});
+	}
+	
+	
 	private void addOrigConstraintsModelMin(double[][] m){
-		//add original constraints (Sv = 0)  -- rows 1,2 in the example above
-		// no need to go through all of the variables because the
-		// stoichoimetric matrix we are putting together has zeros
-		// for these variables in the original row
-		int nMetabolites = m.length;
+		/* add original constraints (Sv = 0)  -- rows 1,2 in the example above
+		 * no need to go through all of the variables because the
+		 * stoichoimetric matrix we are putting together has zeros
+		 * for these variables in the original row
+		 */	 
+		
+		// assuming metabolites are in order in the sparse matrix, define nMetabolites
+		Double mtb = m[m.length-1][0];		
+		int nMetabolites = mtb.intValue(); 
+
+		// create arrays for constraints, senses and rhs values
 		GRBLinExpr[] origConstraints = new GRBLinExpr[nMetabolites];
 		char[] senses = new char[nMetabolites]; // holds the "=" in Sv = 0
 		double[] rhs = new double[nMetabolites]; // holds the "0" in Sv = 0
 
-		for (int k = 0; k < nMetabolites; k++){
-			// make the left-hand-side expressions
-			origConstraints[k] = new GRBLinExpr();
-			for (int j = 0; j < nVars / 2; j++){
-				origConstraints[k].addTerm(m[k][j],	modelMinVars[j]);
-			}
-			// for these expressions, all senses are =, all rhs are 0
-			senses[k] = GRB.EQUAL;
-			rhs[k] = 0;
-		}
+		// add terms to the left-hand-side expressions
+		// note that it will work only if metabolites are in ascending order in sparse S 
+		int met_count = 0; // metabolite count 
+		for (int k = 0; k < m.length; k++){
+			
+			// get metabolite and variable (rxn) in current row of sparse m
+			Double cr = m[k][0];
+			int cMet = cr.intValue();
 
+			Double cc = m[k][1];
+			int cVar = cc.intValue();
+
+			// if new metabolite, move cMet and create new GrbLinExpr for next metabolite
+			if (met_count+1 == cMet){
+				met_count++;
+				origConstraints[cMet-1] = new GRBLinExpr();
+			}
+			
+			// add current term to constraints array 
+			origConstraints[cMet-1].addTerm(m[k][2], modelMinVars[cVar-1]);
+			
+			// for these expressions, all senses are =, all rhs are 0
+			senses[cMet-1] = GRB.EQUAL;
+			rhs[cMet-1] = 0;
+		}
+		
+		/* DEBUG for (int i = 0; i < senses.length; i++){		 
+			try {
+				System.out.println("i: " + i + ", sense:" + senses[i]);
+				modelMin.addConstr(origConstraints[i], senses[i], rhs[i], null);
+				modelMin.update();
+				modelMin.write("/home/djordje/modelMin.lp");
+				
+			} catch (GRBException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		*/
+		
 		//add the constraints to the model
 		try{
 			modelMin.addConstrs(origConstraints, senses, rhs, null);
@@ -981,7 +1058,8 @@ implements edu.bu.segrelab.comets.CometsConstants
 	 * @param objreact Objective reaction index.
 	 */
 	public double getObjectiveSolution(int objreact)
-	{
+	{		
+		// System.out.println("biomass reaction is " + objreact);
 		try{
 			if (runSuccess)
 				return rxnFluxes[objreact-1].get(GRB.DoubleAttr.X);
@@ -1096,7 +1174,6 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 		return PARAMS_OK;
 	}
-
 
 	/**
 	 * Produces a clone of this <code>FBAOptimizerGurobi</code> with all parameters intact.

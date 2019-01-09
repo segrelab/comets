@@ -52,8 +52,7 @@ import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 import edu.bu.segrelab.comets.util.Point3d;
 
-public class FBACometsLoader implements CometsLoader, 
-CometsConstants
+public class FBACometsLoader implements CometsLoader, CometsConstants
 {
 	private enum LoaderState
 	{

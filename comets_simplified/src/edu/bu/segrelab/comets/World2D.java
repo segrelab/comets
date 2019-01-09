@@ -9,6 +9,10 @@ import java.util.List;
 
 import javax.swing.JComponent;
 
+import cern.jet.random.Binomial;
+import cern.jet.random.Poisson;
+import cern.jet.random.engine.DRand;
+
 import edu.bu.segrelab.comets.util.Utility;
 
 /**
@@ -53,6 +57,8 @@ public abstract class World2D implements CometsConstants, IWorld
 											  // that is to remain static, at a value given
 											  // by staticMedia[i]
 	
+	protected DRand randomGenerator; //djordje
+
 	/**
 	 * The main constructor for the World2D. Every extending class should call this
 	 * first.
@@ -258,7 +264,7 @@ public abstract class World2D implements CometsConstants, IWorld
 		}
 		return getMediaAt(x,y);
 	}
-	
+
 	/**
 	 * @return the number of nutrient components in the currently loaded media
 	 */
@@ -1117,6 +1123,31 @@ public abstract class World2D implements CometsConstants, IWorld
 		//if there's nothing to do, just return
 		if (reactionModel.getNrxns() < 1) return;
 		else reactionModel.run(); //the ReactionModel handles updating this world's media
+	}
+
+// This function samples cells from a population (expressed as number of
+	// cells), given a probability.Internally, it uses binomial when cell
+	// numbers
+	// are small, and Poisson otherwise.
+	// needs import cern.jet.random.engine.*;
+	// needs import cern.jet.random.*;
+	public int samplePopulation(int population, double prob) 
+	{
+
+		double lambda = population * prob;
+		Poisson pois;
+		Binomial binom;
+		int nmut;
+
+		if (lambda > 10) {
+			pois = new Poisson(lambda, randomGenerator);
+			nmut = pois.nextInt();
+		} else {
+			binom = new Binomial(population, prob, randomGenerator);
+			nmut = binom.nextInt();
+		}
+
+		return nmut;
 	}
 
 	public void setInitialMediaNames(String[] arr){initialMediaNames = arr;}

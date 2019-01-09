@@ -63,12 +63,15 @@ public class CometsParameters implements CometsConstants
 	
 	private double timeStep = 1,				// hours
 				   deathRate = 0.1,				// percent per time point
-				   activateRate = 0.001,          // 1/hours
-				   maxSpaceBiomass = 10,		// grams
-				   minSpaceBiomass = 1e-10,		// grams
-				   spaceWidth = 0.1,			// cm
+				   activateRate = 0.001,        // 1/hours
+				   maxSpaceBiomass = 10,	// grams
+				   minSpaceBiomass = 1e-10,	// grams
+				   spaceWidth = 0.1,		// cm
 				   slideshowColorValue = 10,	
-				   spaceVolume = 0.001;				// ml (1 mL = 1 cm^3)
+				   spaceVolume = 0.001,		// ml (1 mL = 1 cm^3)
+				   cellSize = 1e-13,		// grams DW, djordje
+				   dilFactor = 1e-2, 		// djordje
+				   dilTime = 12;		// hours
 	
 	private boolean isCommandLine = false,
 					showGraphics = true,
@@ -82,8 +85,9 @@ public class CometsParameters implements CometsConstants
 					showText = true,
 					colorRelative = true,
 					slideshowColorRelative = true,
-					simulateActivation = false;
-	
+					simulateActivation = false,
+					batchDilution = false;	// djordje
+
 	private int displayLayer = 0,
 				pixelScale = 4,
 				gridRows = 100,
@@ -172,6 +176,7 @@ public class CometsParameters implements CometsConstants
 		showText(((Boolean)paramValues.get("showtext")).booleanValue());
 		setColorRelative(((Boolean)paramValues.get("colorrelative")).booleanValue());
 		setSimulateActivation(((Boolean)paramValues.get("simulateactivation")).booleanValue());
+		setBatchDilution(((Boolean)paramValues.get("batchdilution")).booleanValue());
 		
 		setPixelScale(((Integer)paramValues.get("pixelscale")).intValue());
 		setNumRows(((Integer)paramValues.get("gridrows")).intValue());
@@ -191,7 +196,9 @@ public class CometsParameters implements CometsConstants
 		setSlideshowExt(((String)paramValues.get("slideshowext")));
 		setSlideshowName(((String)paramValues.get("slideshowname")));
 		setLastDirectory(((String)paramValues.get("lastdirectory")));
-
+		setDilutionFactor(((Double)paramValues.get("dilfactor")).doubleValue());
+		setDilutionTime(((Double)paramValues.get("diltime")).doubleValue());
+		setCellSize(((Double)paramValues.get("cellsize")).doubleValue());
 	}
 	
 	public void saveParameterState()
@@ -300,7 +307,19 @@ public class CometsParameters implements CometsConstants
 		
 		paramValues.put("simulateactivation", new Boolean(simulateActivation));
 		paramTypes.put("simulateactivation", ParameterType.BOOLEAN);
+
+		paramValues.put("dilfactor", new Double(dilFactor));
+		paramTypes.put("dilfactor", ParameterType.DOUBLE);
 		
+		paramValues.put("diltime", new Double(dilTime));
+		paramTypes.put("diltime", ParameterType.DOUBLE);
+		
+		paramValues.put("cellsize", new Double(cellSize));
+		paramTypes.put("cellsize", ParameterType.DOUBLE);
+
+		paramValues.put("batchdilution", new Boolean(batchDilution));
+		paramTypes.put("batchdilution", ParameterType.BOOLEAN);
+
 		//paramValues.put("seed", new Long(seed));
 		//paramTypes.put("seed", ParameterType.LONG);
 	}
@@ -439,6 +458,80 @@ public class CometsParameters implements CometsConstants
 //	{
 //		return defaultDiffConst;
 //	}
+
+	/**
+	 * Sets if there are batch dilutions in the simulation 
+	 */
+	public void setBatchDilution(boolean b)
+	{
+		batchDilution = b;
+	}
+		
+	/**
+	 * @return do we perform batch dilutions? 
+	 */
+	public boolean getBatchDilution()
+	{
+		return batchDilution;
+	}
+	
+	
+	/**
+	 * @return the dilution factor for batch dilution
+	 */
+	public double getDilutionFactor() 
+	{ 
+		return dilFactor; 
+	}
+	
+	/**
+	 * Sets the dilution factor if batchDilution = True
+	 */
+	public void setDilutionFactor(double d)
+	{
+		if (d >= 1)
+			dilFactor = 1/d;
+		else 
+			dilFactor = d;
+	}
+
+	/**
+	 * @return the dilution time for batch dilution
+	 */
+	public double getDilutionTime() 
+	{ 
+		return dilTime; 
+	}
+	
+	/**
+	 * Sets the dilution factor if batch dilution = True
+	 * djordje
+	 */
+	public void setDilutionTime(double d)
+	{
+		if (d >= 0)
+			dilTime = d;
+	}
+
+	
+	/**
+	 * @return cell size
+	 * djordje
+	 */
+	public double getCellSize() 
+	{ 
+		return cellSize; 
+	}
+	
+	/**
+	 * Sets the cell size
+	 */
+	public void setCellSize(double d)
+	{
+		if (d >= 0)
+			cellSize = d;
+	}
+	
 	
 	public void setSpaceVolume(double d)
 	{
