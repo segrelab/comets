@@ -3190,7 +3190,6 @@ public class FBAWorld extends World2D
 			cell.changeModelsInCell(models, newModels);
 		}
 		
-		System.out.println("new models " + newModels.length + ", old models: " + models.length);
 		changeModelsInWorld(models, newModels);
 		setNumModels(newModels.length);		
 		
@@ -4784,8 +4783,8 @@ public class FBAWorld extends World2D
 			}
 		}
 			
-		System.out.println("INDS: " + Arrays.toString(nCells));
-		System.out.println("MUTS: " + Arrays.toString(nMut));
+		// System.out.println("INDS: " + Arrays.toString(nCells));
+		// System.out.println("MUTS: " + Arrays.toString(nMut));
 	}
 
 	public void performAdditionsInWorld(double addition_rate, double cell_biomass)
