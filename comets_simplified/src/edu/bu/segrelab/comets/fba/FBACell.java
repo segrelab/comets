@@ -478,6 +478,17 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	{
 		return biomass;
 	}
+
+	public synchronized String[] getCellModelIDs()
+	{
+		String[] cellModelIDs = new String[fbaModels.length];
+		for (int i=0; i<fbaModels.length; i++)
+		{
+			cellModelIDs[i] = fbaModels[i].getModelID();
+		}
+		return cellModelIDs;
+	}
+
 	
 	/**
 	 * Returns the convectionRHS1 from the previous step in the <code>FBACell</code>
@@ -769,6 +780,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				/***************** GET BIOMASS CONCENTRATION CHANGE ****************/
 				// biomass is in grams
 				deltaBiomass[i] = (double)(((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];
+				deltaBiomass[i] *= (1-(double)(((FBAModel)models[i]).getGenomeCost()));
+				
 				// if no biomass change dont change media //JEAN 
 				// This may be redundant in newer version of COMETS.
 				if(deltaBiomass[i]<0.0){
@@ -779,6 +792,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //						System.out.print("\t" + exchFlux[j]);
 					}
 				}
+				
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());
 //				System.out.println("solution: " + ((FBAModel)models[i]).getObjectiveSolution());

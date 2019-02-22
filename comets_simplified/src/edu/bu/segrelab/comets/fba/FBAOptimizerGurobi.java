@@ -39,8 +39,8 @@ public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer
 implements edu.bu.segrelab.comets.CometsConstants
 {
 
-	private GRBEnv env;     //Gurobi environment
-	private GRBModel model; //Gurobi model
+	private GRBEnv env;     // Gurobi environment
+	private GRBModel model; // Gurobi model
 	private GRBVar[] rxnFluxes; //These are optimization variables, i.e. fluxes
 	private GRBLinExpr[] rxnExpressions; //These are constraints on fluxes, one for each metabolite
 	private double[] fluxesModel;
@@ -100,12 +100,11 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 		// this should probably only be bothered with if we're doing max/min, 
 		// but right now this class doesn't know the objective style until run()
-
 		sortByColumn(m, 0);
 		initializeAbsModel(m, l, u, objIdxs, objMaximize);
 		
 		// everything below here is for initializing the basic model
-		// stoichMatrix=m;
+		stoichMatrix=m;
 		fluxesModel = new double[l.length];
 		double[] objective=new double[l.length];
 		char[] types=new char[l.length]; // continuous vs. binary, etc

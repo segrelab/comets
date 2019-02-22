@@ -9,9 +9,8 @@ import java.util.List;
 
 import javax.swing.JComponent;
 
-import cern.jet.random.Binomial;
-import cern.jet.random.Poisson;
-import cern.jet.random.engine.DRand;
+import cern.jet.random.engine.*;
+import cern.jet.random.*;
 
 import edu.bu.segrelab.comets.util.Utility;
 
@@ -85,6 +84,7 @@ public abstract class World2D implements CometsConstants, IWorld
 		
 		refreshPoints = new RefreshPoint[numCols][numRows];
 		staticPoints = new StaticPoint[numCols][numRows];
+		randomGenerator = new DRand(new java.util.Date()); // djordje
 	}
 
 	public boolean isOnGrid(int x, int y)
@@ -109,6 +109,18 @@ public abstract class World2D implements CometsConstants, IWorld
 		return numRows;
 	}
 	
+	public int getNumModels()
+	{
+		return numModels;
+	}
+
+	// DJORDJE                                                                                                 
+	// used when adding models in mutation                                                                     
+	public void setNumModels(int newNumModels)
+	{
+		numModels = newNumModels;
+	}
+	
 	/**
 	 * Makes a copy of this <code>World2D</code> that doesn't share any instances
 	 * with the old one. Since this requires making a new instance of a World2D 
@@ -123,13 +135,14 @@ public abstract class World2D implements CometsConstants, IWorld
 	 * @return an array of biomasses - one for each <code>Model</code> loaded
 	 */
 	public double[] calculateTotalBiomass()
-	{
+	{		
 		double[] totalBiomass = new double[numModels];
 		Iterator<Cell> it = c.getCells().iterator();
 		while (it.hasNext())
 		{
 			Cell cell = (Cell) it.next();
 			double[] curBiomass = cell.getBiomass();
+			
 			for (int i = 0; i < curBiomass.length; i++)
 			{
 				totalBiomass[i] += curBiomass[i];
@@ -1125,7 +1138,7 @@ public abstract class World2D implements CometsConstants, IWorld
 		else reactionModel.run(); //the ReactionModel handles updating this world's media
 	}
 
-// This function samples cells from a population (expressed as number of
+	// This function samples cells from a population (expressed as number of
 	// cells), given a probability.Internally, it uses binomial when cell
 	// numbers
 	// are small, and Poisson otherwise.
@@ -1133,12 +1146,11 @@ public abstract class World2D implements CometsConstants, IWorld
 	// needs import cern.jet.random.*;
 	public int samplePopulation(int population, double prob) 
 	{
-
 		double lambda = population * prob;
 		Poisson pois;
 		Binomial binom;
 		int nmut;
-
+		
 		if (lambda > 10) {
 			pois = new Poisson(lambda, randomGenerator);
 			nmut = pois.nextInt();
@@ -1146,7 +1158,6 @@ public abstract class World2D implements CometsConstants, IWorld
 			binom = new Binomial(population, prob, randomGenerator);
 			nmut = binom.nextInt();
 		}
-
 		return nmut;
 	}
 

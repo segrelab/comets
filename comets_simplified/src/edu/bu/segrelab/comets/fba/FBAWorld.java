@@ -7,7 +7,6 @@ import java.awt.Insets;
 import java.awt.Point;
 import java.io.IOException;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
@@ -22,12 +21,15 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.Stack;
+import java.util.UUID;
 
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+
+import org.apache.commons.lang3.ArrayUtils;
 
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
@@ -48,6 +50,7 @@ import com.jmatio.io.*;
 import com.jmatio.types.*;
 
 import java.lang.reflect.Field;
+import edu.bu.segrelab.comets.util.WeightedSample; //djordje 
 
 //import org.apache.commons.math3.distribution.*;
 
@@ -96,6 +99,7 @@ public class FBAWorld extends World2D
 	private PrintWriter mediaLogWriter,	
 						fluxLogWriter,
 						biomassLogWriter,
+						evolutionLogWriter,
 						velocityLogWriter,
 						totalBiomassLogWriter;
 	
@@ -142,7 +146,7 @@ public class FBAWorld extends World2D
 					Model[] models)
 	{
 		this(c, startingMedia.length);
-		pParams = (FBAParameters)c.getPackageParameters();
+		pParams = (FBAParameters)c.getPackageParameters();		
 		cParams = (CometsParameters)c.getParameters();
 //		this.models = models;
 		numModels = models.length;
@@ -308,9 +312,7 @@ public class FBAWorld extends World2D
 		System.out.println();
 		
 		//Intialize the random number generator. Two rnds are used. 
-		Utility.randomSetSeed(pParams.getRandomSeed());
-	
-		
+		Utility.randomSetSeed(pParams.getRandomSeed());		
 		
 		currentTimePoint = 0;
 		DateFormat df = new SimpleDateFormat("_yyyyMMddHHmmss");
@@ -390,7 +392,7 @@ public class FBAWorld extends World2D
 				try
 				{
 					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
-					manifestWriter.write("BiomassFileName: "+name+System.getProperty("line.separator"));
+					manifestWriter.write("BiomassFileName: " + name + System.getProperty("line.separator"));
 					manifestWriter.close();
 				}
 				catch (IOException e)
@@ -404,34 +406,66 @@ public class FBAWorld extends World2D
 				biomassLogWriter = null;
 			}
 		}
+
+		// Genotype map (when evolution = true)
+		if (cParams.getEvolution())
+		{
+			String name = adjustLogFileName("GENOTYPES_" + pParams.getBiomassLogName(), timeStamp);
+			try
+			{
+				evolutionLogWriter = new PrintWriter(new FileWriter(new File(name)));
+				//writeBiomassLog();
+				//Write the file name in the manifest file.
+				try
+				{
+					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+					manifestWriter.write("GenotypesFileName: " + name + System.getProperty("line.separator"));
+					manifestWriter.close();
+				}
+				catch (IOException e)
+				{
+					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+				}
+			}
+			catch (IOException e)
+			{
+				System.out.println("Unable to initialize biomass log file '" + name + "'\nContinuing without saving log.");
+				evolutionLogWriter = null;
+			}
+			for (int i = 0; i < models.length; i++) {
+				evolutionLogWriter.print(models[i].getAncestor() + " " 
+						+ models[i].getMutation() + " " + models[i].getModelID() + "\n");
+				evolutionLogWriter.flush();
+			}
+		}
 		
 		// Init velocity log and write the first line
-				if (pParams.writeVelocityLog())
+		if (pParams.writeVelocityLog())
+		{
+			String name = adjustLogFileName(pParams.getVelocityLogName(), timeStamp);
+			try
+			{
+				velocityLogWriter = new PrintWriter(new FileWriter(new File(name)));
+				writeVelocityLog();
+				//Write the file name in the manifest file.
+				try
 				{
-					String name = adjustLogFileName(pParams.getVelocityLogName(), timeStamp);
-					try
-					{
-						velocityLogWriter = new PrintWriter(new FileWriter(new File(name)));
-						writeVelocityLog();
-						//Write the file name in the manifest file.
-						try
-						{
-							FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
-							manifestWriter.write("VelocityFileName: "+name+System.getProperty("line.separator"));
-							manifestWriter.close();
-						}
-						catch (IOException e)
-						{
-							System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
-						}		
-					}
-					catch (IOException e)
-					{
-						System.out.println("Unable to initialize velocity log file '" + name + "'\nContinuing without saving log.");
-						velocityLogWriter = null;
-					}
+					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+					manifestWriter.write("VelocityFileName: "+name+System.getProperty("line.separator"));
+					manifestWriter.close();
 				}
-		
+				catch (IOException e)
+				{
+					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+				}		
+			}
+			catch (IOException e)
+			{
+				System.out.println("Unable to initialize velocity log file '" + name + "'\nContinuing without saving log.");
+				velocityLogWriter = null;
+			}
+		}
+
 		// Init the total biomass log and write the first line
 		if (pParams.writeTotalBiomassLog())
 		{
@@ -1011,26 +1045,26 @@ public class FBAWorld extends World2D
 		}
 		
 		// Make the changes
-		for (int k = 0; k < oldModels.length; k++)
-		{
-			int idx = -1;
-			for (int z = 0; z < oldModels.length; z++)
-			{
-				if (newModels[z].equals(oldModels[k]))
-					idx = z;
-			}
-			if (idx != -1) // found it!
-			{
-				for (int x = 0; x < numCols; x++)
-				{
-					for (int y = 0; y < numRows; y++)
-					{
-						newDiffBiomassIn[x][y][idx] = diffuseBiomassIn[x][y][k];
-						newDiffBiomassOut[x][y][idx] = diffuseBiomassOut[x][y][k];
-					}
-				}
-			}
-		}
+//		for (int k = 0; k < oldModels.length; k++)
+//		{
+//			int idx = -1;
+//			for (int z = 0; z < oldModels.length; z++)
+//			{
+//				if (newModels[z].equals(oldModels[k]))
+//					idx = z;
+//			}
+//			if (idx != -1) // found it!
+//			{
+//				for (int x = 0; x < numCols; x++)
+//				{
+//					for (int y = 0; y < numRows; y++)
+//					{
+//						newDiffBiomassIn[x][y][idx] = diffuseBiomassIn[x][y][k];
+//						newDiffBiomassOut[x][y][idx] = diffuseBiomassOut[x][y][k];
+//					}
+//				}
+//			}
+//		}
 
 		// now, final housekeeping and variable setting
 		models = new FBAModel[newModels.length];
@@ -3010,8 +3044,17 @@ public class FBAWorld extends World2D
 			}
 			// if (models == null)
 			// models = (FBAModel[])c.getModels();
-
-			// 2. tell all the cells to run
+			
+			// 1. perform mutations
+			if (cParams.getEvolution())
+			{
+				if (cParams.getMutRate()>0)
+					mutateWorld(cParams.getMutRate(), cParams.getCellSize());
+				if (cParams.getAddRate()>0)
+					performAdditionsInWorld(cParams.getAddRate(), cParams.getCellSize());				
+			}
+			
+			// 2. tell all the cells to run			
 			List<Cell> deadCells = new ArrayList<Cell>();
 			//long t = System.currentTimeMillis();
 			for (int i = 0; i < c.getCells().size(); i++)
@@ -3115,17 +3158,42 @@ public class FBAWorld extends World2D
 		if (!cParams.isCommandLineOnly())
 			updateInfoPanel();
 
+				
+		
 		double[] totalBiomass = calculateTotalBiomass();
 		//int[] FBAstatus = getFBAstatus();
 		//TODO: Report if a model is infeasible
 		System.out.println ("Total biomass:");
 		for (int i=0; i<totalBiomass.length; i++)
 		{
-			System.out.println("Model " + i + ": " + totalBiomass[i]);
+			System.out.println("Model " + models[i].getModelID() + ": " + totalBiomass[i]);
 			//if (FBAstatus[i]==0)
 			//	System.out.println("   Model "+ i + " is infeasible");
 		}
 
+		// 7. Remove models that have lower biomass than the minimal required
+		//double[] totalBiomass = calculateTotalBiomass();		
+		List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
+		for (int i = 0; i < totalBiomass.length; i++)
+		{
+			if (totalBiomass[i] > cParams.getCellSize())
+			{
+				newModelsList.add(models[i]);					
+			}
+		}
+		FBAModel[] newModels = new FBAModel[newModelsList.size()];
+		newModels = newModelsList.toArray(newModels);
+
+		// now change models in cells as well as in world
+		for (Cell cell : c.getCells())
+		{
+			cell.changeModelsInCell(models, newModels);
+		}
+		
+		System.out.println("new models " + newModels.length + ", old models: " + models.length);
+		changeModelsInWorld(models, newModels);
+		setNumModels(newModels.length);		
+		
 		currentTimePoint++;
 		if (pParams.writeFluxLog() && currentTimePoint % pParams.getFluxLogRate() == 0)
 			writeFluxLog();
@@ -3139,7 +3207,7 @@ public class FBAWorld extends World2D
 			writeTotalBiomassLog();
 		if (pParams.writeMatFile() && currentTimePoint % pParams.getMatFileRate() == 0)
 			writeMatFile();
-		return ret;
+		return ret;				
 	}
 	
 	/**
@@ -3354,65 +3422,95 @@ public class FBAWorld extends World2D
 	 * Writes the current status to the biomass log if it is at the right time point.
 	 * See documentation for formats.
 	 */
+//	private void writeBiomassLog()
+//	{
+//		if (biomassLogWriter != null)// && (currentTimePoint == 1 || currentTimePoint % pParams.getBiomassLogRate() == 0))
+//		{
+//			//NumberFormat nf = NumberFormat.getInstance();
+//			//nf.setGroupingUsed(false);
+//			//nf.setMaximumFractionDigits(100);
+//			NumberFormat nf = new DecimalFormat("0.##########E0");
+//			
+//			switch(pParams.getBiomassLogFormat())
+//			{
+//				/* Matlab .m file format:
+//				 * biomass_<time>_<species> = sparse(<num_rows>, <num_cols>);
+//				 * biomass_<time>_<species>(<row>, <col>) = <biomass>
+//				 * ...
+//				 * and so on.
+//				 */
+//				case MATLAB:
+//					for (int i=0; i<models.length; i++)
+//					{
+//						String varName = "biomass_" + currentTimePoint + "_" + i;
+//						biomassLogWriter.println(varName + " = sparse(" + numRows + ", " + numCols + ");");
+//						Iterator<Cell> it = c.getCells().iterator();
+//						while (it.hasNext())
+//						{
+//							FBACell cell = (FBACell)it.next();
+//							double[] biomass = cell.getBiomass();
+//							biomassLogWriter.println(varName + "(" + (cell.getY()+1) + ", " + (cell.getX()+1) + ") = " + nf.format(biomass[i]) + ";");
+//						}
+//					}
+//					break;
+//					
+//				default:
+//					/*
+//					 * Comets file format:
+//					 * currentTimePoint on a line
+//					 * x y biomass1 biomass2 ... biomassN
+//					 * x y ...
+//					 * etc.
+//					 */
+//					biomassLogWriter.println(currentTimePoint);
+//					Iterator<Cell> it = c.getCells().iterator();
+//					while (it.hasNext())
+//					{
+//						FBACell cell = (FBACell)it.next();
+//						double[] biomass = cell.getBiomass();
+//						biomassLogWriter.print(cell.getX() + " " + cell.getY());
+//						for (int i=0; i<biomass.length; i++)
+//						{
+//							biomassLogWriter.print(" " + nf.format(biomass[i]));
+//						}
+//						biomassLogWriter.print("\n");
+//					}
+//					break;
+//			}
+//			biomassLogWriter.flush();
+//		}
+//	}
+
 	private void writeBiomassLog()
 	{
-		if (biomassLogWriter != null)// && (currentTimePoint == 1 || currentTimePoint % pParams.getBiomassLogRate() == 0))
+		/*
+		* New biomass log format, supporting also evolution:
+		* timepoint x y modelID biomass
+		* 
+		* - One line written for each timepoint, cell and model
+		*/
+		if (biomassLogWriter != null)			
 		{
-			//NumberFormat nf = NumberFormat.getInstance();
-			//nf.setGroupingUsed(false);
-			//nf.setMaximumFractionDigits(100);
-			NumberFormat nf = new DecimalFormat("0.##########E0");
-			
-			switch(pParams.getBiomassLogFormat())
+			NumberFormat nf = new DecimalFormat("0.##########E0");			
+			Iterator<Cell> it = c.getCells().iterator();
+			while (it.hasNext())
 			{
-				/* Matlab .m file format:
-				 * biomass_<time>_<species> = sparse(<num_rows>, <num_cols>);
-				 * biomass_<time>_<species>(<row>, <col>) = <biomass>
-				 * ...
-				 * and so on.
-				 */
-				case MATLAB:
-					for (int i=0; i<models.length; i++)
-					{
-						String varName = "biomass_" + currentTimePoint + "_" + i;
-						biomassLogWriter.println(varName + " = sparse(" + numRows + ", " + numCols + ");");
-						Iterator<Cell> it = c.getCells().iterator();
-						while (it.hasNext())
-						{
-							FBACell cell = (FBACell)it.next();
-							double[] biomass = cell.getBiomass();
-							biomassLogWriter.println(varName + "(" + (cell.getY()+1) + ", " + (cell.getX()+1) + ") = " + nf.format(biomass[i]) + ";");
-						}
-					}
-					break;
-					
-				default:
-					/*
-					 * Comets file format:
-					 * currentTimePoint on a line
-					 * x y biomass1 biomass2 ... biomassN
-					 * x y ...
-					 * etc.
-					 */
-					biomassLogWriter.println(currentTimePoint);
-					Iterator<Cell> it = c.getCells().iterator();
-					while (it.hasNext())
-					{
-						FBACell cell = (FBACell)it.next();
-						double[] biomass = cell.getBiomass();
-						biomassLogWriter.print(cell.getX() + " " + cell.getY());
-						for (int i=0; i<biomass.length; i++)
-						{
-							biomassLogWriter.print(" " + nf.format(biomass[i]));
-						}
-						biomassLogWriter.print("\n");
-					}
-					break;
+				FBACell cell = (FBACell)it.next();
+				double[] biomass = cell.getBiomass();
+				String[] modelIDs = cell.getCellModelIDs();
+				for (int i=0; i<biomass.length; i++)
+				{
+					biomassLogWriter.print(currentTimePoint + " " 
+							+ cell.getX() + " " + cell.getY() + " " 
+							+ modelIDs[i] + " " + nf.format(biomass[i]) + "\n");
+				}
 			}
-			biomassLogWriter.flush();
 		}
+		biomassLogWriter.flush();
 	}
-
+	
+	
+	
 	/**
 	 * Writes to the currently initialized velocity log, if it is the right time. See documentation
 	 * for the formats.
@@ -4608,4 +4706,160 @@ public class FBAWorld extends World2D
 		}
 	}
 
+	/*
+	 * This performs a mutations in all spaces. 
+	 * - Either bacterial "cells" are sampled (line starting with samplePopulation...) or 
+	 *   more simply, biomass is diluted. The latter one is active for now. 
+	 * todo: Implement parameter specifying how the dilution should be done. 
+	 */
+	public void mutateWorld(double mutation_rate, double cell_biomass)
+	{		
+		// this should go as arguments
+		
+		// 1. get biomass for each model, for all cells
+		double[] totalBiomass = calculateTotalBiomass();
+		
+		int[] nCells = new int[totalBiomass.length];
+		int[] nMut = new int[totalBiomass.length];
+
+		// Loop over all species 
+		for (int a=0; a<totalBiomass.length; a++)
+		{	
+			// subdivide biomass in individual cells
+			nCells[a] = (int)Math.floor(totalBiomass[a]/cell_biomass);
+			if (nCells[a]>0)
+			{
+				// 2. compute number of cells and number of mutations in each species 
+				nMut[a] = samplePopulation(nCells[a], mutation_rate);
+				
+				// 3. if any mutation in model a, clone models and perform mutations,
+				if (nMut[a]>0)
+				{
+					// determine where will mutations happen by building a map to sample cells
+					WeightedSample <Cell> toMutate = new WeightedSample <Cell> ();					
+					for (Cell cell : c.getCells())
+					{
+						toMutate.add(cell.getBiomass()[a], cell);
+					}
+
+					// perform mutations and place them in cells
+					for (int i=0; i<nMut[a]; i++)
+					{
+						FBAModel mutModel = ((FBAModel)models[a]).clone();
+						
+						// perform mutations and write new genotypes to log 
+						mutModel.mutateModel();
+						mutModel.setGenomeCost(pParams.getGeneFractionalCost());
+						mutModel.setModelID(UUID.randomUUID().toString());
+						mutModel.setAncestor(models[a].getModelID());
+						evolutionLogWriter.print(mutModel.getAncestor() + " " 
+								+ mutModel.getMutation() + " " + mutModel.getModelID() 
+								+ "\n");
+						evolutionLogWriter.flush();
+												
+						Model[] newModels = (Model[])ArrayUtils.addAll(models, mutModel);
+						
+						// include the model in all cells, initially with biomass zero
+						for (Cell cell : c.getCells())
+						{
+							cell.changeModelsInCell(models, newModels);
+						}
+						
+						// find the cell where the mutation actually happens
+						Cell cellToMutate = toMutate.next();
+						double[] newValues = cellToMutate.getBiomass();
+						
+						newValues[a] = newValues[a] - cell_biomass;
+						newValues[newValues.length-1] = cell_biomass;
+						
+						// change the biomass
+						cellToMutate.setBiomass(newValues);
+
+						// update world
+						
+						changeModelsInWorld(models, newModels);
+						setNumModels(newModels.length);
+					}					
+				}
+			}
+		}
+			
+		System.out.println("INDS: " + Arrays.toString(nCells));
+		System.out.println("MUTS: " + Arrays.toString(nMut));
+	}
+
+	public void performAdditionsInWorld(double addition_rate, double cell_biomass)
+	{		
+		// this should go as arguments
+		
+		// 1. get biomass for each model, for all cells
+		double[] totalBiomass = calculateTotalBiomass();
+		int[] nCells = new int[totalBiomass.length];
+		int[] nMut = new int[totalBiomass.length];
+
+		// Loop over all species 
+		for (int a=0; a<totalBiomass.length; a++)
+		{	
+			// subdivide biomass in individual cells
+			nCells[a] = (int)Math.floor(totalBiomass[a]/cell_biomass);
+			if (nCells[a]>0)
+			{
+				// 2. compute number of cells and number of mutations in each species 
+				nMut[a] = samplePopulation(nCells[a], addition_rate);
+				
+				// 3. if any mutation in model a, clone models and perform mutations,
+				if (nMut[a]>0)
+				{
+					// determine where will mutations happen by building a map to sample cells
+					WeightedSample <Cell> toMutate = new WeightedSample <Cell> ();					
+					for (Cell cell : c.getCells())
+					{
+						toMutate.add(cell.getBiomass()[a], cell);
+					}
+
+					// perform mutations and place them in cells
+					for (int i=0; i<nMut[a]; i++)
+					{
+						FBAModel mutModel = ((FBAModel)models[a]).clone();
+												
+						mutModel.addReactionToModel();
+						mutModel.setGenomeCost(pParams.getGeneFractionalCost());
+						mutModel.setModelID(UUID.randomUUID().toString());
+						mutModel.setAncestor(models[a].getModelID());
+						evolutionLogWriter.print(mutModel.getAncestor() + " " 
+								+ mutModel.getMutation() + " " + mutModel.getModelID() 
+								+ "\n");
+						evolutionLogWriter.flush();
+						
+						Model[] newModels = (Model[])ArrayUtils.addAll(models, mutModel);
+						
+						// include the model in all cells, initially with biomass zero
+						for (Cell cell : c.getCells())
+						{
+							cell.changeModelsInCell(models, newModels);
+						}
+						
+						// find the cell where the mutation actually happens
+						Cell cellToMutate = toMutate.next();
+						double[] newValues = cellToMutate.getBiomass();
+						
+						newValues[a] = newValues[a] - cell_biomass;
+						newValues[newValues.length-1] = cell_biomass;
+						
+						// change the biomass
+						cellToMutate.setBiomass(newValues);
+
+						// update world
+						changeModelsInWorld(models, newModels);
+						setNumModels(newModels.length);
+					}					
+				}
+			}
+		}			
+		// System.out.println("INDS: " + Arrays.toString(nCells));
+		// System.out.println("MUTS: " + Arrays.toString(nMut));
+	}
+
+	
+	
 }

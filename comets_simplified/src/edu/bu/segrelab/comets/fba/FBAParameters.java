@@ -145,7 +145,8 @@ public class FBAParameters implements PackageParameters
 	useLogNameTimeStamp,
 	randomOrder = true, //shuffle the order each model in a cell is run
 	monodOverride,
-	pseudoOverride; 
+	pseudoOverride, 
+	costlyGenome = false; 
 
 	private String fluxLogName,
 	mediaLogName,
@@ -185,7 +186,8 @@ public class FBAParameters implements PackageParameters
 			defaultHill = 2,
 			defaultAlpha = 1,
 			defaultW = 10,
-			defaultDiffConst = 1e-5,
+			defaultDiffConst = 1e-5, 
+			geneFractionalCost = 0,	
 			minConcentration = 1e-26; //Here's hoping 1 atom per liter is enough precision
 
 	private double[] defaultVelocityVector={0.0,0.0,0.0};
@@ -351,6 +353,13 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("randomorder", new Boolean(randomOrder));
 		paramTypes.put("randomorder", ParameterType.BOOLEAN);
+		
+		paramValues.put("costlygenome", new Boolean(costlyGenome));
+		paramTypes.put("costlygenome", ParameterType.BOOLEAN);
+		
+		paramValues.put("genefractionalcost", new Double(geneFractionalCost));
+		paramTypes.put("genefractionalcost", ParameterType.DOUBLE);
+
 	}
 
 	public void loadParameterState()
@@ -369,6 +378,8 @@ public class FBAParameters implements PackageParameters
 		setTotalBiomassLogName((String)paramValues.get("totalbiomasslogname"));
 		setMatFileName((String)paramValues.get("matfilename"));
 		setRandomOrder(((Boolean)paramValues.get("randomorder")).booleanValue());
+		setCostlyGenome(((Boolean)paramValues.get("costlygenome")).booleanValue());		
+		setGeneFractionalCost(((Double)paramValues.get("genefractionalcost")).doubleValue());
 
 		if(paramValues.get("fluxlogformat") instanceof String)
 			setFluxLogFormat(LogFormat.findByName((String)paramValues.get("fluxlogformat")));
@@ -836,7 +847,20 @@ public class FBAParameters implements PackageParameters
 			}
 		}
 	}
+	
+	public double getGeneFractionalCost()
+	{
+		return geneFractionalCost;
+	}
 
+	public static void setGeneFractionalCost(double d)
+	{
+		if (d <= 0)
+			return;
+		geneFractionalCost = d;
+	}
+
+	
 	/**
 	 * Returns the current style of media exchange occuring within the model
 	 * @return either <code>STANDARD_EXCHANGE</code>, <code>MM_EXCHANGE</code>, or
@@ -1319,6 +1343,21 @@ public class FBAParameters implements PackageParameters
 		this.randomOrder = randomOrder;
 	}
 
+	/** Should the models in a cell be run in a random order?
+	 * @return the randomOrder
+	 */
+	public boolean getCostlyGenome() {
+		return costlyGenome;
+	}
+
+	/** Should the models in a cell be run in a random order?
+	 * @param randomOrder the randomOrder to set
+	 */
+	public void setCostlyGenome(boolean costlyGenome) {
+		this.costlyGenome= costlyGenome;
+	}
+
+	
 	public String getLastDirectory()
 	{
 		return c.getParameters().getLastDirectory();

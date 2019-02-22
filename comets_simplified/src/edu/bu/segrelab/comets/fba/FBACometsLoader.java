@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
@@ -2806,11 +2809,11 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 	}
 
 	public FBAModel loadModelFromFile(Comets c, String path)
-	{
+	{		
 		FBAModel model = null;
 		if (pParams == null)
 			getPackageParameters(c);
-
+		
 		System.out.println("Loading '" + path + "' ...");
 		//2-level testing.
 		// first, check to see if the file, as given, is real.
@@ -2827,6 +2830,22 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			model = FBAModel.loadModelFromFile(f.getPath());
 			model.setFlowDiffusionConstant(pParams.getFlowDiffRate());
 			model.setGrowthDiffusionConstant(pParams.getGrowthDiffRate());
+
+			Path p = Paths.get(path);
+			
+			// set model ID, ancestor and mutation fields
+			model.setAncestor("NO_ANCESTOR");
+			model.setModelID(p.getFileName().toString());
+			model.setMutation("NO_MUT");
+
+			System.out.println("Ancestor " + model.getAncestor());
+			
+			// genome size costs are set when new models are created. That is,
+			// either here at loading. or when mutant models appear.
+			if  (pParams.getCostlyGenome())
+				model.setGenomeCost(pParams.getGeneFractionalCost());
+			else
+				model.setGenomeCost(0);
 			
 			System.out.println("Done!\n Testing default parameters...");
 			int result = model.run();
@@ -2835,6 +2854,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 				System.out.println("(looks ok!)");
 			else
 				System.out.println("(might be an error?)");
+			
 			System.out.println("objective solution = " + model.getObjectiveSolutions());
 			System.out.flush();
 		}

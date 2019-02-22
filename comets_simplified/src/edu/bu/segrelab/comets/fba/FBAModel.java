@@ -55,7 +55,7 @@ import com.sun.xml.internal.ws.util.StringUtils;
  * @author Bill Riehl briehl@bu.edu; Ilija Dukovski ilija.dukovski@gmail.com
  * created 3 Mar 2010, modified 11 Mar 2014
  */
-public class FBAModel extends edu.bu.segrelab.comets.Model 
+public class FBAModel extends edu.bu.segrelab.comets.Model
 					  implements edu.bu.segrelab.comets.CometsConstants
 {
 	/*
@@ -92,8 +92,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private int numMetabs;
 	private int numExch;
 	private boolean runSuccess;
+	
+	// evolution related fields 
 	private String modelID; // DJORDJE 
-	public int mutationCount; 
+	private String ancestor; // DJORDJE 
+	private String mutation;	
 	
 	private int[] exch; // indices of exchange fluxes.
 	// As in the GLPK model idiom,
@@ -114,7 +117,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double[] exchAlpha;	  // another option for creating exchange reactions:
 	private double[] exchW; 		  // defined as min(alpha[i] * media[i], W[i] * volume) / biomass
 									  // not as "exact" as the kinetic constraints, but still time-independent
-
+	
 	private double flowDiffConst; // = 1e-5;
 	private double growthDiffConst; // = 5e-5;
 	private double elasticModulusConst;
@@ -134,7 +137,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   defaultHill = -1,
 				   defaultAlpha = -1,
 				   defaultW = -1,
-				   defaultMetabDiffConst = 0;
+				   defaultMetabDiffConst = 0, 
+				   genomeCost = 0;
 	
 	private boolean active;     // true is model is active growing, if false the model is asleep 
 
@@ -311,14 +315,14 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				cnt++;
 			}				
 		}
-			
+
 		baseExchLB = new double[numExch];
 		baseExchUB = new double[numExch];
 		for (int i = 0; i < numExch; i++)
 		{
 			baseExchLB[i] = baseLB[exch[i]-1];
 			baseExchUB[i] = baseUB[exch[i]-1];
-		}
+		}				
 	}
 	
 	/**Constructor added to make the biomass reaction optional. If not given,
@@ -1025,32 +1029,39 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			//rxnFluxes=model.getVars();
 			runSuccess = true;
 		}
-		
         return ret;
 	}
 
-	// DJORDJE 
-	public void setModelID(String modelName)
-	{
-		this.modelID = modelName;
-	}
-	
+	// evolution related getters and setters
 	public String getModelID()
 	{
 		return modelID; 
 	}
 	
-	/*public void setMutationCount(int mutCount)
+	public void setModelID(String model_id)
 	{
-		this.mutationCount = mutCount;
+		this.modelID = model_id;
 	}
 	
-	public int getMutationCount()
+	public String getAncestor()
 	{
-		return mutationCount; 
+		return ancestor; 
 	}
-	/
+
+	public void setAncestor(String ancestor_id)
+	{
+		this.ancestor = ancestor_id;
+	}
 	
+	public void setMutation(String mutation)
+	{
+		this.mutation = mutation;
+	}
+	
+	public String getMutation()
+	{
+		return mutation; 
+	}
 	
 	/**
 	 * @return The fluxes from the most recent FBA run
@@ -3008,12 +3019,13 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	/**
 	 * @param biomassReaction the biomassReaction to set
 	 */
-	public void setBiomassReaction(int biomassReaction) {
+	public void setBiomassReaction(int biomassReaction)
+	{
 		this.biomassReaction = biomassReaction;
 	}
 
 	/**
-	 * Mutation method 
+	 * Mutation method (this is for deletions only) 
 	 */
 	public void mutateModel()
 	{		
@@ -3023,12 +3035,13 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		// figure out which reactions have nonzero bounds
 		ArrayList<Integer> nonzeroRxns = new ArrayList<Integer>();
 		for (int j = 0; j < lBounds.length; j++) {
-			if (lBounds[j] != 0 || uBounds[j] != 0)
+			if ((lBounds[j] != 0 || uBounds[j] != 0) && !(ArrayUtils.contains(exch, j)))
 				nonzeroRxns.add(j);
 		}
 		
 		// select randomly one of these reactions
 		int mutReaction = nonzeroRxns.get(new Random().nextInt(nonzeroRxns.size()));
+		setMutation("del_" + Integer.toString(mutReaction));
 		//System.out.println("mutated reaction: " + mutReaction);
 		
 		// and update the mutModel model bounds
@@ -3036,5 +3049,50 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		uBounds[mutReaction] = 0;
 		setBaseLowerBounds(lBounds);
 		setBaseUpperBounds(uBounds);		
+	}
+	
+	/**
+	 * Reaction addition method. 
+	 * - Only adds those reactions present in the model with zero bounds.
+	 * - Done similarly to mutateModel, but performing the reverse
+	 */
+	public void addReactionToModel()
+	{		
+		double[] lBounds = getBaseLowerBounds();
+		double[] uBounds = getBaseUpperBounds();
+		
+		// figure out which reactions have zero bounds
+		ArrayList<Integer> nonzeroRxns = new ArrayList<Integer>();
+		for (int j = 0; j < lBounds.length; j++) {
+			if ((lBounds[j] == 0 && uBounds[j] == 0) && !(ArrayUtils.contains(exch, j)))
+				nonzeroRxns.add(j);
+		}
+		
+		// select randomly one of these reactions
+		int mutReaction = nonzeroRxns.get(new Random().nextInt(nonzeroRxns.size()));
+		setMutation("add_" + Integer.toString(mutReaction));
+		
+		// and update the mutModel model bounds
+		uBounds[mutReaction] = 1000;
+		setBaseUpperBounds(uBounds);		
+	}
+	
+	public double getGenomeCost()
+	{
+		return genomeCost;
+	}
+	
+	public void setGenomeCost(double ind_frac_cost)
+	{
+		double[] lBounds = getBaseLowerBounds();
+		double[] uBounds = getBaseUpperBounds();
+		
+		// figure out how many reactions have nonzero bounds
+		int num_reactions = 0;
+		for (int j = 0; j < lBounds.length; j++) {
+			if (lBounds[j] != 0 || uBounds[j] != 0)
+				num_reactions ++;			
+		}
+		genomeCost = num_reactions * ind_frac_cost;		
 	}
 }

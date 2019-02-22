@@ -64,14 +64,16 @@ public class CometsParameters implements CometsConstants
 	private double timeStep = 1,				// hours
 				   deathRate = 0.1,				// percent per time point
 				   activateRate = 0.001,        // 1/hours
-				   maxSpaceBiomass = 10,	// grams
-				   minSpaceBiomass = 1e-10,	// grams
-				   spaceWidth = 0.1,		// cm
-				   slideshowColorValue = 10,	
-				   spaceVolume = 0.001,		// ml (1 mL = 1 cm^3)
-				   cellSize = 1e-13,		// grams DW, djordje
-				   dilFactor = 1e-2, 		// djordje
-				   dilTime = 12;		// hours
+				   maxSpaceBiomass = 10,		// grams
+				   minSpaceBiomass = 1e-10,		// grams
+				   spaceWidth = 0.1,			// cm
+				   slideshowColorValue = 10,
+				   spaceVolume = 0.001,			// ml (1 mL = 1 cm^3)
+				   cellSize = 4.3e-13,			// grams DW
+				   dilFactor = 1e-2,
+				   dilTime = 12,				// hours
+				   mutRate = 1e-9,				// per genome and cycle
+				   addRate = 1e-9;				// per genome and cycle	
 	
 	private boolean isCommandLine = false,
 					showGraphics = true,
@@ -86,7 +88,8 @@ public class CometsParameters implements CometsConstants
 					colorRelative = true,
 					slideshowColorRelative = true,
 					simulateActivation = false,
-					batchDilution = false;	// djordje
+					batchDilution = false,
+					evolution = false;
 
 	private int displayLayer = 0,
 				pixelScale = 4,
@@ -163,6 +166,8 @@ public class CometsParameters implements CometsConstants
 		setSpaceWidth(((Double)paramValues.get("spacewidth")).doubleValue());
 		setSpaceVolume(Math.pow(((Double)paramValues.get("spacewidth")), 3));
 		setActivateRate(((Double)paramValues.get("activaterate")).doubleValue());
+		setMutRate(((Double)paramValues.get("mutrate")).doubleValue());
+		setAddRate(((Double)paramValues.get("addrate")).doubleValue());
 
 		setCommandLineOnly(((Boolean)paramValues.get("iscommandline")).booleanValue());
 		showGraphics(((Boolean)paramValues.get("showgraphics")).booleanValue());
@@ -177,6 +182,7 @@ public class CometsParameters implements CometsConstants
 		setColorRelative(((Boolean)paramValues.get("colorrelative")).booleanValue());
 		setSimulateActivation(((Boolean)paramValues.get("simulateactivation")).booleanValue());
 		setBatchDilution(((Boolean)paramValues.get("batchdilution")).booleanValue());
+		setEvolution(((Boolean)paramValues.get("evolution")).booleanValue());
 		
 		setPixelScale(((Integer)paramValues.get("pixelscale")).intValue());
 		setNumRows(((Integer)paramValues.get("gridrows")).intValue());
@@ -319,6 +325,15 @@ public class CometsParameters implements CometsConstants
 
 		paramValues.put("batchdilution", new Boolean(batchDilution));
 		paramTypes.put("batchdilution", ParameterType.BOOLEAN);
+		
+		paramValues.put("mutrate", new Double(mutRate));
+		paramTypes.put("mutrate", ParameterType.DOUBLE);
+		
+		paramValues.put("addrate", new Double(addRate));
+		paramTypes.put("addrate", ParameterType.DOUBLE);
+
+		paramValues.put("evolution", new Boolean(evolution));
+		paramTypes.put("evolution", ParameterType.BOOLEAN);
 
 		//paramValues.put("seed", new Long(seed));
 		//paramTypes.put("seed", ParameterType.LONG);
@@ -474,6 +489,23 @@ public class CometsParameters implements CometsConstants
 	{
 		return batchDilution;
 	}
+	
+	/**
+	 * Sets if there is evolution in the simulation 
+	 */
+	public void setEvolution(boolean b)
+	{
+		evolution = b;
+	}
+		
+	/**
+	 * @return do we perform evolution? 
+	 */
+	public boolean getEvolution()
+	{
+		return evolution;
+	}
+	
 	
 	
 	/**
@@ -1356,5 +1388,40 @@ public class CometsParameters implements CometsConstants
 	{
 		activateRate = r;
 	}
+	
+	/** Returns the value of the mutRate parameter
+	 * 
+	 * @return mutRate value
+	 */
+	public double getMutRate()
+	{
+		return mutRate;
+	}
+	
+	/** Sets the value of the mutRate parameter
+	 * 
+	 * @param r The double value for the parameter.
+	 */
+	public void setMutRate(double r)
+	{
+		mutRate = r;
+	}
 
+	/** Returns the value of the mutRate parameter
+	 * 
+	 * @return mutRate value
+	 */
+	public double getAddRate()
+	{
+		return addRate;
+	}
+	
+	/** Sets the value of the mutRate parameter
+	 * 
+	 * @param r The double value for the parameter.
+	 */
+	public void setAddRate(double r)
+	{
+		addRate = r;
+	}
 }
