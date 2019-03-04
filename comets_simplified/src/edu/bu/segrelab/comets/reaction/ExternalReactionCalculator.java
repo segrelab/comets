@@ -1,11 +1,8 @@
 package edu.bu.segrelab.comets.reaction;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.fba.FBACell;
+import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.fba.FBAWorld;
 import edu.bu.segrelab.comets.fba.FBAWorld3D;
 import edu.bu.segrelab.comets.util.Utility;
@@ -18,10 +15,13 @@ public class ExternalReactionCalculator{
 	double[][] params; //either the Michaelis constant or the reaction order
 	double timestep; //in *SECONDS*, whereas Comets stores the timestep in hours
 	
+	double errorThreshold = FBAParameters.getMinConcentration(); //in millimolar units 
+	
 	protected enum CalcStatus{
 		PENDING, //is in process or hasn't run yet
 		CALC_OK, //execution successful
 		UNSTABLE_DEPLETION, //a reactant is draining too fast, causing instability
+		APPROX_DEPLETION, // a substep returned such a small concentration it was projected to 0
 		//SUBSTEPS_MAXIMIZED, //Calculation isn't OK, but we've iterated the max number of times
 		DEPLETED; //at least one concentration is negative
 	}
@@ -157,7 +157,13 @@ public class ExternalReactionCalculator{
 	}
 	
 	//Implement Runge-Kutta algorithm to solve ODEs
-	
+	/*	Approach to handling decay / concentrations approaching 0: If an intermediate solution of 
+	 * RK yields a negative concentration, the solution can become unstable. Projecting all negative 
+	 * values back up to 0 can also yield unexpected behavior. The approach here is to define some 
+	 * error threshold, then A) if an intermediate result is below 0-err, reduce the step size by 
+	 * half and try again; b) if an intermediate result is <0 and >0-err, project it back up to 0. 
+	 * See L.F.Shampine et al. 2005 (DOI:10.1016/j.amc.2004.12.011) for more discussion
+	 */
 	/**Implement the Runge-Kutta algorithm to solve the ODE system and return the concentrations 
 	 * after the set number of timesteps
 	 * 
@@ -179,11 +185,21 @@ public class ExternalReactionCalculator{
 			}
 			delta *= timestep;
 			dy1[i] = delta; //units are mmol
-			
-			if (delta < -2 * concentrations[i]) {
-				//The reaction is running too fast, which will cause an instability
-				status = CalcStatus.UNSTABLE_DEPLETION;
+
+			//if (delta < -1 * concentrations[i]) {
+			//The reaction is running too fast, which will cause an instability
+			//	status = CalcStatus.UNSTABLE_DEPLETION;
+			//}
+
+			//check for negativity
+			if (concentrations[i] + dy1[i] < 0) {
+				if (Math.abs(concentrations[i] + dy1[i]) < errorThreshold) {
+					status = CalcStatus.APPROX_DEPLETION;
+				}
+				else status = CalcStatus.UNSTABLE_DEPLETION;
+				dy1[i] = -concentrations[i];
 			}
+
 		}
 		
 		//delta_y2 = delta_t * f(t0 + 1/2 delta_t, y0 + 1/2 delta_y1)
@@ -200,6 +216,15 @@ public class ExternalReactionCalculator{
 			}
 			delta *= timestep;
 			dy2[i] = delta;
+			
+			//check for negativity
+			if (concentrations[i] + dy2[i] < 0) {
+				if (Math.abs(concentrations[i] + dy1[i]) < errorThreshold) {
+					status = CalcStatus.APPROX_DEPLETION;
+				}
+				else status = CalcStatus.UNSTABLE_DEPLETION;
+				dy2[i] = -concentrations[i];
+			}
 		}
 		
 		//delta_y3 = delta_t * f(t0 + 1/2 delta_t, y0 + 1/2 delta_y2)
@@ -216,6 +241,15 @@ public class ExternalReactionCalculator{
 			}
 			delta *= timestep;
 			dy3[i] = delta;
+			
+			//check for negativity
+			if (concentrations[i] + dy3[i] < 0) {
+				if (Math.abs(concentrations[i] + dy1[i]) < errorThreshold) {
+					status = CalcStatus.APPROX_DEPLETION;
+				}
+				else status = CalcStatus.UNSTABLE_DEPLETION;
+				dy3[i] = -concentrations[i];
+			}
 		}
 		
 		//delta_y4 = delta_t * f(t0 + delta_t, y0 + delta_y3)
@@ -232,6 +266,15 @@ public class ExternalReactionCalculator{
 			}
 			delta *= timestep;
 			dy4[i] = delta;
+			
+			//check for negativity
+			if (concentrations[i] + dy4[i] < 0) {
+				if (Math.abs(concentrations[i] + dy4[i]) < errorThreshold) {
+					status = CalcStatus.APPROX_DEPLETION;
+				}
+				else status = CalcStatus.UNSTABLE_DEPLETION;
+				dy4[i] = -concentrations[i];
+			}
 		}
 		
 		//y_final = y0 + some linear combination of the deltas
@@ -244,7 +287,7 @@ public class ExternalReactionCalculator{
 		//check for any values < 0
 		boolean neg = false;
 		for (double d:yf) {
-			if (d < 0) neg = true;
+			if (d < -errorThreshold) neg = true;
 		}
 		if (neg) status = CalcStatus.DEPLETED;
 		

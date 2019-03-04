@@ -349,6 +349,7 @@ public class FBAParameters implements PackageParameters
 		setTotalBiomassLogName((String)paramValues.get("totalbiomasslogname"));
 		setMatFileName((String)paramValues.get("matfilename"));
 		setRandomOrder(((Boolean)paramValues.get("randomorder")).booleanValue());
+		setNumExRxnSubsteps((Integer)paramValues.get("numexrxnsubsteps"));
 
 		if(paramValues.get("fluxlogformat") instanceof String)
 			setFluxLogFormat(LogFormat.findByName((String)paramValues.get("fluxlogformat")));
@@ -1231,11 +1232,11 @@ public class FBAParameters implements PackageParameters
 	 * 
 	 * @return
 	 */
-	public double getMinConcentration() {
+	public static double getMinConcentration() {
 		return minConcentration;
 	}
 
-	public void setMinConcentration(double min) {
+	public static void setMinConcentration(double min) {
 		minConcentration = min;
 	}
 
