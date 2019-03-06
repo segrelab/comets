@@ -4592,7 +4592,7 @@ public class FBAWorld extends World2D
 	/*
 	 * This performs a dilution of the simulation (both cells and media). 
 	 * - Either bacterial "cells" are sampled (line starting with samplePopulation...) or 
-	 *   more simply, biomass is diluted. The latter one is active for now. 
+	 *   more simply, biomass is diluted. The former one is active for now. 
 	 * todo: Implement parameter specifying how the dilution should be done. 
 	 */
 	public void batchDilute(double dilution, double cellBiomass)
@@ -4603,8 +4603,8 @@ public class FBAWorld extends World2D
 		
 		for (int i = 0; i < models.length; i++)
 			if (totalBiomass[i] > 0.0)
-				//dilutedBiomass[i] = samplePopulation((int)Math.floor(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
-				dilutedBiomass[i] = totalBiomass[i]*dilution; // jean
+				dilutedBiomass[i] = samplePopulation((int)Math.floor(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
+				//dilutedBiomass[i] = totalBiomass[i]*dilution; // jean
 			else
 				dilutedBiomass[i] = 0.0;
 		// cell where new biomass will be located
@@ -4631,6 +4631,7 @@ public class FBAWorld extends World2D
 			
 			// and update media 
 			setMedia(cell.getX(), cell.getY(), media);
+			cell.setStationaryStatus();
 		}
 	}		
 	
@@ -4713,22 +4714,20 @@ public class FBAWorld extends World2D
 	 */
 	public void mutateWorld(double mutation_rate, double cell_biomass)
 	{		
-		// this should go as arguments
-		
-		// 1. get biomass for each model, for all cells
-		double[] totalBiomass = calculateTotalBiomass();
-		
-		int[] nCells = new int[totalBiomass.length];
-		int[] nMut = new int[totalBiomass.length];
+		// Jean updated to get Delta biomass for each model, for all cells rather than total biomass
+		double[] totalDeltaBiomass = calculateDeltaBiomass();		
+
+		int[] nCells = new int[totalDeltaBiomass.length];
+		int[] nMut = new int[totalDeltaBiomass.length];
 
 		// Loop over all species 
-		for (int a=0; a<totalBiomass.length; a++)
+		for (int a=0; a<totalDeltaBiomass.length; a++)
 		{	
-			// subdivide biomass in individual cells
-			nCells[a] = (int)Math.floor(totalBiomass[a]/cell_biomass);
+			// subdivide change in biomass to individual cells
+			nCells[a] = (int)Math.floor(totalDeltaBiomass[a]/cell_biomass);
 			if (nCells[a]>0)
 			{
-				// 2. compute number of cells and number of mutations in each species 
+				// 2. compute number of new cells and number of mutations in each species 
 				nMut[a] = samplePopulation(nCells[a], mutation_rate);
 				
 				// 3. if any mutation in model a, clone models and perform mutations,
@@ -4739,6 +4738,7 @@ public class FBAWorld extends World2D
 					for (Cell cell : c.getCells())
 					{
 						toMutate.add(cell.getBiomass()[a], cell);
+						break;
 					}
 
 					// perform mutations and place them in cells
@@ -4748,7 +4748,11 @@ public class FBAWorld extends World2D
 						
 						// perform mutations and write new genotypes to log 
 						mutModel.mutateModel();
-						mutModel.setGenomeCost(pParams.getGeneFractionalCost());
+						// Jean added flag to check if genome costs are present
+						if  (pParams.getCostlyGenome())
+							mutModel.setGenomeCost(pParams.getGeneFractionalCost());
+						else
+							mutModel.setGenomeCost(0);
 						mutModel.setModelID(UUID.randomUUID().toString());
 						mutModel.setAncestor(models[a].getModelID());
 						evolutionLogWriter.print(mutModel.getAncestor() + " " 
@@ -4774,8 +4778,7 @@ public class FBAWorld extends World2D
 						// change the biomass
 						cellToMutate.setBiomass(newValues);
 
-						// update world
-						
+						// update world		
 						changeModelsInWorld(models, newModels);
 						setNumModels(newModels.length);
 					}					
@@ -4788,22 +4791,20 @@ public class FBAWorld extends World2D
 	}
 
 	public void performAdditionsInWorld(double addition_rate, double cell_biomass)
-	{		
-		// this should go as arguments
-		
-		// 1. get biomass for each model, for all cells
-		double[] totalBiomass = calculateTotalBiomass();
-		int[] nCells = new int[totalBiomass.length];
-		int[] nMut = new int[totalBiomass.length];
+	{				
+		// Jean updated to get Delta biomass for each model, for all cells rather than total biomass
+		double[] totalDeltaBiomass = calculateDeltaBiomass();	
+		int[] nCells = new int[totalDeltaBiomass.length];
+		int[] nMut = new int[totalDeltaBiomass.length];
 
 		// Loop over all species 
-		for (int a=0; a<totalBiomass.length; a++)
+		for (int a=0; a<totalDeltaBiomass.length; a++)
 		{	
-			// subdivide biomass in individual cells
-			nCells[a] = (int)Math.floor(totalBiomass[a]/cell_biomass);
+			// subdivide change in biomass into individual cells
+			nCells[a] = (int)Math.floor(totalDeltaBiomass[a]/cell_biomass);
 			if (nCells[a]>0)
 			{
-				// 2. compute number of cells and number of mutations in each species 
+				// 2. compute number of new cells and number of mutations in each species 
 				nMut[a] = samplePopulation(nCells[a], addition_rate);
 				
 				// 3. if any mutation in model a, clone models and perform mutations,
@@ -4822,7 +4823,11 @@ public class FBAWorld extends World2D
 						FBAModel mutModel = ((FBAModel)models[a]).clone();
 												
 						mutModel.addReactionToModel();
-						mutModel.setGenomeCost(pParams.getGeneFractionalCost());
+						// Jean added flag to check if genome costs are present
+						if  (pParams.getCostlyGenome())
+							mutModel.setGenomeCost(pParams.getGeneFractionalCost());
+						else
+							mutModel.setGenomeCost(0);
 						mutModel.setModelID(UUID.randomUUID().toString());
 						mutModel.setAncestor(models[a].getModelID());
 						evolutionLogWriter.print(mutModel.getAncestor() + " " 

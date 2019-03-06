@@ -36,6 +36,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private double[] convectionRHS2;
 	private double[] deltaBiomass;
 	private double[][] deltaMedia; // DJORDJE
+	private boolean stationaryStatus = false; //Jean
 	private double[][] fluxes;
 	private int[] FBAstatus;
 	  
@@ -524,6 +525,21 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	{
 		return FBAstatus;
 	}
+	/**
+	 * @return thwhether cell is in stationary phase (only applicable to batch dilute and evolution runs)
+	 */ // JEAN
+	public boolean getStationaryStatus()
+	{
+		return stationaryStatus;
+	}
+	
+	/**
+	 * @sets the cell to not be in stationary phase (only applicable to batch dilute and evolution runs)
+	 */	
+	public void setStationaryStatus()
+	{
+		stationaryStatus = false;
+	}
 	
 	/**
 	 * @return the fluxes calculated from the most recent FBA run for all species in the cell.
@@ -596,6 +612,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		// them all in random order- DEPRECATED
 		// int[] updateOrder = Utility.randomOrder(models.length);
 		// DJORDJE Changes to partition media between models and simulate simultaneously rather than simulating in random order.
+		
 		//unless cParams.randomOrder is false, 
 		//in which case we run each model in the same order every time
 //		if (!pParams.getRandomOrder()){ 
@@ -620,6 +637,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		    if(cParams.getSimulateActivation() && !((FBAModel)models[i]).activate(cParams.getActivateRate()))
 		    {
 		    	continue;
+		    }
+		    
+		    // if in stationary phase do not bother with the optimisation.
+		    if (stationaryStatus == true){
+		    	continue;
+
 		    }
 			/************************* CALCULATE MAX EXCHANGE FLUXES ******************************/
 			double[] media=null;//=world3D.getModelMediaAt(x, y, z, i);
@@ -789,7 +812,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					for (int j=0; j<deltaMedia[i].length; j++)
 					{
 						deltaMedia[i][j] = 0.0;
-//						System.out.print("\t" + exchFlux[j]);
 					}
 				}
 				
@@ -826,8 +848,16 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			else if (cParams.getNumLayers() > 1)
 				world3D.changeModelMedia(x, y, z, a, deltaMedia[a]);
 		}
-
-
+		//Jean Section for batch dilute Checks if models are growing and if they all stopped growing sets stationary phase in cell.
+		// This flag will remain on until the environment is updated.
+		if(cParams.getBatchDilution()==true){
+			stationaryStatus =true;
+			for (int a=0; a<models.length; a++){
+				if(deltaBiomass[a]>0.0){
+					stationaryStatus =false;
+				}
+			}
+		}
 		return updateCellData(deltaBiomass, fluxes);
 	}
 	

@@ -309,7 +309,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			{
 				int rxn = curr_rxn.intValue();
 				int mtb = curr_mtb.intValue();
-				ArrayUtils.removeElement(exch_tmp, rxn); 
+				ArrayUtils.removeElement(exch_tmp, rxn);
 				exchRxnNames[cnt] = rxnNames[rxn-1];
 				exchMetabNames[cnt] = metabNames[mtb-1];
 				cnt++;
@@ -3048,7 +3048,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		lBounds[mutReaction] = 0;
 		uBounds[mutReaction] = 0;
 		setBaseLowerBounds(lBounds);
-		setBaseUpperBounds(uBounds);		
+		setBaseUpperBounds(uBounds);	
+		//JEAN make sure newbounds apply to the optimizer
+		fbaOptimizer.setLowerBounds(lBounds.length, lBounds);
+		fbaOptimizer.setUpperBounds(uBounds.length, uBounds);
+
 	}
 	
 	/**
@@ -3074,7 +3078,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		
 		// and update the mutModel model bounds
 		uBounds[mutReaction] = 1000;
-		setBaseUpperBounds(uBounds);		
+		setBaseUpperBounds(uBounds);
+		//JEAN make sure new bounds apply to the optimizer
+		fbaOptimizer.setLowerBounds(lBounds.length, lBounds);
+		fbaOptimizer.setUpperBounds(uBounds.length, uBounds);		
 	}
 	
 	public double getGenomeCost()
@@ -3083,7 +3090,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	}
 	
 	public void setGenomeCost(double ind_frac_cost)
-	{
+	{	
+		//Jean Updated so that cost is quadratic (see ranea et al 2005)
 		double[] lBounds = getBaseLowerBounds();
 		double[] uBounds = getBaseUpperBounds();
 		
@@ -3093,6 +3101,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			if (lBounds[j] != 0 || uBounds[j] != 0)
 				num_reactions ++;			
 		}
-		genomeCost = num_reactions * ind_frac_cost;		
+		genomeCost = num_reactions * num_reactions * ind_frac_cost;		
 	}
 }
