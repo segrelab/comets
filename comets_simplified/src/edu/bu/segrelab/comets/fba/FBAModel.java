@@ -3072,7 +3072,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				nonzeroRxns.add(j);
 		}
 		
-		// select randomly one of these reactions
+		// select one of these reactions at random
 		int mutReaction = nonzeroRxns.get(new Random().nextInt(nonzeroRxns.size()));
 		setMutation("add_" + Integer.toString(mutReaction));
 		
