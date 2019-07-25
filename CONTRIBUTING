@@ -1,0 +1,7 @@
+Discuss the change and features you plan to make via email or slack or any other method with the team.
+Please follow the structure of the code, i.e. FBA features must be placed as FBA type class etc. 
+Please test your code against previous version, using the standard testing suite. 
+Creata a testing case for the code you created. 
+Please, update the version number. 
+
+
