@@ -1,4 +1,4 @@
-Contributing
+# Contributing
 
 1. Discuss the change and features you plan to make via email or slack or any other method with the team.
 
