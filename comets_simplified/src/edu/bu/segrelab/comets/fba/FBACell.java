@@ -1,6 +1,7 @@
 package edu.bu.segrelab.comets.fba;
 
 import edu.bu.segrelab.comets.Cell;
+import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.World2D;
@@ -526,7 +527,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		return FBAstatus;
 	}
 	/**
-	 * @return thwhether cell is in stationary phase (only applicable to batch dilute and evolution runs)
+	 * @return whether cell is in stationary phase (only applicable to batch dilute and evolution runs)
 	 */ // JEAN
 	public boolean getStationaryStatus()
 	{
@@ -738,7 +739,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			for (int j=0; j<lb.length; j++)
 			{
 				lb[j] = -1 * rates[j]/rho;
-;
 			}
 			if (DEBUG)
 			{
@@ -748,7 +748,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					System.out.println(lb[j]);
 				}
 				System.out.println("//");
-			}
+			}			
 			((FBAModel)models[i]).setExchLowerBounds(lb);
 
 
@@ -770,8 +770,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			int stat = models[i].run();
 			fluxes[i] = ((FBAModel)models[i]).getFluxes();
 
-
-
+			
 			if (stat != 5 && stat != 180)
 			{
 				// failure! don't do anything right now.
@@ -797,12 +796,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
 //					System.out.print("\t" + exchFlux[j]);
 				}
-				deltaMedia[i] = mediaDelta; // DJORDJE
+				deltaMedia[i] = mediaDelta; // DJORDJE				
 
 
 				/***************** GET BIOMASS CONCENTRATION CHANGE ****************/
 				// biomass is in grams
-				deltaBiomass[i] = (double)(((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];
+				deltaBiomass[i] = (double)(((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];				
 				deltaBiomass[i] *= (1-(double)(((FBAModel)models[i]).getGenomeCost()));
 				
 				// if no biomass change dont change media //JEAN 
@@ -984,6 +983,23 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		FBACell bak = new FBACell(x, y, z, biomass.clone(), (FBAWorld3D)backupWorld, fbaModels, cParams, pParams);
 		
 		return bak;
+	}
+	
+	public double[] getMedia(){
+		if(cParams.getNumLayers() == 1) //2d World
+			return world.getMediaAt(x,y);
+		else if (cParams.getNumLayers() > 1) //3D world
+			return world3D.getMediaAt(x, y, z);
+		return null;
+	}
+
+
+	public Comets getComets(){
+		if(cParams.getNumLayers() == 1) //2d World
+			return world.getComets();
+		else if (cParams.getNumLayers() > 1) //3D world
+			return world3D.getComets();
+		return null;
 	}
 	
 	@Override

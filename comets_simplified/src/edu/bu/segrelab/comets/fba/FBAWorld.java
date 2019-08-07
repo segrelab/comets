@@ -327,16 +327,16 @@ public class FBAWorld extends World2D
 				fluxLogWriter = new PrintWriter(new FileWriter(new File(name)));
 				writeFluxLog();
 				//Write the file name in the manifest file.
-				try
-				{
-					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
-					manifestWriter.write("FluxFileName: "+name+System.getProperty("line.separator"));
-					manifestWriter.close();
-				}
-				catch (IOException e)
-				{
-					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
-				}		
+//				try
+//				{
+//					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+//					manifestWriter.write("FluxFileName: "+name+System.getProperty("line.separator"));
+//					manifestWriter.close();
+//				}
+//				catch (IOException e)
+//				{
+//					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+//				}		
 			}
 			catch (IOException e)
 			{
@@ -352,26 +352,7 @@ public class FBAWorld extends World2D
 			try
 			{
 				mediaLogWriter = new PrintWriter(new FileWriter(new File(name)));
-				
-				// init the media log writer.
-				mediaLogWriter.print("media_names = { '" + mediaNames[0] + "'");
-				for (int i=1; i<mediaNames.length; i++)
-				{
-					mediaLogWriter.print(", '" + mediaNames[i] + "'");
-				}
-				mediaLogWriter.println("};");
 				writeMediaLog();
-				//Write the file name in the manifest file.
-				try
-				{
-					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
-					manifestWriter.write("MediaFileName: "+name+System.getProperty("line.separator"));
-					manifestWriter.close();
-				}
-				catch (IOException e)
-				{
-					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
-				}
 			}
 			catch (IOException e)
 			{
@@ -3173,26 +3154,30 @@ public class FBAWorld extends World2D
 
 		// 7. Remove models that have lower biomass than the minimal required
 		//double[] totalBiomass = calculateTotalBiomass();		
-		List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
-		for (int i = 0; i < totalBiomass.length; i++)
-		{
-			if (totalBiomass[i] > cParams.getCellSize())
+		//JEAN i think this is only necessary if new models are being generated via Evolution
+		// Otherwise it messes up the indexing the biomass output file so i'm adding a conditional
+		if (cParams.getEvolution()){
+			
+			List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
+			for (int i = 0; i < totalBiomass.length; i++)
 			{
-				newModelsList.add(models[i]);					
+				if (totalBiomass[i] > cParams.getCellSize())
+				{
+					newModelsList.add(models[i]);					
+				}
 			}
-		}
-		FBAModel[] newModels = new FBAModel[newModelsList.size()];
-		newModels = newModelsList.toArray(newModels);
-
-		// now change models in cells as well as in world
-		for (Cell cell : c.getCells())
-		{
-			cell.changeModelsInCell(models, newModels);
-		}
+			FBAModel[] newModels = new FBAModel[newModelsList.size()];
+			newModels = newModelsList.toArray(newModels);
+			
+			// now change models in cells as well as in world
+			for (Cell cell : c.getCells())
+			{
+				cell.changeModelsInCell(models, newModels);
+			}
 		
-		changeModelsInWorld(models, newModels);
-		setNumModels(newModels.length);		
-		
+			changeModelsInWorld(models, newModels);
+			setNumModels(newModels.length);		
+		}
 		currentTimePoint++;
 		if (pParams.writeFluxLog() && currentTimePoint % pParams.getFluxLogRate() == 0)
 			writeFluxLog();
@@ -3403,13 +3388,12 @@ public class FBAWorld extends World2D
 			
 			for (int k=0; k<numMedia; k++)
 			{
-				mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + "));");
 				for (int i=0; i<numCols; i++)
 				{
 					for (int j=0; j<numRows; j++)
 					{
 						if (media[i][j][k] != 0)
-							mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "}(" + (i+1) + ", " + (j+1) + ") = " + nf.format(media[i][j][k]) + ";");
+							mediaLogWriter.println(mediaNames[k] + " " + (currentTimePoint+1) + " " + (i+1) + " " + (j+1) + " " + nf.format(media[i][j][k]) + ";");
 					}
 				}
 			}

@@ -3072,14 +3072,14 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				nonzeroRxns.add(j);
 		}
 		
-		// select one of these reactions at random
+		// select randomly one of these reactions
 		int mutReaction = nonzeroRxns.get(new Random().nextInt(nonzeroRxns.size()));
 		setMutation("add_" + Integer.toString(mutReaction));
 		
 		// and update the mutModel model bounds
 		uBounds[mutReaction] = 1000;
 		setBaseUpperBounds(uBounds);
-		//JEAN make sure new bounds apply to the optimizer
+		//JEAN make sure newbounds apply to the optimizer
 		fbaOptimizer.setLowerBounds(lBounds.length, lBounds);
 		fbaOptimizer.setUpperBounds(uBounds.length, uBounds);		
 	}
@@ -3101,6 +3101,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			if (lBounds[j] != 0 || uBounds[j] != 0)
 				num_reactions ++;			
 		}
-		genomeCost = num_reactions * num_reactions * ind_frac_cost;		
+		genomeCost = num_reactions * num_reactions * ind_frac_cost;
 	}
 }
+

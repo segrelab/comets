@@ -26,8 +26,7 @@ import edu.bu.segrelab.comets.ParameterType;
  */
 public class FBAParameters implements PackageParameters
 {
-	public enum LogFormat
-	{
+	public enum LogFormat {
 		MATLAB("Matlab"),
 		COMETS("COMETS");
 
@@ -176,7 +175,7 @@ public class FBAParameters implements PackageParameters
 
 	private LogFormat biomassLogFormat = LogFormat.MATLAB,
 			mediaLogFormat = LogFormat.MATLAB,
-			fluxLogFormat = LogFormat.MATLAB,
+			fluxLogFormat = LogFormat.default,
 			velocityLogFormat = LogFormat.MATLAB;
 
 	private static double growthDiffRate = 1e-7,
