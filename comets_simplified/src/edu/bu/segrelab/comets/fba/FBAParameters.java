@@ -175,7 +175,7 @@ public class FBAParameters implements PackageParameters
 
 	private LogFormat biomassLogFormat = LogFormat.MATLAB,
 			mediaLogFormat = LogFormat.MATLAB,
-			fluxLogFormat = LogFormat.default,
+			fluxLogFormat = LogFormat.MATLAB,
 			velocityLogFormat = LogFormat.MATLAB;
 
 	private static double growthDiffRate = 1e-7,

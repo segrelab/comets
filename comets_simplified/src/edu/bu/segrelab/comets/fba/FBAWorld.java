@@ -325,7 +325,7 @@ public class FBAWorld extends World2D
 			try
 			{
 				fluxLogWriter = new PrintWriter(new FileWriter(new File(name)));
-				writeFluxLog();
+//				writeFluxLog();
 				//Write the file name in the manifest file.
 //				try
 //				{
@@ -3305,69 +3305,28 @@ public class FBAWorld extends World2D
 			//nf.setMaximumFractionDigits(4);
 			NumberFormat nf = new DecimalFormat("0.##########E0");
 
-			switch(pParams.getFluxLogFormat())
-			{
-				case MATLAB:
-					/*
-					 * Matlab .m file format:
-					 * fluxes{time}{x}{y}{species} = [array];
-					 * so it'll be one bigass structure.
-					 */
-					Iterator<Cell> it = c.getCells().iterator();
-					while (it.hasNext())
+			Iterator<Cell> it = c.getCells().iterator();
+			while (it.hasNext()) 
+			{	
+				FBACell cell = (FBACell)it.next();
+				double fluxes[][] = cell.getFluxes();
+				if (fluxes == null)
+					continue; // fluxes uninitialized.
+				else
+				{
+					for (int i=0; i<fluxes.length; i++)
 					{
-						FBACell cell = (FBACell)it.next();
-						double fluxes[][] = cell.getFluxes();
-						if (fluxes == null)
-							continue; // fluxes uninitialized.
-						else
+						if (fluxes[i] != null)
 						{
-							for (int i=0; i<fluxes.length; i++)
+							fluxLogWriter.write((currentTimePoint) + " " + (cell.getX()+1) + " " + (cell.getY()+1) + " " + (i+1) + " ");
+							for (int j=0; j<fluxes[i].length; j++)
 							{
-								if (fluxes[i] != null)
-								{
-									fluxLogWriter.write("fluxes{" + (currentTimePoint) + "}{" + (cell.getX()+1) + "}{" + (cell.getY()+1) + "}{" + (i+1) + "} = [");
-									for (int j=0; j<fluxes[i].length; j++)
-									{
-										fluxLogWriter.write(nf.format(fluxes[i][j]) + " ");
-									}
-									fluxLogWriter.write("];\n");
-								}
+								fluxLogWriter.write(nf.format(fluxes[i][j]) + " ");
 							}
+							fluxLogWriter.write("];\n");
 						}
 					}
-					break;
-					
-				default:
-					/* print all fluxes from each cell
-					 * format:
-					 * timepoint\n
-					 * x y speciesNum1 flux1 flux2 ... fluxn\n
-					 * x y speciesNum2 flux1 flux2 ... fluxn\n
-					 */
-					fluxLogWriter.println(currentTimePoint);
-					it = c.getCells().iterator();
-					while (it.hasNext())
-					{
-						// blah print
-						FBACell cell = (FBACell)it.next();
-						double[][] fluxes = cell.getFluxes();
-						if (fluxes[0] == null) // e.g., FBA hasn't been run yet.
-							continue;
-						else
-						{
-							for (int i=0; i<fluxes.length; i++) //fluxes[i][j] denotes flux j in species i
-							{
-								fluxLogWriter.print((cell.getX() +1) + " " + (cell.getY() + 1) + " " + (i + 1));
-								for (int j=0; j<fluxes[i].length; j++)
-								{
-									fluxLogWriter.print(" " + nf.format(fluxes[i][j]));
-								}
-								fluxLogWriter.print("\n");
-							}
-						}
-					}
-					break;
+				}
 			}
 			fluxLogWriter.flush();
 		}
