@@ -3352,7 +3352,7 @@ public class FBAWorld extends World2D
 					for (int j=0; j<numRows; j++)
 					{
 						if (media[i][j][k] != 0)
-							mediaLogWriter.println(mediaNames[k] + " " + (currentTimePoint+1) + " " + (i+1) + " " + (j+1) + " " + nf.format(media[i][j][k]) + ";");
+							mediaLogWriter.println(mediaNames[k] + " " + (currentTimePoint+1) + " " + (i+1) + " " + (j+1) + " " + nf.format(media[i][j][k]));
 					}
 				}
 			}
@@ -4546,8 +4546,8 @@ public class FBAWorld extends World2D
 		
 		for (int i = 0; i < models.length; i++)
 			if (totalBiomass[i] > 0.0)
-				dilutedBiomass[i] = samplePopulation((int)Math.floor(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
-				//dilutedBiomass[i] = totalBiomass[i]*dilution; // jean
+				//dilutedBiomass[i] = samplePopulation((int)Math.floor(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
+				dilutedBiomass[i] = totalBiomass[i]*dilution; // jean
 			else
 				dilutedBiomass[i] = 0.0;
 		// cell where new biomass will be located
