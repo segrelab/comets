@@ -100,6 +100,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private String[] metabNames;
 	private double[] baseLB; // the base lower bounds that were originally loaded.
 	private double[] baseUB; // base upper bounds (as a backup of sorts).
+
 	private double[] baseExchLB;
 	private double[] baseExchUB;
 	private double[] exchKm;		  // each of these three arrays is applied to the exchange
@@ -2952,6 +2953,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public void setBiomassReaction(int biomassReaction) {
 		this.biomassReaction = biomassReaction;
+	}
+	
+	public double[] getBaseUB() {
+		return baseUB;
 	}
 
 }
