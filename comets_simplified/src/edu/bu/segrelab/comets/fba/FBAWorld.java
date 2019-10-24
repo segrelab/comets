@@ -41,6 +41,7 @@ import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.reaction.RK4Runner;
 import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.IWorld;
+import edu.bu.segrelab.comets.fba.FBAPeriodicMedia;
 
 import java.io.*;
 
@@ -112,6 +113,7 @@ public class FBAWorld extends World2D
 	private FBASubstrate[] substrates;
 	
 	private int numSubstrates;
+	private FBAPeriodicMedia periodicMedia;
 	
 	
 	
@@ -156,7 +158,6 @@ public class FBAWorld extends World2D
 		diffuseBiomassIn = new boolean[numCols][numRows][numModels];
 		diffuseBiomassOut = new boolean[numCols][numRows][numModels];
 		nutrientDiffConsts = new double[numMedia];
-		
 		/*
 		 * Initialize everything so that it can diffuse everywhere,
 		 * and the startingMedia is uniform across the grid.
@@ -988,7 +989,7 @@ public class FBAWorld extends World2D
 				}
 			}
 		}
-
+		
 		// now, final housekeeping and variable setting
 		models = new FBAModel[newModels.length];
 		for (int i = 0; i < newModels.length; i++)
@@ -2765,6 +2766,12 @@ public class FBAWorld extends World2D
 		// 6. refresh media, if we're supposed to.
 		refreshMedia();
 		
+		// 7. Update periodic media
+		if (this.periodicMedia.isSet == true)
+		{
+			applyPeriodicMedia(currentTimePoint*cParams.getTimeStep());
+		}
+		
 		if (!cParams.isCommandLineOnly())
 			updateInfoPanel();
 
@@ -2793,6 +2800,21 @@ public class FBAWorld extends World2D
 		return ret;
 	}
 	
+	public void applyPeriodicMedia(double time){
+		for (int k=0; k<numMedia; k++) {
+			if (this.periodicMedia.mediaIsSet[k]) {
+				for (int i=0; i<numRows; i++) {
+					for (int j=0; j<numCols; j++) {
+						if (this.periodicMedia.isPeriodic(i,j,k)) {
+							media[i][j][k] = this.periodicMedia.getValue(time, i, j, k);
+						}
+					}
+				}
+			}
+		}
+	}
+
+
 	/**
 	 * Performs the FBA phase of the simulation run using the <code>FBARunThread</code> group.
 	 * If there are no threads, it makes them first, then runs them. This also removes
@@ -4096,6 +4118,10 @@ public class FBAWorld extends World2D
 				}
 			}
 		}
+	}
+	public void setPeriodicMedia(FBAPeriodicMedia obj) {
+		this.periodicMedia = obj;
+		this.periodicMedia.reshapeMedia(this.mediaNames);
 	}
 
 }
