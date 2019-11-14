@@ -2806,7 +2806,9 @@ public class FBAWorld extends World2D
 				for (int i=0; i<numRows; i++) {
 					for (int j=0; j<numCols; j++) {
 						if (this.periodicMedia.isPeriodic(i,j,k)) {
-							media[i][j][k] = this.periodicMedia.getValue(time, i, j, k);
+							// Seems like [column][row] is the general order in comets
+							// however in PeriodicMedia it is opposite - [row][col]
+							media[j][i][k] = this.periodicMedia.getValue(time, i, j, k);
 						}
 					}
 				}
