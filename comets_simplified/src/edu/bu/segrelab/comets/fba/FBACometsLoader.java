@@ -1023,7 +1023,8 @@ CometsConstants
 			for (String line : lines) {
 				String [] parsed = line.split("\\s+");
 				System.out.println(line);
-				int metIndex =  Integer.parseInt(parsed[0]);
+				// Subtract 1 from index to account for 0 vs 1 indexing in matlab
+				int metIndex =  Integer.parseInt(parsed[0])-1;
 				String funcName = parsed[1];
 				double [] params = new double[4];
 				
@@ -1042,7 +1043,8 @@ CometsConstants
 		else if (periodicKey.equalsIgnoreCase("detailed")) {
 			for (String line : lines) {
 				String [] parsed = line.split("\\s+");
-				int metIndex =  Integer.parseInt(parsed[0]);
+				// Subtract 1 from index to account for 0 vs 1 indexing in matlab
+				int metIndex =  Integer.parseInt(parsed[0])-1;
 				int row =  Integer.parseInt(parsed[1]);
 				int col =  Integer.parseInt(parsed[2]);
 				String funcName = parsed[3];
