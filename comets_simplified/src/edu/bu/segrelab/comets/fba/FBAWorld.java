@@ -113,7 +113,7 @@ public class FBAWorld extends World2D
 	private FBASubstrate[] substrates;
 	
 	private int numSubstrates;
-	private FBAPeriodicMedia periodicMedia;
+	private FBAPeriodicMedia periodicMedia = new FBAPeriodicMedia();
 	
 	
 	
