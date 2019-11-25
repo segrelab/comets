@@ -3155,6 +3155,9 @@ public class FBAWorld extends World2D
 		// 6. refresh media, if we're supposed to.
 		refreshMedia();
 		
+		// 7. apply metabolite dilution
+		applyMetaboliteDilution();
+		
 		if (!cParams.isCommandLineOnly())
 			updateInfoPanel();
 
@@ -3191,7 +3194,9 @@ public class FBAWorld extends World2D
 		}
 		
 		changeModelsInWorld(models, newModels);
-		setNumModels(newModels.length);		
+		setNumModels(newModels.length);
+		
+		
 		
 		currentTimePoint++;
 		if (pParams.writeFluxLog() && currentTimePoint % pParams.getFluxLogRate() == 0)
