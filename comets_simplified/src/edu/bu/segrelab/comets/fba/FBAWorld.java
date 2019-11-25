@@ -3214,11 +3214,12 @@ public class FBAWorld extends World2D
 		// 5. set static media
 		applyStaticMedia();
 		
+		// 7. apply metabolite dilution - this should go before media refresh, or else that will be diluted as well
+		applyMetaboliteDilution();
+		
 		// 6. refresh media, if we're supposed to.
 		refreshMedia();
 		
-		// 7. apply metabolite dilution
-		applyMetaboliteDilution();
 		
 		if (!cParams.isCommandLineOnly())
 			updateInfoPanel();
