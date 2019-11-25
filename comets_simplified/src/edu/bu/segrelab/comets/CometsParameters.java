@@ -62,7 +62,7 @@ public class CometsParameters implements CometsConstants
 //	}
 	
 	private double timeStep = 1,				// hours
-				   deathRate = 0.1,				// percent per time point
+				   deathRate = 0.1,				// fraction per hour
 				   activateRate = 0.001,        // 1/hours
 				   maxSpaceBiomass = 10,		// grams
 				   minSpaceBiomass = 1e-10,		// grams
@@ -73,7 +73,8 @@ public class CometsParameters implements CometsConstants
 				   dilFactor = 1e-2,
 				   dilTime = 12,				// hours
 				   mutRate = 1e-9,				// per genome and cycle
-				   addRate = 1e-9;				// per genome and cycle	
+				   addRate = 1e-9,				// per genome and cycle	
+				   metaboliteDilutionRate = 0.0;// fraction per hour
 	
 	private boolean isCommandLine = false,
 					showGraphics = true,
@@ -168,6 +169,7 @@ public class CometsParameters implements CometsConstants
 		setActivateRate(((Double)paramValues.get("activaterate")).doubleValue());
 		setMutRate(((Double)paramValues.get("mutrate")).doubleValue());
 		setAddRate(((Double)paramValues.get("addrate")).doubleValue());
+		setMetaboliteDilutionRate(((Double)paramValues.get("metabolitedilutionrate")).doubleValue());
 
 		setCommandLineOnly(((Boolean)paramValues.get("iscommandline")).booleanValue());
 		showGraphics(((Boolean)paramValues.get("showgraphics")).booleanValue());
@@ -334,6 +336,9 @@ public class CometsParameters implements CometsConstants
 
 		paramValues.put("evolution", new Boolean(evolution));
 		paramTypes.put("evolution", ParameterType.BOOLEAN);
+		
+		paramValues.put("metabolitedilutionrate", new Double(metaboliteDilutionRate));
+		paramTypes.put("metabolitedilutionrate", ParameterType.DOUBLE);
 
 		//paramValues.put("seed", new Long(seed));
 		//paramTypes.put("seed", ParameterType.LONG);
@@ -543,6 +548,39 @@ public class CometsParameters implements CometsConstants
 	{
 		if (d >= 0)
 			dilTime = d;
+	}
+	
+	/**
+	 * @return the metabolite dilution rate
+	 * chacon
+	 */
+	public double getMetaboliteDilutionRate()
+	{
+		return metaboliteDilutionRate;
+	}
+	
+	private void checkMetaboliteDilutionRate(double rate) throws NumberFormatException
+	{
+		if (rate < 0 | rate > 1){
+			throw new NumberFormatException();
+		}
+	}
+	/**
+	 * Sets the metaboliteDilutionRate
+	 * @param rate
+	 */
+	public void setMetaboliteDilutionRate(double rate)
+	{
+		try
+		{
+			checkMetaboliteDilutionRate(rate);
+		}
+		catch(NumberFormatException e)
+		{
+			throw new NumberFormatException("metaboliteDilutionRate must be between 0-1");
+		}
+		metaboliteDilutionRate = rate;
+		System.out.println("itgotset");
 	}
 
 	
@@ -1303,6 +1341,7 @@ public class CometsParameters implements CometsConstants
 		s += "maxSpaceBiomassConc = " + maxSpaceBiomass + "\n";
 		s += "spaceWidth = " + spaceWidth + "\n";
 //		s += "numRunThreads = " + numRunThreads + "\n";
+		s += "metaboliteDilutionRate = " + metaboliteDilutionRate + "\n";
 
 		s += "isCommandLine = " + isCommandLine + "\n";
 		s += "showGraphics = " + showGraphics + "\n";

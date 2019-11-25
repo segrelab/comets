@@ -977,7 +977,32 @@ public abstract class World2D implements CometsConstants, IWorld
 	public double[] getMediaRefreshAmount()
 	{
 		return mediaRefresh;
-	}	
+	}
+	/**
+	 * dilutes the media world-wide by a global dilution coefficient, which is supplied
+	 * in the parameters file as metaboliteDilution
+	 */
+	public void applyMetaboliteDilution()
+	{
+		double metaboliteDilutionRate = cParams.getMetaboliteDilutionRate();
+		if (metaboliteDilutionRate == 0.0)
+		{
+			return; // don't bother wasting cpu if no dilution applied
+		}
+		double dt = cParams.getTimeStep();
+		for (int i = 0; i < numCols; i++)
+		{
+			for (int j = 0; j < numRows; j++)
+			{
+				for (int k = 0; k < numMedia; k++)
+				{
+					media[i][j][k] -= media[i][j][k] * metaboliteDilutionRate * dt;
+					if (media[i][j][k] < 0)
+						media[i][j][k] = 0;
+				}
+			}
+		}
+	}
 	
 	/**
 	 * Puts the given <code>Cell</code> into the world at (x, y)
