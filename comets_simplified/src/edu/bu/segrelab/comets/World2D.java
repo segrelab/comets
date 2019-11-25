@@ -978,7 +978,10 @@ public abstract class World2D implements CometsConstants, IWorld
 	{
 		return mediaRefresh;
 	}
-	
+	/**
+	 * dilutes the media world-wide by a global dilution coefficient, which is supplied
+	 * in the parameters file as metaboliteDilution
+	 */
 	public void applyMetaboliteDilution()
 	{
 		double metaboliteDilutionRate = cParams.getMetaboliteDilutionRate();

@@ -101,7 +101,8 @@ public class FBAWorld extends World2D
 						biomassLogWriter,
 						evolutionLogWriter,
 						velocityLogWriter,
-						totalBiomassLogWriter;
+						totalBiomassLogWriter,
+						specificMediaLogWriter;
 	
 	private MatFileIncrementalWriter matFileWriter;
 	//private MLStructure matWorldStructure;
@@ -119,6 +120,8 @@ public class FBAWorld extends World2D
 	private FBASubstrate[] substrates;
 	
 	private int numSubstrates;
+	
+	private int[] specificMediaNums; //Ideally this would be part of FBA parameters, but since mediaNames is not initialized when parameters are set, it must go here.
 	
 	
 	
@@ -377,6 +380,65 @@ public class FBAWorld extends World2D
 			{
 				System.out.println("Unable to initialize media log file '" + name + "'\nContinuing without saving log.");
 				mediaLogWriter = null;
+			}
+		}
+		
+		// Init specific media log and write the first line
+		// also compare the given string to the medianames, and if there isn't a match
+		// throw an error and quit
+		if (pParams.writeSpecificMediaLog()){ 
+
+			String specificMedia = pParams.getSpecificMedia();
+			String[] mediaToPrintList = specificMedia.split("\\s*,\\s*");
+			
+			int matchesRequired = mediaToPrintList.length;
+			int nMatches = 0;
+			for (int i = 0; i < mediaNames.length; i++){
+				for (int j = 0; j < mediaToPrintList.length; j++){
+					if (mediaNames[i].equals(mediaToPrintList[j])){
+						nMatches++;
+					}
+				}
+			}
+			if (nMatches < matchesRequired){
+				throw new Error("\nspecificMedia was not well-formed in parameters file.\n"
+						+ "specificMedia must be a comma-separated list of extracellular\n"
+						+ "metabolites which are present in the layout.\n"
+						+ "For example, if using the E. coli ijo model, a\n"
+						+ "well-formed parameter could be:\n"
+						+ "specificMedia=lcts[e],ac[e],glc-D[e]\n\n");
+			}
+			
+			// now figure out the indices of the specific media to print,
+			// so we don't have to look through mediaNames every time we print
+			// determine media numbers of media names wanted for printing
+			specificMediaNums = new int[mediaToPrintList.length];
+			for (int i = 0; i < mediaToPrintList.length; i++){
+				String currMediaDesired = mediaToPrintList[i];
+				for (int j = 0; j < mediaNames.length; j++){
+					if (currMediaDesired.equals(mediaNames[j])){
+						specificMediaNums[i] = j;
+					}
+				}
+			}
+			
+		
+			String print_string = "cycle\tx\ty\t";
+
+			
+			for (int i = 0; i < mediaToPrintList.length; i++){
+				print_string = print_string + mediaToPrintList[i] + "\t";
+			}
+			
+			String name = pParams.getSpecificMediaLogName();   
+			try{
+				specificMediaLogWriter = new PrintWriter(new FileWriter(new File(name)));
+				specificMediaLogWriter.println(print_string);
+				writeSpecificMediaLog();
+				
+			}catch (IOException e){
+				System.out.println("Unable to initialize specific media log file '" + name + "'\nContinuing without saving log.");
+				specificMediaLogWriter = null;				
 			}
 		}
 		
@@ -3209,6 +3271,8 @@ public class FBAWorld extends World2D
 			writeVelocityLog();
 		if (pParams.writeTotalBiomassLog() && currentTimePoint % pParams.getTotalBiomassLogRate() == 0)
 			writeTotalBiomassLog();
+		if (pParams.writeSpecificMediaLog() && currentTimePoint % pParams.getSpecificMediaLogRate() == 0)
+			writeSpecificMediaLog();
 		if (pParams.writeMatFile() && currentTimePoint % pParams.getMatFileRate() == 0)
 			writeMatFile();
 		return ret;				
@@ -3420,6 +3484,30 @@ public class FBAWorld extends World2D
 			}
 			mediaLogWriter.flush();
 		}
+	}
+	
+	/**
+	 * writes the specific media log
+	 */
+	private void writeSpecificMediaLog(){
+		System.out.println("WRITING SPECIFIC MEDIA LOG");
+		String cycle = String.valueOf(currentTimePoint); 
+		
+		
+		NumberFormat nf = new DecimalFormat("0.##########E0");
+		// go through all media at all locations, print if desired
+		for (int i=0; i<numCols; i++)
+		{
+			for (int j=0; j<numRows; j++)
+			{
+				String print_line = cycle + "\t" + i + "\t" + j + "\t";
+				for (int k : specificMediaNums){
+					print_line = print_line + nf.format(media[i][j][k]) + "\t";
+				}
+				specificMediaLogWriter.println(print_line);
+			}
+		}
+		specificMediaLogWriter.flush();
 	}
 
 	/**
