@@ -430,7 +430,7 @@ public class FBAWorld extends World2D
 				print_string = print_string + mediaToPrintList[i] + "\t";
 			}
 			
-			String name = pParams.getSpecificMediaLogName();   
+			String name = adjustLogFileName(pParams.getSpecificMediaLogName(), timeStamp);
 			try{
 				specificMediaLogWriter = new PrintWriter(new FileWriter(new File(name)));
 				specificMediaLogWriter.println(print_string);
