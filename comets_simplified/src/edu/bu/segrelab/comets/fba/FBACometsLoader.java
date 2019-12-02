@@ -1809,7 +1809,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 
 		for (int i=0; i<mediaRefresh.length; i++)
 		{
-			mediaRefresh[i] = Double.valueOf(header[i+1]);
+			mediaRefresh[i] = Double.valueOf(header[i+1]) * c.getParameters().getTimeStep();
 		}
 
 		for (String line : lines)
@@ -1827,7 +1827,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			double[] refresh = new double[mediaRefresh.length];
 			for (int i=0; i<refresh.length; i++)
 			{
-				refresh[i] = Double.valueOf(refreshParsed[i+2]);
+				refresh[i] = Double.valueOf(refreshParsed[i+2]) * c.getParameters().getTimeStep();
 			}
 			refreshPoints.add(new RefreshPoint(Integer.valueOf(refreshParsed[0]), Integer.valueOf(refreshParsed[1]), refresh));
 		}
