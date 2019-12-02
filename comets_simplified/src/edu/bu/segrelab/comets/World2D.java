@@ -876,9 +876,7 @@ public abstract class World2D implements CometsConstants, IWorld
 			if (refreshPoints[x][y] != null)
 				rpConc = refreshPoints[x][y].getMediaRefresh();
 			for (int i=0; i<numMedia; i++){
-				// JMC something weird is up, figure this out
-				// this doesn't get called during loading of layout--must be called just by gui
-				conc[i] = mediaRefresh[i] + rpConc[i] * cParams.getTimeStep();
+				conc[i] = mediaRefresh[i] + rpConc[i];
 			}
 
 			return conc;
