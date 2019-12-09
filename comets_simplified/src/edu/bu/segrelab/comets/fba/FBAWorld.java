@@ -2385,7 +2385,9 @@ public class FBAWorld extends World2D
 						//System.out.println(((FBAModel)models[k]).getNoiseVariance());
 						//System.out.println(Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance()));
 						//System.out.println("here0   "+pParams.getRandomSeed());
+						//System.out.println("1  "+biomassDensity[k][i][j]);
 						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance(),pParams.getRandomSeed());
+						//System.out.println("2  "+biomassDensity[k][i][j]);
 						if(biomassDensity[k][i][j]<0.0)
 						{
 							biomassDensity[k][i][j]=0.0;
@@ -2984,6 +2986,13 @@ public class FBAWorld extends World2D
 					for (int k=0; k<numModels; k++)
 					{
 						biomassDensity[k][i][j]=biomassDensity[k][i][j]+dT*(5.0*convectionRHS[k][i][j]+8.0*convectionRHS1[k][i][j]-1.0*convectionRHS2[k][i][j])/12.0;
+						//add random gaussian noise
+						//System.out.println(((FBAModel)models[k]).getNoiseVariance());
+						//System.out.println(Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance()));
+						//System.out.println("here0   "+pParams.getRandomSeed());
+						//System.out.println("1  "+biomassDensity[k][i][j]);
+						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance(),pParams.getRandomSeed());
+						//System.out.println("2  "+biomassDensity[k][i][j]);
 						if(biomassDensity[k][i][j]<0.0)
 						{
 							biomassDensity[k][i][j]=0.0;

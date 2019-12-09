@@ -854,8 +854,11 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			default :  // STANDARD_EXCHANGE
 				for (int j=0; j<lb.length; j++)
 				{
+					//rates[j] = Math.min(Math.abs(lb[j]),
+					//					Math.abs(calcStandardExchange(media[j]/cParams.getSpaceVolume())));
 					rates[j] = Math.min(Math.abs(lb[j]),
-										Math.abs(calcStandardExchange(media[j]/cParams.getSpaceVolume())));
+										Math.abs(calcStandardExchange(media[j])));
+			
 				}	
 				break;
 		}
