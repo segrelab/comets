@@ -875,8 +875,10 @@ public abstract class World2D implements CometsConstants, IWorld
 			double[] rpConc = new double[numMedia];
 			if (refreshPoints[x][y] != null)
 				rpConc = refreshPoints[x][y].getMediaRefresh();
-			for (int i=0; i<numMedia; i++)
+			for (int i=0; i<numMedia; i++){
 				conc[i] = mediaRefresh[i] + rpConc[i];
+			}
+
 			return conc;
 		}
 		else
