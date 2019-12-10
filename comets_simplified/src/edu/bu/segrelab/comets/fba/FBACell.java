@@ -660,7 +660,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //			String[] exchNames = ((FBAModel)models[i]).getExchangeReactionNames();
 			if (DEBUG)
 				System.out.println("Exchange reaction bounds:");
-
+			
+			// if a model has metabolite signal : reaction bound relationships,
+			// apply them
+			applySignals((FBAModel)models[i], media);
+			
+			
 			double[] rates = new double[lb.length];
 			
 			switch (pParams.getExchangeStyle())
@@ -859,6 +864,35 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			}
 		}
 		return updateCellData(deltaBiomass, fluxes);
+	}
+	
+	private boolean applySignals(FBAModel model, double[] media) {
+		// Signal encoding.  Adjust bounds if a media component
+		// affects a reaction boundary
+		// this code block looks at each signal, and adjusts
+		// the relevant bound of a reaction based upon that signal
+		// concentration.  Note:  this should not be applied
+		// directly to exchange reactions, as they are dealt with later
+
+		double[] all_lb = model.getLowerBounds();
+		double[] all_ub = model.getUpperBounds();
+		for (Signal signal : model.getSignals()) {
+			if (signal.affectsLb()) {
+				int signal_met = signal.getExchMet() - 1;
+				int signal_rxn = signal.getReaction() - 1;
+				double new_lb = signal.calculateBound(media[signal_met]);
+				all_lb[signal_rxn] = new_lb;
+			}
+			if (signal.affectsUb()) {
+				int signal_met = signal.getExchMet() - 1;
+				int signal_rxn = signal.getReaction() - 1;
+				double new_ub = signal.calculateBound(media[signal_met]);
+				all_ub[signal_rxn] = new_ub;					
+			}
+		}
+		model.setLowerBounds(all_lb);
+		model.setUpperBounds(all_ub);
+		return true;
 	}
 	
 	private double calcMichaelisMentenRate(double mediaConc, double km, double vMax, double hill)

@@ -40,8 +40,29 @@ public class Signal {
 		this.C = C;
 		this.Q = Q;
 		this.B = B;
-		this.v = v;
-		
+		this.v = v;	
 	}
+	
+	
+	
+	public boolean affectsLb() {
+		return this.lb;
+	}
+	public boolean affectsUb() {
+		return this.ub;
+	}
+	
+	public double calculateBound(double met_conc) {
+		return(0.);
+	}
+	
+	public int getReaction() {
+		return this.reaction;
+	}
+	
+	public int getExchMet() {
+		return this.exch_met;
+	}
+		
 
 }

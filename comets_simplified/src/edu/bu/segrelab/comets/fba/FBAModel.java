@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.Random;
 
@@ -117,6 +118,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double[] exchAlpha;	  // another option for creating exchange reactions:
 	private double[] exchW; 		  // defined as min(alpha[i] * media[i], W[i] * volume) / biomass
 									  // not as "exact" as the kinetic constraints, but still time-independent
+	
+	private List<Signal> signals; // array of Signals that models' bounds respond to
 	
 	private double flowDiffConst; // = 1e-5;
 	private double growthDiffConst; // = 5e-5;
@@ -234,6 +237,12 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		setObjectiveReactions(objs);
 		setObjectiveMaximize(objsMax);
 		setBiomassReaction(b);
+		
+		this.signals = new ArrayList<Signal>();
+		this.signals.add(new Signal(true, false, 87, 4,
+				0,10,1,1,1,1));
+		this.signals.add(new Signal(false, true, 87, 4,
+				0,10,1,1,1,1));
 	}
 
 
@@ -894,6 +903,16 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 		return PARAMS_OK;
 	}
+	
+	public int setLowerBounds(double[] lb)
+	{
+		if (numMetabs == 0 || numRxns == 0)
+		{
+			return MODEL_NOT_INITIALIZED;
+		}
+		fbaOptimizer.setLowerBounds(numRxns, lb);
+		return PARAMS_OK;
+	}
 
 	/**
 	 * @return the current upper bounds for all fluxes
@@ -1002,6 +1021,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	public int setObjectiveMaximize(boolean[] objMax) {
 		objMaximize = objMax;
 		return fbaOptimizer.setObjectiveMaximize(objMax);
+	}
+	
+	public List<Signal> getSignals(){
+		return this.signals;
 	}
 	
 	/**
