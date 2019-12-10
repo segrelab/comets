@@ -498,14 +498,18 @@ CometsConstants
 						}
 						
 						/****************** PERIODIC MEDIA **********************/
-						/* The format I've currently landed on is
-						 * periodic_media 	global/detailed // Header	mode (either global or difficult)
+						/* The format describing the periodic media is the following:
+						 * 
+						 * periodic_media 	global/detailed 
 						 * 
 						 * Global mode (assigns same function to the complete grid):
 						 * 		metabolite_id	function	function_params
 						 * 
 						 * Detailed mode (one function per grid point):
 						 * 		metabolite_id	function	 x-coord	y-coord		function_params	
+						 * 
+						 * The params are four doubles: Amplitude, period, phase and offset. The possible functions are 
+						 * "sin", "step", "cos", "half_sin", "half_cos" 
 						 */
 						else if (worldParsed[0].equalsIgnoreCase(PERIODIC_MEDIA))
 						{
