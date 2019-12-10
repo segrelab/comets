@@ -876,18 +876,19 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 		double[] all_lb = model.getLowerBounds();
 		double[] all_ub = model.getUpperBounds();
+		double space_volume = cParams.getSpaceVolume();
 		for (Signal signal : model.getSignals()) {
 			
 			if (signal.affectsLb()) {
 				int signal_met = signal.getExchMet() - 1;
 				int signal_rxn = signal.getReaction() - 1;
-				double new_lb = signal.calculateBound(media[signal_met]);
+				double new_lb = signal.calculateBound(media[signal_met] / space_volume);
 				all_lb[signal_rxn] = new_lb;
 			}
 			if (signal.affectsUb()) {
 				int signal_met = signal.getExchMet() - 1;
 				int signal_rxn = signal.getReaction() - 1;
-				double new_ub = signal.calculateBound(media[signal_met]);
+				double new_ub = signal.calculateBound(media[signal_met] / space_volume);
 				all_ub[signal_rxn] = new_ub;					
 			}
 		}

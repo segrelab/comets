@@ -1,6 +1,6 @@
 package edu.bu.segrelab.comets.fba;
 
-
+import java.lang.Math;
 /**
  * Signal is a simple class that holds information about how 
  * a particular reaction's bounds are modified by the 
@@ -53,7 +53,10 @@ public class Signal {
 	}
 	
 	public double calculateBound(double met_conc) {
-		return(0.);
+		double bound = A + (K - A) / Math.pow(C + Q * Math.exp(-B * met_conc),
+				1.0 / v);
+		System.out.println ("bound: " + bound);
+		return bound;
 	}
 	
 	public int getReaction() {
