@@ -1018,14 +1018,14 @@ CometsConstants
 	}
 
 	private LoaderState parsePeriodicMediaBlock(String periodicKey, List<String> lines, int numCols, int numRows) throws LayoutFileException {
-		if (periodicKey.equalsIgnoreCase("simple")){
+		if (periodicKey.equalsIgnoreCase("global")){
 			// Read the input lines
 			for (String line : lines) {
 				String [] parsed = line.split("\\s+");
 				System.out.println(line);
-				// Subtract 1 from index to account for 0 vs 1 indexing in matlab
-				int metIndex =  Integer.parseInt(parsed[0])-1;
+				int metIndex =  Integer.parseInt(parsed[0]);
 				String funcName = parsed[1];
+				// Params are amplitude, period, phase and offset
 				double [] params = new double[4];
 				
 				System.out.println("Parameters: ");
@@ -1043,11 +1043,11 @@ CometsConstants
 		else if (periodicKey.equalsIgnoreCase("detailed")) {
 			for (String line : lines) {
 				String [] parsed = line.split("\\s+");
-				// Subtract 1 from index to account for 0 vs 1 indexing in matlab
-				int metIndex =  Integer.parseInt(parsed[0])-1;
-				int row =  Integer.parseInt(parsed[1]);
-				int col =  Integer.parseInt(parsed[2]);
-				String funcName = parsed[3];
+				int metIndex =  Integer.parseInt(parsed[0]);
+				String funcName = parsed[1];
+				int row =  Integer.parseInt(parsed[2]);
+				int col =  Integer.parseInt(parsed[3]);
+				
 				double [] params = new double[4];
 				for (int k = 4; k<8;k++) {
 					params[k-4]=Double.parseDouble(parsed[k]);
