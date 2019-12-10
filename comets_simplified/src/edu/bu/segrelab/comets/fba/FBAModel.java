@@ -27,6 +27,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.ui.DoubleField;
+import edu.bu.segrelab.comets.fba.Signal;
 
 import org.apache.commons.math3.distribution.*;
 
@@ -239,10 +240,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		setBiomassReaction(b);
 		
 		this.signals = new ArrayList<Signal>();
-		this.signals.add(new Signal(true, false, 87, 4,
-				0,10,1,1,1,1));
-		this.signals.add(new Signal(false, true, 87, 4,
-				0,10,1,1,1,1));
 	}
 
 
@@ -1027,6 +1024,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		return this.signals;
 	}
 	
+	public void setSignals(List<Signal> signals) {
+		this.signals = signals;
+	}
+	
 	/**
 	 * Performs an FBA run with the loaded model, constraints, and bounds. Fluxes
 	 * and solutions are stored in the FBAModel class and can be used through their
@@ -1254,6 +1255,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			double[] exchVmax = null;
 			double[] exchHillCoeff = null;
 			
+
+			
 			double defaultAlpha = -1,
 				   defaultW = -1,
 				   defaultKm = -1,
@@ -1272,6 +1275,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			boolean blockOpen = false;
 
 			boolean neutralDrift = false;
+			
+			List<Signal> signals = new ArrayList<Signal>();
 
 			// First, identify lines where S matrix starts and ends, to code it as a sparse matrix 			
 			String line_2 = null;
@@ -2303,6 +2308,60 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					}
 					
 				}
+				/**************************************************************
+				 ********************** LOAD SIGNALS *******************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("MET_REACTION_SIGNAL"))
+				{
+					while (!(line = reader.readLine().trim()).equalsIgnoreCase("//")) {
+						String parsed[] = line.split("\\s+");
+						if (parsed.length < 6) {
+							reader.close();
+							throw new ModelFileException("There must be at least six values given for each MET_REACTION_SIGNAL, line num" + lineNum);
+						}
+
+						int rxn_num = Integer.parseInt(parsed[0]);
+						if (rxn_num > numRxns) {
+							reader.close();
+							throw new ModelFileException("first argument in MET_REACTION_SIGNAL must be the number of a reaction, < # reactions in S matrix. line num: " + lineNum);
+						}
+						int exch_met_num = Integer.parseInt(parsed[1]);
+						if (exch_met_num > numExch) {
+							reader.close();
+							throw new ModelFileException("second argument in MET_REACTION_SIGNAL must be the number of an exchange metabolite, < # exchange mets in model list. line num: " + lineNum);
+						}
+						String bound = parsed[2];
+						if (!(bound.equalsIgnoreCase("lb") ||
+								bound.equalsIgnoreCase("ub"))) {
+							reader.close();
+							throw new ModelFileException("third argument in MET_REACTION_SIGNAL must be the string ub or lb, designating the affected bound. line num" + lineNum);
+						}
+						Double A = Double.valueOf(parsed[3]);
+						Double K = Double.valueOf(parsed[4]);
+						Double B = Double.valueOf(parsed[5]);
+						Double v = 1.0;
+						if (parsed.length > 6) {
+							v = Double.valueOf(parsed[6]);							
+						}
+						Double Q = 1.0;
+						if (parsed.length > 7){
+							Q = Double.valueOf(parsed[7]);
+						}
+						Double C = 1.0;
+						if (parsed.length > 8) {
+							C = Double.valueOf(parsed[8]);
+						}
+						if (bound.equalsIgnoreCase("lb")){
+							signals.add(new Signal(true, false, rxn_num,
+									exch_met_num, A,B,K,v,Q,C));
+						}else {
+							signals.add(new Signal(false, true, rxn_num,
+									exch_met_num, A,B,K,v,Q,C));							
+						}
+						
+					}
+
+				}
 			}
 			reader.close();
 			if (blockOpen)
@@ -2375,7 +2434,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			
 			model.setNeutralDrift(neutralDrift);
 			model.setNeutralDriftSigma(neutralDriftSigma);
-			
+			model.setSignals(signals);
 			model.setFileName(filename);
 			return model;
 			
