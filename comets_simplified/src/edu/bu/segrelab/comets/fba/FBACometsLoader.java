@@ -98,7 +98,7 @@ CometsConstants
 	private int[][] substrateLayout;
 	private double[][] specificMedia;
 	private double[][] substrateFrictionConsts;
-	private FBAPeriodicMedia periodicMedia = new FBAPeriodicMedia();
+	private FBAPeriodicMedia periodicMedia; 
 	protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
 	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
 									//depending on if the reaction is enzymatic
@@ -210,10 +210,10 @@ CometsConstants
 		this.useGui = useGui;
 		this.c = c;
 		lineCount = 0;
+		periodicMedia = new FBAPeriodicMedia();
 
 		if (pParams == null)
 			getPackageParameters(c);
-
 		System.out.println("Loading layout file '" + filename + "'...");
 		// get the path to that file.
 		/* First, we get the path to the file.
@@ -499,13 +499,13 @@ CometsConstants
 						
 						/****************** PERIODIC MEDIA **********************/
 						/* The format I've currently landed on is
-						 * periodic_media 	simple/detailed // Header	mode (either simple or difficult)
+						 * periodic_media 	global/detailed // Header	mode (either global or difficult)
 						 * 
-						 * Simple mode (assigns same function to the complete grid):
+						 * Global mode (assigns same function to the complete grid):
 						 * 		metabolite_id	function	function_params
 						 * 
 						 * Detailed mode (one function per grid point):
-						 * 		x-coord	y-coord	metabolite_id	function_key	function_params	
+						 * 		metabolite_id	function	 x-coord	y-coord		function_params	
 						 */
 						else if (worldParsed[0].equalsIgnoreCase(PERIODIC_MEDIA))
 						{
@@ -794,8 +794,8 @@ CometsConstants
 						{
 							world.setSubstrateFriction(substrateFrictionConsts);
 						}
-						if (this.periodicMedia.isSet) {
-							world.setPeriodicMedia(this.periodicMedia);
+						if (periodicMedia.isSet) {
+							world.setPeriodicMedia(periodicMedia);
 						}
 						
 						IWorld.reactionModel.setWorld(world);
@@ -1033,9 +1033,8 @@ CometsConstants
 					params[k-2]=Double.parseDouble(parsed[k]);
 					System.out.println(params[k-2]);
 					}
-				
-				System.out.println(metIndex);
-				System.out.println(funcName);
+				// System.out.println(metIndex);
+				// System.out.println(funcName);
 				
 				this.periodicMedia.setAllCells(metIndex, funcName, params);
 			}
@@ -1045,14 +1044,14 @@ CometsConstants
 				String [] parsed = line.split("\\s+");
 				int metIndex =  Integer.parseInt(parsed[0]);
 				String funcName = parsed[1];
-				int row =  Integer.parseInt(parsed[2]);
-				int col =  Integer.parseInt(parsed[3]);
+				int x =  Integer.parseInt(parsed[2]);
+				int y =  Integer.parseInt(parsed[3]);
 				
 				double [] params = new double[4];
 				for (int k = 4; k<8;k++) {
 					params[k-4]=Double.parseDouble(parsed[k]);
 					}
-				this.periodicMedia.setCell(row, col, metIndex, funcName, params);
+				this.periodicMedia.setCell(x, y, metIndex, funcName, params);
 			}
 		}
 		else {
