@@ -134,6 +134,12 @@ implements edu.bu.segrelab.comets.CometsConstants
 			// add terms to the left-hand-side expressions
 			// note that it will work only if metabolites are in ascending order in sparse S 
 			int met_count = 0; // metabolite count 
+			for (int k = 0; k < numMetabs; k++){
+				rxnExpressions[k] = new GRBLinExpr();
+				// for these expressions, all senses are =, all rhs are 0
+				senses[k] = GRB.EQUAL;
+				rhsValues[k] = 0;
+			}
 			for (int k = 0; k < m.length; k++){
 				
 				// get metabolite and variable (rxn) in current row of sparse m
@@ -146,17 +152,17 @@ implements edu.bu.segrelab.comets.CometsConstants
 				// System.out.println("cMet: " + cMet + ", CVar:" + cVar);			
 
 				// if new metabolite, move cMet and create new GrbLinExpr for next metabolite
-				if (met_count+1 == cMet){
-					met_count++;
-					rxnExpressions[cMet-1] = new GRBLinExpr();
-				}
+				//if (met_count+1 == cMet){
+				//	met_count++;
+				//	rxnExpressions[cMet-1] = new GRBLinExpr();
+				//}
 				
 				// add current term to constraints array 
 				rxnExpressions[cMet-1].addTerm(m[k][2], rxnFluxes[cVar-1]);
 				
 				// for these expressions, all senses are =, all rhs are 0
-				senses[cMet-1] = GRB.EQUAL;
-				rhsValues[cMet-1] = 0;
+				//senses[cMet-1] = GRB.EQUAL;
+				//rhsValues[cMet-1] = 0;
 			}
 
 			model.addConstrs(rxnExpressions, senses, rhsValues, null);
@@ -359,28 +365,37 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 		// add terms to the left-hand-side expressions
 		// note that it will work only if metabolites are in ascending order in sparse S 
-		int met_count = 0; // metabolite count 
+		for (int k = 0; k < nMetabolites; k++){
+			origConstraints[k] = new GRBLinExpr();
+			// for these expressions, all senses are =, all rhs are 0
+			senses[k] = GRB.EQUAL;
+			rhs[k] = 0;
+		}
+		// int met_count = 0; // metabolite count 
+		
 		for (int k = 0; k < m.length; k++){
 			
 			// get metabolite and variable (rxn) in current row of sparse m
 			Double cr = m[k][0];
 			int cMet = cr.intValue();
-
+			System.out.println("k: " + k+ "S " + 0);
 			Double cc = m[k][1];
 			int cVar = cc.intValue();
-
-			// if new metabolite, move cMet and create new GrbLinExpr for next metabolite
-			if (met_count+1 == cMet){
-				met_count++;
-				origConstraints[cMet-1] = new GRBLinExpr();
+			if (cMet==25){
+				System.out.println("k: " + k+ "S " +250);
 			}
-			
+			// if new metabolite, move cMet and create new GrbLinExpr for next metabolite
+			// if (met_count+1 == cMet){
+			//	met_count++;
+			// origConstraints[cMet-1] = new GRBLinExpr();
+			//}
+			System.out.println("k: " + k + "cc "+ cc+ " cMet"+cMet);
 			// add current term to constraints array 
 			origConstraints[cMet-1].addTerm(m[k][2], modelMinVars[cVar-1]);
-			
+			System.out.println("k: " + k+ "S " + 2);
 			// for these expressions, all senses are =, all rhs are 0
-			senses[cMet-1] = GRB.EQUAL;
-			rhs[cMet-1] = 0;
+			// senses[cMet-1] = GRB.EQUAL;
+			// rhs[cMet-1] = 0;
 		}
 		
 		/* DEBUG for (int i = 0; i < senses.length; i++){		 
