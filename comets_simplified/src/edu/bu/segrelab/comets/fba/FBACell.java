@@ -1046,4 +1046,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		for (int i=0; i<newModels.length; i++)
 			fbaModels[i] = (FBAModel)newModels[i];
 	}
+
+	public CometsParameters getCometsParameters() {
+		// Get the comets parameters
+		return cParams;
+	}
 }

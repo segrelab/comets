@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.swing.JComponent;
+// import javax.swing.JComponent;
 
 import edu.bu.segrelab.comets.util.Utility;
 
@@ -1114,10 +1114,7 @@ public abstract class World3D implements CometsConstants, IWorld
 	 * @see #getAllMedia()
 	 * @see #getMediaAt(int, int)
 	 */
-	public String[] getMediaNames(){
-		return mediaNames;
-	}
-	
+
 	public Comets getComets(){
 		return c;
 	}

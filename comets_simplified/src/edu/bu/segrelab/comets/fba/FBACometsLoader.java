@@ -54,6 +54,7 @@ import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 import edu.bu.segrelab.comets.util.Point3d;
+import edu.bu.segrelab.comets.fba.FBAPeriodicMedia;
 
 public class FBACometsLoader implements CometsLoader, CometsConstants
 {
@@ -99,6 +100,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 	private int[][] substrateLayout;
 	private double[][] specificMedia;
 	private double[][] substrateFrictionConsts;
+	private FBAPeriodicMedia periodicMedia; 
 	protected double[][] exRxnStoich; //dimensions are ReactionID by MetID (in World Media list)
 	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
 									//depending on if the reaction is enzymatic
@@ -111,6 +113,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			WORLD_MEDIA = "world_media",
 			MEDIA_REFRESH = "media_refresh",
 			STATIC_MEDIA = "static_media",
+			PERIODIC_MEDIA = "periodic_media",
 			INITIAL_POP = "initial_pop",
 			//								RANDOM_POP = "random",
 			//								RANDOM_RECT_POP = "random_rect",
@@ -209,6 +212,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		this.useGui = useGui;
 		this.c = c;
 		lineCount = 0;
+		periodicMedia = new FBAPeriodicMedia();
 
 		if (pParams == null)
 			getPackageParameters(c);
@@ -495,6 +499,39 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							state = parseSpecificMediaBlock(lines);
 						}
 
+						/****************** PERIODIC MEDIA **********************/
+						/* The format describing the periodic media is the following:
+						 * 
+						 * periodic_media 	global/detailed 
+						 * 
+						 * Global mode (assigns same function to the complete grid):
+						 * 		metabolite_id	function	function_params
+						 * 
+						 * Detailed mode (one function per grid point):
+						 * 		metabolite_id	function	 x-coord	y-coord		function_params	
+						 * 
+						 * The params are four doubles: Amplitude, period, phase and offset. The possible functions are 
+						 * "sin", "step", "cos", "half_sin", "half_cos" 
+						 */
+						else if (worldParsed[0].equalsIgnoreCase(PERIODIC_MEDIA))
+						{
+							if (worldParsed.length != 2)
+							{
+								throw new IOException("Wrong format for periodic media");
+							}
+							// Read next block of lines containing information about periodic media
+							List<String> lines = collectLayoutFileBlock(reader);
+							int numRows = c.getParameters().getNumRows();
+							int numCols = c.getParameters().getNumCols();
+							String [] mediaNames = IWorld.reactionModel.getInitialMetNames();
+							System.out.println("Num media"+mediaNames.length);
+							this.periodicMedia.setSize(numRows, numCols, mediaNames);
+							//FBAPeriodicMedia periodicMedia = new FBAPeriodicMedia(numRows,numCols, numMedia);
+							state = parsePeriodicMediaBlock(worldParsed[1], lines, numCols,numRows);
+							
+
+							
+						}
 						/****************** MEDIA ***********************/
 
 						else if (worldParsed[0].equalsIgnoreCase(MEDIA))
@@ -763,7 +800,10 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 						{
 							world.setSubstrateFriction(substrateFrictionConsts);
 						}
-						
+						if (periodicMedia.isSet) {
+							world.setPeriodicMedia(periodicMedia);
+						}
+
 						IWorld.reactionModel.setWorld(world);
 						
 						System.out.println("Done!");
@@ -983,6 +1023,51 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			c.getParameters().setDisplayLayer(world3D.getNumMedia());
 		return PARAMS_OK;
 	}
+
+	private LoaderState parsePeriodicMediaBlock(String periodicKey, List<String> lines, int numCols, int numRows) throws LayoutFileException {
+		if (periodicKey.equalsIgnoreCase("global")){
+			// Read the input lines
+			for (String line : lines) {
+				String [] parsed = line.split("\\s+");
+				System.out.println(line);
+				int metIndex =  Integer.parseInt(parsed[0]);
+				String funcName = parsed[1];
+				// Params are amplitude, period, phase and offset
+				double [] params = new double[4];
+				
+				System.out.println("Parameters: ");
+				for (int k = 2; k<6;k++) {
+					params[k-2]=Double.parseDouble(parsed[k]);
+					System.out.println(params[k-2]);
+					}
+				// System.out.println(metIndex);
+				// System.out.println(funcName);
+				
+				this.periodicMedia.setAllCells(metIndex, funcName, params);
+			}
+		}
+		else if (periodicKey.equalsIgnoreCase("detailed")) {
+			for (String line : lines) {
+				String [] parsed = line.split("\\s+");
+				int metIndex =  Integer.parseInt(parsed[0]);
+				String funcName = parsed[1];
+				int x =  Integer.parseInt(parsed[2]);
+				int y =  Integer.parseInt(parsed[3]);
+				
+				double [] params = new double[4];
+				for (int k = 4; k<8;k++) {
+					params[k-4]=Double.parseDouble(parsed[k]);
+					}
+				this.periodicMedia.setCell(x, y, metIndex, funcName, params);
+			}
+		}
+		else {
+			return LoaderState.ERROR;
+		}
+			
+		return LoaderState.OK;
+	}
+
 
 	private void showGuiLoadError(String error, String title)
 	{
