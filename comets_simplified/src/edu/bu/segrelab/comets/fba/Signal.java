@@ -21,8 +21,8 @@ public class Signal {
 	//
 	//  main signaling function is Richard's, aka generalized logistic:
 	//
-	//   bound(met) = A + (K-A) / [(C + Q*exp(-B*met)^(1/v)]
-	private double A, K, C, Q, B, v;
+	//   bound(met) = A + (K-A) / [(C + Q*exp(-B*(met-M)))^(1/v)]
+	private double A, K, C, Q, B, v, M;
 	
 	/**
 	 * creates a Signal object.  
@@ -30,16 +30,17 @@ public class Signal {
 	 * 
 	 */
 	public Signal(boolean lb, boolean ub, int reaction, int exch_met,
-			double A, double K, double C, double Q, double B, double v) {
+			double A, double K, double B, double M, double C, double Q, double v) {
 		this.lb = lb;
 		this.ub = ub;
 		this.reaction = reaction;
-		this.exch_met = exch_met;
+		this.exch_met = exch_met - 1;  // don't ask me why this is off-by-one but not reaction!?!?
 		this.A = A;
 		this.K = K;
+		this.B = B;
+		this.M = M;
 		this.C = C;
 		this.Q = Q;
-		this.B = B;
 		this.v = v;	
 	}
 	
@@ -53,7 +54,7 @@ public class Signal {
 	}
 	
 	public double calculateBound(double met_conc) {
-		double bound = A + (K - A) / Math.pow(C + Q * Math.exp(-B * met_conc),
+		double bound = A + (K - A) / Math.pow(C + Q * Math.exp(-B * (met_conc - M)),
 				1.0 / v);
 		System.out.println ("bound: " + bound);
 		return bound;

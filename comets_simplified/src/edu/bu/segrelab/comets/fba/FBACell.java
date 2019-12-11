@@ -873,27 +873,37 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		// the relevant bound of a reaction based upon that signal
 		// concentration.  Note:  this should not be applied
 		// directly to exchange reactions, as they are dealt with later
-
-		double[] all_lb = model.getLowerBounds();
-		double[] all_ub = model.getUpperBounds();
-		double space_volume = cParams.getSpaceVolume();
-		for (Signal signal : model.getSignals()) {
-			
-			if (signal.affectsLb()) {
-				int signal_met = signal.getExchMet() - 1;
-				int signal_rxn = signal.getReaction() - 1;
-				double new_lb = signal.calculateBound(media[signal_met] / space_volume);
-				all_lb[signal_rxn] = new_lb;
+		
+		if (model.getSignals().size() > 0){  // only bother if there are signals
+			double[] all_lb = model.getLowerBounds();
+			double[] all_ub = model.getUpperBounds();
+			double space_volume = cParams.getSpaceVolume();
+			for (Signal signal : model.getSignals()) {
+				
+				if (signal.affectsLb()) {
+					int signal_met = signal.getExchMet();
+					int signal_rxn = signal.getReaction();
+					// useful to double check.  its because the stupid -1 for exchs but not for rxns!?
+					//String[] exchNames = model.getExchangeReactionNames();
+					//String[] rxnNames = model.getReactionNames();
+					//System.out.println(exchNames[signal_met]);
+					//System.out.println(rxnNames[signal_rxn]);
+					
+					double new_lb = signal.calculateBound(media[signal_met] / space_volume);
+					all_lb[signal_rxn] = new_lb;
+				}
+				if (signal.affectsUb()) {
+					int signal_met = signal.getExchMet();
+					int signal_rxn = signal.getReaction();
+					double new_ub = signal.calculateBound(media[signal_met] / space_volume);
+					all_ub[signal_rxn] = new_ub;	
+				}
 			}
-			if (signal.affectsUb()) {
-				int signal_met = signal.getExchMet() - 1;
-				int signal_rxn = signal.getReaction() - 1;
-				double new_ub = signal.calculateBound(media[signal_met] / space_volume);
-				all_ub[signal_rxn] = new_ub;					
-			}
+			model.setLowerBounds(all_lb);
+			model.setUpperBounds(all_ub);			
 		}
-		model.setLowerBounds(all_lb);
-		model.setUpperBounds(all_ub);
+
+
 		return true;
 	}
 	

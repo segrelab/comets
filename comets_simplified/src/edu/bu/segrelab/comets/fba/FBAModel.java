@@ -2317,7 +2317,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						String parsed[] = line.split("\\s+");
 						if (parsed.length < 6) {
 							reader.close();
-							throw new ModelFileException("There must be at least six values given for each MET_REACTION_SIGNAL, line num" + lineNum);
+							throw new ModelFileException("There must be at least six values given for each MET_REACTION_SIGNAL:\nrxn exch bound A K B,\nline num: " + lineNum);
 						}
 
 						int rxn_num = Integer.parseInt(parsed[0]);
@@ -2339,24 +2339,29 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						Double A = Double.valueOf(parsed[3]);
 						Double K = Double.valueOf(parsed[4]);
 						Double B = Double.valueOf(parsed[5]);
-						Double v = 1.0;
-						if (parsed.length > 6) {
-							v = Double.valueOf(parsed[6]);							
-						}
-						Double Q = 1.0;
-						if (parsed.length > 7){
-							Q = Double.valueOf(parsed[7]);
+						Double M = 0.0;
+						if (parsed.length > 6){
+							M = Double.valueOf(parsed[6]);
 						}
 						Double C = 1.0;
-						if (parsed.length > 8) {
-							C = Double.valueOf(parsed[8]);
+						if (parsed.length > 7) {
+							C = Double.valueOf(parsed[7]);							
 						}
+						Double Q = 1.0;
+						if (parsed.length > 8){
+							Q = Double.valueOf(parsed[8]);
+						}
+						Double v = 1.0;
+						if (parsed.length > 9) {
+							v = Double.valueOf(parsed[9]);
+						}
+					
 						if (bound.equalsIgnoreCase("lb")){
 							signals.add(new Signal(true, false, rxn_num,
-									exch_met_num, A,B,K,v,Q,C));
+									exch_met_num, A,K,B,M,C,Q,v));
 						}else {
 							signals.add(new Signal(false, true, rxn_num,
-									exch_met_num, A,B,K,v,Q,C));							
+									exch_met_num, A,K,B,M,C,Q,v));							
 						}
 						
 					}
