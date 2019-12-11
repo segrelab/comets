@@ -378,21 +378,18 @@ implements edu.bu.segrelab.comets.CometsConstants
 			// get metabolite and variable (rxn) in current row of sparse m
 			Double cr = m[k][0];
 			int cMet = cr.intValue();
-			System.out.println("k: " + k+ "S " + 0);
+			
 			Double cc = m[k][1];
 			int cVar = cc.intValue();
-			if (cMet==25){
-				System.out.println("k: " + k+ "S " +250);
-			}
+			
 			// if new metabolite, move cMet and create new GrbLinExpr for next metabolite
 			// if (met_count+1 == cMet){
 			//	met_count++;
 			// origConstraints[cMet-1] = new GRBLinExpr();
 			//}
-			System.out.println("k: " + k + "cc "+ cc+ " cMet"+cMet);
+
 			// add current term to constraints array 
 			origConstraints[cMet-1].addTerm(m[k][2], modelMinVars[cVar-1]);
-			System.out.println("k: " + k+ "S " + 2);
 			// for these expressions, all senses are =, all rhs are 0
 			// senses[cMet-1] = GRB.EQUAL;
 			// rhs[cMet-1] = 0;
