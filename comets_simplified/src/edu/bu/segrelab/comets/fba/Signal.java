@@ -1,6 +1,10 @@
 package edu.bu.segrelab.comets.fba;
 
 import java.lang.Math;
+import java.util.List;
+import java.util.ArrayList;
+
+import edu.bu.segrelab.comets.exception.ModelFileException;
 /**
  * Signal is a simple class that holds information about how 
  * a particular reaction's bounds are modified by the 
@@ -16,34 +20,108 @@ public class Signal {
 	private boolean lb, ub; // True if this signal affects these bounds
 	private int reaction; // the reaction number affected
 	private int exch_met;// the exchange met number of the affecting metabolite
-	//note:  above could easily be turned into a list, if multiple mets
-	//   can affect a reaction
-	//
-	//  main signaling function is Richard's, aka generalized logistic:
-	//
-	//   bound(met) = A + (K-A) / [(C + Q*exp(-B*(met-M)))^(1/v)]
-	private double A, K, C, Q, B, v, M;
+	private String function; // The name of the signaling function to use
+	private final String[] allowed_functions = {"generalized_logistic",
+			"bounded_linear"};
+	
+
+	private List<Double> parameters;
 	
 	/**
 	 * creates a Signal object.  
+	 * @throws ModelFileException 
 	 * @todo have these test for correct values (esp reactions and exch_met)
 	 * 
 	 */
-	public Signal(boolean lb, boolean ub, int reaction, int exch_met,
-			double A, double K, double B, double M, double C, double Q, double v) {
+	public Signal(boolean lb, boolean ub, int reaction, int exch_met, String function,
+			double[] parameters){
 		this.lb = lb;
 		this.ub = ub;
 		this.reaction = reaction;
 		this.exch_met = exch_met - 1;  // don't ask me why this is off-by-one but not reaction!?!?
-		this.A = A;
-		this.K = K;
-		this.B = B;
-		this.M = M;
-		this.C = C;
-		this.Q = Q;
-		this.v = v;	
+		this.function = function.toLowerCase();
+		
+		this.parameters = new ArrayList<>();
+		for (double p : parameters){
+			this.parameters.add(p);
+		}
+		
+		
+		// Check for incorrect model stuff given by user
+		boolean function_allowed = checkFunction();
+		if (!function_allowed){
+			throw new IllegalArgumentException("the function for the signal must be one of:\n" +
+					"generalized_logistic\tbounded_linear");
+		}
+		
+		boolean correct_number_of_parameters = checkParameterNumber();
+		if (!correct_number_of_parameters){
+			throw new IllegalArgumentException("you must provide the correct number of parameters for your signaling function");
+		}
+		
+
+
+		addDefaultParameters();
+
 	}
 	
+	
+	private boolean checkFunction(){
+		for (String func : this.allowed_functions){
+			if (this.function.equals(func)){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private boolean checkParameterNumber(){
+		switch(this.function){
+		case "generalized_logistic":
+			if(this.parameters.size() >= 4){
+				return true;
+			}
+		case "bounded_linear":
+			if(this.parameters.size() == 4){
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private void addDefaultParameters(){
+		if (this.function.equals("generalized_logistic")){
+			// A, K, B, M, C, Q, V
+			if (this.parameters.size() < 4){
+				this.parameters.add(0.0); // M
+			}
+			if (this.parameters.size() < 5){
+				this.parameters.add(1.0); // C
+			}
+			if (this.parameters.size() < 6){
+				this.parameters.add(1.0); // Q
+			}
+			if (this.parameters.size() < 7){
+				this.parameters.add(1.0); // v
+			}
+		}
+	}
+	
+	private double boundedLinear(double met_conc){
+		double A = this.parameters.get(0);
+		double B = this.parameters.get(1);
+		double C = this.parameters.get(2);
+		double D = this.parameters.get(3);
+
+		double bound = A;
+		if (met_conc >= D){
+			bound = A + (D - B) * C;
+		}else if (met_conc >= B){
+			bound = A + (met_conc - B) * C;
+		}
+		return bound;
+		
+	}
 	
 	
 	public boolean affectsLb() {
@@ -53,9 +131,29 @@ public class Signal {
 		return this.ub;
 	}
 	
-	public double calculateBound(double met_conc) {
+	private double generalizedLogistic(double met_conc){
+		// parameter_order = A, K, B, M, C, Q, v
+		double A = this.parameters.get(0);
+		double K = this.parameters.get(1);
+		double B = this.parameters.get(2);
+		double M = this.parameters.get(3);
+		double C = this.parameters.get(4);
+		double Q = this.parameters.get(5);
+		double v = this.parameters.get(6);
 		double bound = A + (K - A) / Math.pow(C + Q * Math.exp(-B * (met_conc - M)),
 				1.0 / v);
+		return bound;
+	}
+	
+	public double calculateBound(double met_conc) {
+		double bound = 0;
+		switch(this.function){
+		case "generalized_logistic":
+			bound = generalizedLogistic(met_conc);
+		case "bounded_linear":
+			bound = boundedLinear(met_conc);
+		}
+			
 		System.out.println ("bound: " + bound);
 		return bound;
 	}

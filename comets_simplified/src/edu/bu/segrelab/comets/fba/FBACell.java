@@ -880,6 +880,11 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			double space_volume = cParams.getSpaceVolume();
 			for (Signal signal : model.getSignals()) {
 				
+				if (signal.getReaction() == -1){
+					// affects death rate, pass here
+					continue;
+				}
+				
 				if (signal.affectsLb()) {
 					int signal_met = signal.getExchMet();
 					int signal_rxn = signal.getReaction();

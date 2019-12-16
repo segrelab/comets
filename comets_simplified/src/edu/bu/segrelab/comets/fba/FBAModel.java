@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Random;
+import java.lang.Double;
 
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -2315,15 +2316,23 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				{
 					while (!(line = reader.readLine().trim()).equalsIgnoreCase("//")) {
 						String parsed[] = line.split("\\s+");
-						if (parsed.length < 6) {
-							reader.close();
-							throw new ModelFileException("There must be at least six values given for each MET_REACTION_SIGNAL:\nrxn exch bound A K B,\nline num: " + lineNum);
-						}
 
-						int rxn_num = Integer.parseInt(parsed[0]);
-						if (rxn_num > numRxns) {
+						if (parsed.length < 5) {
 							reader.close();
-							throw new ModelFileException("first argument in MET_REACTION_SIGNAL must be the number of a reaction, < # reactions in S matrix. line num: " + lineNum);
+							throw new ModelFileException("There must be at least five values given for each MET_REACTION_SIGNAL:\nrxn exch bound A K B,\nline num: " + lineNum);
+						}
+						int rxn_num = -1;
+						if (parsed[0].toLowerCase().equals("death")){
+							// this met changes death rate
+							// we will use rxn_num = -1 to indicate that
+							
+						}else{
+							// this met alters a reaction bound
+							rxn_num = Integer.parseInt(parsed[0]);
+							if (rxn_num > numRxns) {
+								reader.close();
+								throw new ModelFileException("first argument in MET_REACTION_SIGNAL must be the number of a reaction, < # reactions in S matrix. line num: " + lineNum);
+							}
 						}
 						int exch_met_num = Integer.parseInt(parsed[1]);
 						if (exch_met_num > numExch) {
@@ -2332,36 +2341,25 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						}
 						String bound = parsed[2];
 						if (!(bound.equalsIgnoreCase("lb") ||
-								bound.equalsIgnoreCase("ub"))) {
+								bound.equalsIgnoreCase("ub") ||
+								bound.equalsIgnoreCase("na"))) {
 							reader.close();
-							throw new ModelFileException("third argument in MET_REACTION_SIGNAL must be the string ub or lb, designating the affected bound. line num" + lineNum);
+							throw new ModelFileException("third argument in MET_REACTION_SIGNAL must be the string ub, lb or NA, designating the affected bound (or none for death-causing toxins). line num" + lineNum);
 						}
-						Double A = Double.valueOf(parsed[3]);
-						Double K = Double.valueOf(parsed[4]);
-						Double B = Double.valueOf(parsed[5]);
-						Double M = 0.0;
-						if (parsed.length > 6){
-							M = Double.valueOf(parsed[6]);
-						}
-						Double C = 1.0;
-						if (parsed.length > 7) {
-							C = Double.valueOf(parsed[7]);							
-						}
-						Double Q = 1.0;
-						if (parsed.length > 8){
-							Q = Double.valueOf(parsed[8]);
-						}
-						Double v = 1.0;
-						if (parsed.length > 9) {
-							v = Double.valueOf(parsed[9]);
+						
+						String function = parsed[3].toLowerCase(); // the name of the function connecting the met to the signal. see Signal for options
+						
+						double[] parameters = new double[parsed.length - 4];
+						for (int p = 4; p < parsed.length; p++){
+							parameters[p-4] = Double.parseDouble(parsed[p]);
 						}
 					
 						if (bound.equalsIgnoreCase("lb")){
 							signals.add(new Signal(true, false, rxn_num,
-									exch_met_num, A,K,B,M,C,Q,v));
+									exch_met_num, function, parameters));
 						}else {
 							signals.add(new Signal(false, true, rxn_num,
-									exch_met_num, A,K,B,M,C,Q,v));							
+									exch_met_num, function, parameters));							
 						}
 						
 					}
