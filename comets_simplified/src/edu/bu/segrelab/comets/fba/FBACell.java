@@ -1,10 +1,12 @@
 package edu.bu.segrelab.comets.fba;
 
 import edu.bu.segrelab.comets.Cell;
+import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.World3D;
+import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Utility;
 import java.util.Arrays; //DJORDJE
 
@@ -1051,4 +1053,27 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		// Get the comets parameters
 		return cParams;
 	}
+	
+	
+	/**Return the full list of media in this cell position
+     * 
+     * @return
+     */
+    public double[] getMedia(){
+            if(cParams.getNumLayers() == 1) //2d World
+                    return world.getMediaAt(x,y);
+            else if (cParams.getNumLayers() > 1) //3D world
+                    return world3D.getMediaAt(x, y, z);
+            return null;
+    }
+
+    public Comets getComets(){
+            if(cParams.getNumLayers() == 1) //2d World
+                    return world.getComets();
+            else if (cParams.getNumLayers() > 1) //3D world
+                    return world3D.getComets();
+            return null;
+    }
+
+	
 }
