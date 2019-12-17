@@ -18,11 +18,15 @@ import edu.bu.segrelab.comets.exception.ModelFileException;
  */
 public class Signal {
 	private boolean lb, ub; // True if this signal affects these bounds
+	private boolean consume_met; // for toxins, if this is true, then the metabolite is consumed at the same rate;
 	private int reaction; // the reaction number affected
 	private int exch_met;// the exchange met number of the affecting metabolite
 	private String function; // The name of the signaling function to use
-	private final String[] allowed_functions = {"generalized_logistic",
-			"bounded_linear"};
+	private final String generalized_logistic = "generalized_logistic";
+	private final String bounded_linear = "bounded_linear";
+	private final String linear = "linear";
+	private final String[] allowed_functions = {generalized_logistic,
+			bounded_linear, linear};
 	
 
 	private List<Double> parameters;
@@ -33,10 +37,11 @@ public class Signal {
 	 * @todo have these test for correct values (esp reactions and exch_met)
 	 * 
 	 */
-	public Signal(boolean lb, boolean ub, int reaction, int exch_met, String function,
+	public Signal(boolean lb, boolean ub, boolean consume_met, int reaction, int exch_met, String function,
 			double[] parameters){
 		this.lb = lb;
 		this.ub = ub;
+		this.consume_met = consume_met;
 		this.reaction = reaction;
 		this.exch_met = exch_met - 1;  // don't ask me why this is off-by-one but not reaction!?!?
 		this.function = function.toLowerCase();
@@ -51,7 +56,7 @@ public class Signal {
 		boolean function_allowed = checkFunction();
 		if (!function_allowed){
 			throw new IllegalArgumentException("the function for the signal must be one of:\n" +
-					"generalized_logistic\tbounded_linear");
+					"generalized_logistic\nbounded_linear\nlinear");
 		}
 		
 		boolean correct_number_of_parameters = checkParameterNumber();
@@ -77,12 +82,16 @@ public class Signal {
 	
 	private boolean checkParameterNumber(){
 		switch(this.function){
-		case "generalized_logistic":
-			if(this.parameters.size() >= 4){
+		case generalized_logistic:
+			if (this.parameters.size() >= 4){
 				return true;
 			}
-		case "bounded_linear":
-			if(this.parameters.size() == 4){
+		case bounded_linear:
+			if (this.parameters.size() == 4){
+				return true;
+			}
+		case linear:
+			if (this.parameters.size() >= 1){
 				return true;
 			}
 		}
@@ -90,7 +99,7 @@ public class Signal {
 	}
 	
 	private void addDefaultParameters(){
-		if (this.function.equals("generalized_logistic")){
+		if (this.function.equals(generalized_logistic)){
 			// A, K, B, M, C, Q, V
 			if (this.parameters.size() < 4){
 				this.parameters.add(0.0); // M
@@ -105,13 +114,26 @@ public class Signal {
 				this.parameters.add(1.0); // v
 			}
 		}
+		if (this.function.equals(linear)){
+			if (this.parameters.size() == 1){
+				this.parameters.add(0.0); // B, the y-intercept
+			}
+		}
+	}
+	
+	private double linear(double met_conc){
+		double m = this.parameters.get(0); // slope
+		double B = this.parameters.get(1); // intercept
+		
+		double bound = m * met_conc + B;
+		return bound;
 	}
 	
 	private double boundedLinear(double met_conc){
-		double A = this.parameters.get(0);
-		double B = this.parameters.get(1);
-		double C = this.parameters.get(2);
-		double D = this.parameters.get(3);
+		double A = this.parameters.get(0);  // intercept
+		double B = this.parameters.get(1);  // offset
+		double C = this.parameters.get(2);  // slope
+		double D = this.parameters.get(3);  // point where slope ceases to increase
 
 		double bound = A;
 		if (met_conc >= D){
@@ -123,13 +145,6 @@ public class Signal {
 		
 	}
 	
-	
-	public boolean affectsLb() {
-		return this.lb;
-	}
-	public boolean affectsUb() {
-		return this.ub;
-	}
 	
 	private double generalizedLogistic(double met_conc){
 		// parameter_order = A, K, B, M, C, Q, v
@@ -148,14 +163,35 @@ public class Signal {
 	public double calculateBound(double met_conc) {
 		double bound = 0;
 		switch(this.function){
-		case "generalized_logistic":
+		case generalized_logistic:
 			bound = generalizedLogistic(met_conc);
-		case "bounded_linear":
+		case bounded_linear:
 			bound = boundedLinear(met_conc);
+		case linear:
+			bound = linear(met_conc);
 		}
-			
-		System.out.println ("bound: " + bound);
+//		System.out.println("met_conc: " + met_conc);
+//		System.out.println ("bound: " + bound);
 		return bound;
+	}
+	
+	public double calculateDeathRate(double met_conc){
+		return calculateBound(met_conc);
+		
+	}
+	
+	public boolean isMetConsumed(){
+		return this.consume_met;
+	}
+	
+	public boolean affectsLb() {
+		return (this.lb && this.reaction != -1);
+	}
+	public boolean affectsUb() {
+		return (this.ub && this.reaction != -1);
+	}
+	public boolean affectsDeathRate(){
+		return this.reaction == -1;
 	}
 	
 	public int getReaction() {

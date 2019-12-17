@@ -2342,9 +2342,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						String bound = parsed[2];
 						if (!(bound.equalsIgnoreCase("lb") ||
 								bound.equalsIgnoreCase("ub") ||
-								bound.equalsIgnoreCase("na"))) {
+								bound.equalsIgnoreCase("consume_met")||
+								bound.equalsIgnoreCase("met_unchanged"))) {
 							reader.close();
-							throw new ModelFileException("third argument in MET_REACTION_SIGNAL must be the string ub, lb or NA, designating the affected bound (or none for death-causing toxins). line num" + lineNum);
+							throw new ModelFileException("third argument in MET_REACTION_SIGNAL must be the string ub, lb or consume_met,met_unchanged designating the affected bound (or whether the metabolite is consumed for death-causing toxins). line num" + lineNum);
 						}
 						
 						String function = parsed[3].toLowerCase(); // the name of the function connecting the met to the signal. see Signal for options
@@ -2353,14 +2354,24 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						for (int p = 4; p < parsed.length; p++){
 							parameters[p-4] = Double.parseDouble(parsed[p]);
 						}
-					
-						if (bound.equalsIgnoreCase("lb")){
-							signals.add(new Signal(true, false, rxn_num,
-									exch_met_num, function, parameters));
-						}else {
-							signals.add(new Signal(false, true, rxn_num,
-									exch_met_num, function, parameters));							
+						if (rxn_num != -1){ // signal
+							if (bound.equalsIgnoreCase("lb")){
+								signals.add(new Signal(true, false, false, rxn_num,
+										exch_met_num, function, parameters));
+							}else {
+								signals.add(new Signal(false, true, false, rxn_num,
+										exch_met_num, function, parameters));							
+							}							
+						}else{
+							if (bound.equalsIgnoreCase("consume_met")){
+								signals.add(new Signal(false, false, true, rxn_num,
+										exch_met_num, function, parameters));
+							}else {
+								signals.add(new Signal(false, false, false, rxn_num,
+										exch_met_num, function, parameters));							
+							}							
 						}
+
 						
 					}
 

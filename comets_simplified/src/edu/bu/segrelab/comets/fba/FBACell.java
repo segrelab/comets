@@ -7,6 +7,9 @@ import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.util.Utility;
 import java.util.Arrays; //DJORDJE
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * FBACell
@@ -34,7 +37,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private double[] biomass;
 	private double[] convectionRHS1;
 	private double[] convectionRHS2;
-	private double[] deltaBiomass;
+	private double[] deltaBiomass; // this would more accurately be "bornBiomass" but keeping it as it was
+	private double[] dyingBiomass; 
 	private double[][] deltaMedia; // DJORDJE
 	private boolean stationaryStatus = false; //Jean
 	private double[][] fluxes;
@@ -90,6 +94,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.y = y;
 		id = getNewCellID();
 		deltaBiomass = new double[biomass.length];
+		dyingBiomass = new double[biomass.length];
 		deltaMedia = new double[biomass.length][]; // DJORDJE
 
 		FBAstatus = new int[biomass.length];
@@ -146,6 +151,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.z = z;
 		id = getNewCellID();
 		deltaBiomass = new double[biomass.length];
+		dyingBiomass = new double[biomass.length];
 		FBAstatus = new int[biomass.length];
 		this.fbaModels = fbaModels;
 		this.world3D = world3D;
@@ -599,6 +605,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //		if (Comets.DIFFUSION_TEST_MODE)
 //			return CELL_OK;
 		deltaBiomass = new double[models.length];
+		dyingBiomass = new double[biomass.length];
 		deltaMedia = new double[models.length][]; //DJORDJE
 
 		// compute share of each model in total cell biomass
@@ -840,6 +847,21 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //				}
 //				System.out.println();
 			}
+			
+			// calculate toxin-mediated death and consumption of toxins during death:
+			Object[] temp = calcDeathRateAndMetConsumption((FBAModel)models[i], media, biomass[i]);
+			double death_rate = (double)temp[0];
+			Map<Integer, Double> consumed_mets = (Map<Integer, Double>)temp[1];
+
+			// death
+			dyingBiomass[i] = death_rate;
+			System.out.println("death_rate " + death_rate);
+			// toxin consumption
+			Set<Integer> consumed_met_keys = consumed_mets.keySet();
+			for (int key : consumed_met_keys){
+				deltaMedia[i][key] -= consumed_mets.get(key);
+			}
+			System.out.println(consumed_mets);
 		}
 		
 		//DJORDJE Section.moved to partition media by model and then update media collectively at the end.
@@ -864,6 +886,36 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			}
 		}
 		return updateCellData(deltaBiomass, fluxes);
+	}
+	
+	private Object[] calcDeathRateAndMetConsumption(FBAModel model, double[] media, double biomass){
+		/** checks a model's signals to see which cause death.
+		 * calculate the death rate (per unit time) caused by these different
+		 * chemicals, and returns the sum of these rates.
+		 * 
+		 *  Note that this method of calculation assumes pure additivity of death-rate
+		 *  affecting forces
+		 *  
+		 *  Note also that this could result in a death rate > 1.  There is nothing biologically
+		 *  wrong with this, but it might cause numerical issues if the timestep is too high. 
+		 */
+		double death_rate = 0;
+		Map<Integer, Double> consumed_mets = new HashMap<Integer, Double>();
+		double space_volume = cParams.getSpaceVolume();
+		for (Signal signal : model.getSignals()) {
+			if (signal.affectsDeathRate()){
+				int signal_met = signal.getExchMet();
+				double death_caused_by_toxin = signal.calculateDeathRate(media[signal_met] / space_volume);
+				death_caused_by_toxin = death_caused_by_toxin * biomass * cParams.getTimeStep();
+				
+				death_rate += death_caused_by_toxin;
+				if (signal.isMetConsumed()){
+					consumed_mets.put(signal_met, death_caused_by_toxin);
+				}
+				
+			}
+		}
+		return new Object[]{death_rate, consumed_mets};
 	}
 	
 	private boolean applySignals(FBAModel model, double[] media) {
@@ -934,6 +986,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			biomassShare[i] = biomass[i]/Utility.sum(biomass); 
 		return biomassShare;		
 	}
+	
+	
+
+	
+
+	
 	/**
 	 * Updates the data owned by this FBACell. The fluxes are stored internally, while the
 	 * deltaBiomass is used to calculate the change in biomass applied to the FBACell.
@@ -947,12 +1005,13 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.deltaBiomass = deltaBiomass;
 		this.fluxes = fluxes;
 		
-		// apply biomass death rate, regardless of whether growth is feasible.
+		// apply BASELINE biomass death rate, regardless of whether growth is feasible.
 		int numDead = 0;
 		for (int i=0; i<biomass.length; i++)
 		{
-			deltaBiomass[i] -= cParams.getDeathRate() * biomass[i] * cParams.getTimeStep();
+			dyingBiomass[i] += cParams.getDeathRate() * biomass[i] * cParams.getTimeStep();
 			biomass[i] += deltaBiomass[i];
+			biomass[i] -= dyingBiomass[i];
 			
 			if (biomass[i] < cParams.getMinSpaceBiomass())
 				biomass[i] = 0;
