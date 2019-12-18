@@ -866,10 +866,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 			// death
 			dyingBiomass[i] = death_rate;
-			System.out.println("death_rate " + death_rate);
 			// toxin consumption
 			Set<Integer> consumed_met_keys = consumed_mets.keySet();
-			System.out.println(consumed_mets);
 			for (int key : consumed_met_keys){
 				// deltaMedia[i] is null when a model is not feasible
 				deltaMedia[i][key] -= consumed_mets.get(key);
@@ -879,9 +877,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		//DJORDJE Section.moved to partition media by model and then update media collectively at the end.
 		for (int a=0; a<models.length; a++)
 		{	
-			if (biomass[a] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass() || 	deltaBiomass[a]==0.0)
-				continue;
-			
+			// JMC: removed if statement so toxins can degrade.  
+			//if (biomass[a] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass() || 	deltaBiomass[a]==0.0)
+			//	continue;
 			if(cParams.getNumLayers() == 1)
 				world.changeModelMedia(x, y, a, deltaMedia[a]);
 			else if (cParams.getNumLayers() > 1)

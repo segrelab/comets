@@ -94,14 +94,17 @@ public class Signal {
 			if (this.parameters.size() >= 4){
 				return true;
 			}
+			break;
 		case bounded_linear:
 			if (this.parameters.size() == 4){
 				return true;
 			}
+			break;
 		case linear:
 			if (this.parameters.size() >= 1){
 				return true;
 			}
+			break;
 		}
 		return false;
 	}
@@ -163,8 +166,8 @@ public class Signal {
 		double C = this.parameters.get(4);
 		double Q = this.parameters.get(5);
 		double v = this.parameters.get(6);
-		double bound = A + (K - A) / Math.pow(C + Q * Math.exp(-B * (met_conc - M)),
-				1.0 / v);
+		double bound = A + ((K - A) / Math.pow(C + Q * Math.exp(-B * (met_conc - M)),
+				1.0 / v));
 		return bound;
 	}
 	
@@ -173,13 +176,14 @@ public class Signal {
 		switch(this.function){
 		case generalized_logistic:
 			bound = generalizedLogistic(met_conc);
+			break;
 		case bounded_linear:
 			bound = boundedLinear(met_conc);
+			break;
 		case linear:
 			bound = linear(met_conc);
+			break;
 		}
-//		System.out.println("met_conc: " + met_conc);
-//		System.out.println ("bound: " + bound);
 		return bound;
 	}
 	
