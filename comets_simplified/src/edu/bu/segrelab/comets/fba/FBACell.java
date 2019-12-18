@@ -651,6 +651,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		    	continue;
 
 		    }
+		    
+
+		    
 			/************************* CALCULATE MAX EXCHANGE FLUXES ******************************/
 			double[] media=null;//=world3D.getModelMediaAt(x, y, z, i);
 			if(cParams.getNumLayers() == 1)
@@ -661,6 +664,15 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			//split media
 			for (int j=0; j<media.length; j++)
 				media[j] = media[j]*modelShare[i];
+			
+			// initialize change in media
+			double[] mediaDelta = new double[media.length];
+			for (int j=0; j<mediaDelta.length; j++)
+			{	
+				mediaDelta[j] = 0;
+			}
+			deltaMedia[i] = mediaDelta;
+			
 			
 			double[] lb = ((FBAModel)models[i]).getBaseExchLowerBounds();
 			double[] ub = ((FBAModel)models[i]).getBaseExchUpperBounds();
@@ -797,7 +809,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 				/***************** GET MEDIA CONCENTRATION CHANGE ********************/
 				double[] exchFlux = ((FBAModel)models[i]).getExchangeFluxes();
-				double[] mediaDelta = new double[exchFlux.length];
 
 				// modify the media (in mmol) by changing the fluxes back
 				// into concentrations
@@ -858,10 +869,11 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			System.out.println("death_rate " + death_rate);
 			// toxin consumption
 			Set<Integer> consumed_met_keys = consumed_mets.keySet();
+			System.out.println(consumed_mets);
 			for (int key : consumed_met_keys){
+				// deltaMedia[i] is null when a model is not feasible
 				deltaMedia[i][key] -= consumed_mets.get(key);
 			}
-			System.out.println(consumed_mets);
 		}
 		
 		//DJORDJE Section.moved to partition media by model and then update media collectively at the end.

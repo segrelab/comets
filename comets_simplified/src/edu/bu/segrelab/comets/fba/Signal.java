@@ -33,8 +33,16 @@ public class Signal {
 	
 	/**
 	 * creates a Signal object.  
-	 * @throws ModelFileException 
-	 * @todo have these test for correct values (esp reactions and exch_met)
+	 * 
+	 * These are checked during a COMETS simulation in FBACell.run() 
+	 * They code for an interaction between the concentration of an
+	 * external metabolite and either a reaction's bound or the death 
+	 * rate of a model.
+	 * 
+	 * There are three allowed functions that describe the relationship
+	 * between a signaling metabolite and the effect: generalized_logistic,
+	 * bounded_linear, and linear
+	 * 
 	 * 
 	 */
 	public Signal(boolean lb, boolean ub, boolean consume_met, int reaction, int exch_met, String function,
