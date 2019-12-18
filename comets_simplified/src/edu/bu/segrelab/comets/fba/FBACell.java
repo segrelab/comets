@@ -1,5 +1,7 @@
 package edu.bu.segrelab.comets.fba;
 
+import java.io.*;
+
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsParameters;
@@ -9,6 +11,9 @@ import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Utility;
 import java.util.Arrays; //DJORDJE
+
+import org.apache.commons.math3.distribution.*;
+import jdistlib.*;
 
 /**
  * FBACell
@@ -51,6 +56,14 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private CometsParameters cParams;
 	private FBAParameters pParams;
 	
+	
+	//Distributions for neutral drift of the biomass.   
+//	private PoissonDistribution poissonDist;
+	private Poisson poissonDist;
+//	private GammaDistribution gammaDist;
+	private Gamma gammaDist;
+	
+	private PrintWriter PoissWriter;
 	/**
 	 * Creates a new <code>FBACell</code> with randomized biomass from 0->1 g for each species.
 	 * @param x the new cell's column
