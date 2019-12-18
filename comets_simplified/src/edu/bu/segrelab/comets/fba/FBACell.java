@@ -36,9 +36,15 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private double[] biomass;
 	private double[] convectionRHS1;
 	private double[] convectionRHS2;
+	private double jointRHS1;
+	private double jointRHS2;
 	private double[] deltaBiomass;
+
+	private double[] allModelsGrowthRates;
+
 	private double[][] deltaMedia; // DJORDJE
 	private boolean stationaryStatus = false; //Jean
+  
 	private double[][] fluxes;
 	private int[] FBAstatus;
 	  
@@ -258,6 +264,25 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		{
 				convectionRHS2[i] = values[i];
 		}
+	}
+	
+	
+	/**
+	 * Sets the previous step jointRHS1.
+	 * @param values
+	 */
+	public void setJointRHS1(double value)
+	{
+				jointRHS1 = value;
+	}
+	
+	/**
+	 * Sets the previous step jointRHS2.
+	 * @param values
+	 */
+	public void setJointRHS2(double value)
+	{
+				jointRHS2 = value;
 	}
 	
 	/**
@@ -502,6 +527,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		return convectionRHS1;
 	}
 	
+	
 	/**
 	 * Returns the convectionRHS1 from 2 steps away in the <code>FBACell</code>
 	 * @return a double[] containing the total convectionRHS2 from two steps away in the <code>FBACell</code>.
@@ -510,6 +536,26 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	{
 		return convectionRHS2;
 	}
+	
+	/**
+	 * Returns the jointRHS1 from 2 steps away in the <code>FBACell</code>
+	 * @return a double[] containing the total jointRHS2 from two steps away in the <code>FBACell</code>.
+	 */
+	public synchronized double getJointRHS2()
+	{
+		return jointRHS2;
+	}
+	
+	
+	/**
+	 * Returns the jointRHS1 from the previous step in the <code>FBACell</code>
+	 * @return a double[] containing the calculated jointRHS1 from a previous step in the <code>FBACell</code>.
+	 */
+	public synchronized double getJointRHS1()
+	{
+		return jointRHS1;
+	}
+	
 	
 	/**
 	 * @return the most recent change in biomass that occurred in the cell, typically due
@@ -601,13 +647,18 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //		if (Comets.DIFFUSION_TEST_MODE)
 //			return CELL_OK;
 		deltaBiomass = new double[models.length];
+
+		allModelsGrowthRates = new double[models.length];
+    
 		deltaMedia = new double[models.length][]; //DJORDJE
 
 		// compute share of each model in total cell biomass
 		double[] modelShare = getBiomassFraction();
 
+
 		FBAstatus = new int[models.length];
 		
+		double biomassGrowthRate = 0.0;
 		double rho = 1.0;
 		
 		// If we have multiple concurrent models in the cell, we want to update
@@ -772,14 +823,13 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			int stat = models[i].run();
 			fluxes[i] = ((FBAModel)models[i]).getFluxes();
 
-
-
 			if (stat != 5 && stat != 180)
 			{
 				// failure! don't do anything right now.
 				// System.out.println("FBA failure status: " + stat);
 				//error check for JEAN (again may be redundant in later versions).
 				deltaBiomass[i]=0.0;
+
 			}
 			if (stat == 5 || stat == 180)
 			{
@@ -804,7 +854,11 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 				/***************** GET BIOMASS CONCENTRATION CHANGE ****************/
 				// biomass is in grams
+				biomassGrowthRate = (double)(((FBAModel)models[i]).getBiomassFluxSolution());
 				deltaBiomass[i] = (double)(((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];
+
+				allModelsGrowthRates[i]=biomassGrowthRate;
+				
 				deltaBiomass[i] *= (1-(double)(((FBAModel)models[i]).getGenomeCost()));
 				
 				// if no biomass change dont change media //JEAN 
@@ -817,6 +871,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					}
 				}
 				
+
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());
 //				System.out.println("solution: " + ((FBAModel)models[i]).getObjectiveSolution());
@@ -849,6 +904,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				world.changeModelMedia(x, y, a, deltaMedia[a]);
 			else if (cParams.getNumLayers() > 1)
 				world3D.changeModelMedia(x, y, z, a, deltaMedia[a]);
+
 		}
 		//Jean Section for batch dilute Checks if models are growing and if they all stopped growing sets stationary phase in cell.
 		// This flag will remain on until the environment is updated.
@@ -860,7 +916,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				}
 			}
 		}
-		return updateCellData(deltaBiomass, fluxes);
+		return updateCellData(deltaBiomass, fluxes, allModelsGrowthRates);
 	}
 	
 	private double calcMichaelisMentenRate(double mediaConc, double km, double vMax, double hill)
@@ -877,6 +933,54 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	{
 		return mediaConc;
 	}
+
+	
+	
+	/** Adds demographic noise to the biomass according to the procedure in 
+	 *  Phys. Rev. Lett. 94, 100601 (2005). 
+	 *
+	 * @param currentBiomass
+	 * @param biomassGrowthRate
+	 * @param demographicNoiseSigmaZero
+	 * @return noisyBiomass
+	 */
+	private double addDemographicNoise(double currentBiomass, double biomassGrowthRate, double demographicNoiseSigmaZero)
+	{
+		double noisyBiomass=currentBiomass;
+		if(biomassGrowthRate>0.0)
+		{	
+			double noiseSigma = biomassGrowthRate*demographicNoiseSigmaZero;
+			//System.out.println("sigma  "+noiseSigma);
+			double poissonLambda=2.0*currentBiomass/(cParams.getTimeStep()*noiseSigma*noiseSigma);
+			//System.out.println("poiss  "+poissonLambda);
+			if(poissonLambda>0)
+			{
+				poissonDist=new Poisson(poissonLambda);
+			
+				double gammaAlpha=poissonDist.random();
+				//System.out.println("alpha  "+gammaAlpha);
+				if(gammaAlpha>0)
+				{
+					//System.out.println(gammaAlpha);
+					gammaDist=new Gamma(gammaAlpha,1.0);
+					double gammaSample=gammaDist.random();
+					noisyBiomass=0.5*gammaSample*(cParams.getTimeStep()*noiseSigma*noiseSigma);
+					//System.out.println("biomass  "+noisyBiomass);
+				}
+				else if(gammaAlpha==0)
+				{
+					noisyBiomass=0.0;
+				}
+			}
+			else if(poissonLambda==0)
+			{
+				noisyBiomass=0.0;
+			}
+		}
+		return noisyBiomass;
+	}
+	
+
 	//DJORDJE, get fraction of biomass of each model. 
 	private double[] getBiomassFraction()
 	{
@@ -885,6 +989,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			biomassShare[i] = biomass[i]/Utility.sum(biomass); 
 		return biomassShare;		
 	}
+
 	/**
 	 * Updates the data owned by this FBACell. The fluxes are stored internally, while the
 	 * deltaBiomass is used to calculate the change in biomass applied to the FBACell.
@@ -893,7 +998,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	 * @return Cell.CELL_DEAD if this cell has no more active biomass, Cell.CELL_OK 
 	 * otherwise
 	 */
-	public int updateCellData(double[] deltaBiomass, double[][] fluxes)
+	public int updateCellData(double[] deltaBiomass, double[][] fluxes, double[] biomassGrowthRates)
 	{
 		this.deltaBiomass = deltaBiomass;
 		this.fluxes = fluxes;
@@ -905,6 +1010,20 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			deltaBiomass[i] -= cParams.getDeathRate() * biomass[i] * cParams.getTimeStep();
 			biomass[i] += deltaBiomass[i];
 			
+
+			//Neutral drift block. Only if the death rate is zero. Get the sigmas from the model and 
+			// calculate biomass=(sigma^2*timestep/2)*Gamm(Poiss(2*biomass/sigma^2*timesteo))
+			if(fbaModels[i].getNeutralDrift() && deltaBiomass[i]>0.0 && cParams.getDeathRate()==0.0)
+			{   
+				biomass[i]=addDemographicNoise(biomass[i], biomassGrowthRates[i], fbaModels[i].getNeutralDriftSigma());
+			}
+			else if(fbaModels[i].getNeutralDrift() && cParams.getDeathRate()!=0.0)
+			{
+				System.out.println("Error in model "+i+": Demographic noise is applies only if the death rate for the model is zero. Noise will not be applied.");
+				System.err.println("Error in model "+i+": Demographic noise is applies only if the death rate for the model is zero. Noise will not be applied.");
+			}
+			
+
 			if (biomass[i] < cParams.getMinSpaceBiomass())
 				biomass[i] = 0;
 			if (biomass[i] == 0)

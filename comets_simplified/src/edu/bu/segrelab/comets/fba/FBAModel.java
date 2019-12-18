@@ -124,6 +124,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double frictionConst;
 	private double packedDensity;
 	private double convectionDiffConst;
+	private double convNonlinDiffZero;
+	private double convNonlinDiffN;
+	private double convNonlinDiffExponent;
+	private double convNonlinDiffHillK;
+	private double convNonlinDiffHillN;
 	private double noiseVariance;
 	private int[] objReactions; //index of reactions, in order of priority
 	private boolean[] objMaximize; //is corresponding objective maximized? If not, it's minimized
@@ -1242,6 +1247,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   elasticModulusConst=1,
 				   frictionConst=1,
 				   convDiffConst=1,
+				   convNonlinDiffZero=1,
+				   convNonlinDiffN=1,
+				   convNonlinDiffExponent=1,
+				   convNonlinDiffHillN=10,
+				   convNonlinDiffHillK=0.9,
 				   packDensity=1,
 				   noiseVariance=0.0,
 				   neutralDriftSigma=0.0;
@@ -1706,6 +1716,100 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						throw new ModelFileException("The convDiffConstant value given at line " + lineNum + "should be => 0");
 					}
 					
+				}
+				
+				/**************************************************************
+				 *******LOAD Nonlinear DIFFUSION CONSTANT (CONVECTION MODEL)***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("convNonlinDiffZero"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The convNonlinDiffZero should be followed only by its value at line " + lineNum);
+					}
+					convNonlinDiffZero = Double.parseDouble(tokens[1]);
+					if (convDiffConst < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The convNonlinDiffZero value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
+				
+				/**************************************************************
+				 *******LOAD Nonlinear DIFFUSION CONSTANT (CONVECTION MODEL)***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("convNonlinDiffN"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The convNonlinDiffN should be followed only by its value at line " + lineNum);
+					}
+					convNonlinDiffN = Double.parseDouble(tokens[1]);
+					if (convDiffConst < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The convNonlinDiffN value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
+				
+				/**************************************************************
+				 *******LOAD Nonlinear DIFFUSION EXPONENT (CONVECTION MODEL)***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("convNonlinDiffExponent"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The convNonlinDiffExponent should be followed only by its value at line " + lineNum);
+					}
+					convNonlinDiffExponent = Double.parseDouble(tokens[1]);
+					if (convDiffConst < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The convNonlinDiffExponent value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
+				
+				/**************************************************************
+				 *******LOAD Nonlinear DIFFUSION HILL K (CONVECTION MODEL)***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("convNonlinDiffHillK"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The convNonlinDiffHillK should be followed only by its value at line " + lineNum);
+					}
+					convNonlinDiffHillK = Double.parseDouble(tokens[1]);
+					if (convNonlinDiffHillK < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The convNonlinDiffHillK value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
+				
+				/**************************************************************
+				 *******LOAD Nonlinear DIFFUSION HILL N (CONVECTION MODEL)***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("convNonlinDiffHillN"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The convNonlinDiffHillN should be followed only by its value at line " + lineNum);
+					}
+					convNonlinDiffHillN = Double.parseDouble(tokens[1]);
+					if (convNonlinDiffHillN < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The convNonlinDiffHillN value given at line " + lineNum + "should be => 0");
+					}
 				}
 				
 				/**************************************************************
@@ -2347,6 +2451,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setElasticModulusConstant(elasticModulusConst);
 			model.setFrictionConstant(frictionConst);
 			model.setConvDiffConstant(convDiffConst);
+			model.setConvNonlinDiffZero(convNonlinDiffZero);
+			model.setConvNonlinDiffN(convNonlinDiffN);
+			model.setConvNonlinDiffHillK(convNonlinDiffHillK);
+			model.setConvNonlinDiffHillN(convNonlinDiffHillN);
+			model.setConvNonlinDiffExponent(convNonlinDiffExponent);
 			model.setPackedDensity(packDensity);
 			model.setNoiseVariance(noiseVariance);
 			
@@ -2485,6 +2594,87 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	{
 		convectionDiffConst=val;;
 	}
+	
+	/**
+	 * @return the value of the nonlinear diffusion constant D0 in (D0+DN*rho^N) for the convection model in cm^2/s
+	 */
+	public double getConvNonlinDiffZero()
+	{
+		return convNonlinDiffZero;
+	}
+	
+	/**
+	 * Sets the Diffusion constant D0 in (D0+DN*rho^N) for the convection model.
+	 */
+	public void setConvNonlinDiffZero(double val)
+	{
+		convNonlinDiffZero=val;;
+	}
+	
+	/**
+	 * @return the value of the nonlinear diffusion constant DN in (D0+DN*rho^N) for the convection model in cm^2/s
+	 */
+	public double getConvNonlinDiffN()
+	{
+		return convNonlinDiffN;
+	}
+	
+	/**
+	 * Sets the Diffusion constant DN in (D0+DN*rho^N) for the convection model.
+	 */
+	public void setConvNonlinDiffN(double val)
+	{
+		convNonlinDiffN=val;;
+	}
+	
+	/**
+	 * @return the value of the nonlinear diffusion exponent N in (D0+DN*rho^N) for the convection model in cm^2/s
+	 */
+	public double getConvNonlinDiffExponent()
+	{
+		return convNonlinDiffExponent;
+	}
+	
+	/**
+	 * Sets the Diffusion constant N in (D0+DN*rho^N) for the convection model.
+	 */
+	public void setConvNonlinDiffExponent(double val)
+	{
+		convNonlinDiffExponent=val;;
+	}
+	
+	/**
+	 * @return the value of K in the nonlinear diffusion Hill step function (dRho/Rho)^N/(K^N+(dRho/Rho)^N)
+	 */
+	public double getConvNonlinDiffHillK()
+	{
+		return convNonlinDiffHillK;
+	}
+	
+	/**
+	 * Sets the value of K in the nonlinear diffusion Hill step function (dRho/Rho)^N/(K^N+(dRho/Rho)^N)
+	 */
+	public void setConvNonlinDiffHillK(double val)
+	{
+		convNonlinDiffHillK=val;;
+	}
+	
+	/**
+	 * @return the value of N in the nonlinear diffusion Hill step function (dRho/Rho)^N/(K^N+(dRho/Rho)^N)
+	 */
+	public double getConvNonlinDiffHillN()
+	{
+		return convNonlinDiffHillN;
+	}
+	
+	/**
+	 * Sets the value of N in the nonlinear diffusion Hill step function (dRho/Rho)^N/(K^N+(dRho/Rho)^N)
+	 */
+	public void setConvNonlinDiffHillN(double val)
+	{
+		convNonlinDiffHillN=val;;
+	}
+	
 	
 	public double getNoiseVariance()
 	{
