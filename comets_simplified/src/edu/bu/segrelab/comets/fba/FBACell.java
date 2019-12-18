@@ -696,7 +696,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			if (stat != 5 && stat != 180)
 			{
 				// failure! don't do anything right now.
-				System.out.println("FBA failure status " + stat);
+				//System.out.println("FBA failure status: " + stat);
 			}
 			if (stat == 5 || stat == 180)
 			{
@@ -725,7 +725,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				//System.out.println("biomass "+((FBAModel)models[i]).getBiomassFluxSolution());
 				// biomass is in grams
 				biomassGrowthRate = (double)(((FBAModel)models[i]).getBiomassFluxSolution());
-				deltaBiomass[i] = (((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];
+				deltaBiomass[i] = (double)(((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];
 				allModelsGrowthRates[i]=biomassGrowthRate;
 				//System.out.println("deltaBiomass "+deltaBiomass[i]);
 				if(deltaBiomass[i]<0.0)deltaBiomass[i]=0.0;
