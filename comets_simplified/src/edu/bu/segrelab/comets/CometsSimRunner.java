@@ -1,6 +1,7 @@
 package edu.bu.segrelab.comets;
 
 import edu.bu.segrelab.comets.event.SimulationStateChangeEvent;
+import edu.bu.segrelab.comets.fba.FBAWorld;
 
 
 /**
@@ -101,7 +102,21 @@ public class CometsSimRunner extends Thread
 	
 				// Simulate!
 				if (c.getParameters().getNumLayers()==1)
+				// do batch dilution here
+				{
+					if (c.getParameters().getBatchDilution())
+					{
+						if ((curCycle*c.getParameters().getTimeStep()) % c.getParameters().getDilutionTime() == 0) 
+						{
+							((FBAWorld) c.getWorld()).batchDilute(c.getParameters().getDilutionFactor(), c.getParameters().getCellSize());
+							System.out.println("Transfer performed: dilute " + 
+												c.getParameters().getDilutionFactor() + 
+												" each " + c.getParameters().getDilutionTime() + 'h');
+						}
+					}
+
 					c.getWorld().run();
+				}
 				else if (c.getParameters().getNumLayers()>1)
 					c.getWorld3D().run();
 				//c.getWorld().run();

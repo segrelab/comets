@@ -9,6 +9,9 @@ import java.util.List;
 
 import javax.swing.JComponent;
 
+import cern.jet.random.engine.*;
+import cern.jet.random.*;
+
 import edu.bu.segrelab.comets.util.Utility;
 
 /**
@@ -53,6 +56,8 @@ public abstract class World2D implements CometsConstants, IWorld
 											  // that is to remain static, at a value given
 											  // by staticMedia[i]
 	
+	protected DRand randomGenerator; //djordje
+
 	/**
 	 * The main constructor for the World2D. Every extending class should call this
 	 * first.
@@ -79,6 +84,7 @@ public abstract class World2D implements CometsConstants, IWorld
 		
 		refreshPoints = new RefreshPoint[numCols][numRows];
 		staticPoints = new StaticPoint[numCols][numRows];
+		randomGenerator = new DRand(new java.util.Date()); // djordje
 	}
 
 	public boolean isOnGrid(int x, int y)
@@ -103,6 +109,18 @@ public abstract class World2D implements CometsConstants, IWorld
 		return numRows;
 	}
 	
+	public int getNumModels()
+	{
+		return numModels;
+	}
+
+	// DJORDJE                                                                                                 
+	// used when adding models in mutation                                                                     
+	public void setNumModels(int newNumModels)
+	{
+		numModels = newNumModels;
+	}
+	
 	/**
 	 * Makes a copy of this <code>World2D</code> that doesn't share any instances
 	 * with the old one. Since this requires making a new instance of a World2D 
@@ -117,13 +135,14 @@ public abstract class World2D implements CometsConstants, IWorld
 	 * @return an array of biomasses - one for each <code>Model</code> loaded
 	 */
 	public double[] calculateTotalBiomass()
-	{
+	{		
 		double[] totalBiomass = new double[numModels];
 		Iterator<Cell> it = c.getCells().iterator();
 		while (it.hasNext())
 		{
 			Cell cell = (Cell) it.next();
 			double[] curBiomass = cell.getBiomass();
+			
 			for (int i = 0; i < curBiomass.length; i++)
 			{
 				totalBiomass[i] += curBiomass[i];
@@ -258,7 +277,7 @@ public abstract class World2D implements CometsConstants, IWorld
 		}
 		return getMediaAt(x,y);
 	}
-	
+
 	/**
 	 * @return the number of nutrient components in the currently loaded media
 	 */
@@ -856,8 +875,10 @@ public abstract class World2D implements CometsConstants, IWorld
 			double[] rpConc = new double[numMedia];
 			if (refreshPoints[x][y] != null)
 				rpConc = refreshPoints[x][y].getMediaRefresh();
-			for (int i=0; i<numMedia; i++)
+			for (int i=0; i<numMedia; i++){
 				conc[i] = mediaRefresh[i] + rpConc[i];
+			}
+
 			return conc;
 		}
 		else
@@ -958,7 +979,32 @@ public abstract class World2D implements CometsConstants, IWorld
 	public double[] getMediaRefreshAmount()
 	{
 		return mediaRefresh;
-	}	
+	}
+	/**
+	 * dilutes the media world-wide by a global dilution coefficient, which is supplied
+	 * in the parameters file as metaboliteDilution
+	 */
+	public void applyMetaboliteDilution()
+	{
+		double metaboliteDilutionRate = cParams.getMetaboliteDilutionRate();
+		if (metaboliteDilutionRate == 0.0)
+		{
+			return; // don't bother wasting cpu if no dilution applied
+		}
+		double dt = cParams.getTimeStep();
+		for (int i = 0; i < numCols; i++)
+		{
+			for (int j = 0; j < numRows; j++)
+			{
+				for (int k = 0; k < numMedia; k++)
+				{
+					media[i][j][k] -= media[i][j][k] * metaboliteDilutionRate * dt;
+					if (media[i][j][k] < 0)
+						media[i][j][k] = 0;
+				}
+			}
+		}
+	}
 	
 	/**
 	 * Puts the given <code>Cell</code> into the world at (x, y)
@@ -1117,6 +1163,29 @@ public abstract class World2D implements CometsConstants, IWorld
 		//if there's nothing to do, just return
 		if (reactionModel.getNrxns() < 1) return;
 		else reactionModel.run(); //the ReactionModel handles updating this world's media
+	}
+
+	// This function samples cells from a population (expressed as number of
+	// cells), given a probability.Internally, it uses binomial when cell
+	// numbers
+	// are small, and Poisson otherwise.
+	// needs import cern.jet.random.engine.*;
+	// needs import cern.jet.random.*;
+	public int samplePopulation(int population, double prob) 
+	{
+		double lambda = population * prob;
+		Poisson pois;
+		Binomial binom;
+		int nmut;
+		
+		if (lambda > 10) {
+			pois = new Poisson(lambda, randomGenerator);
+			nmut = pois.nextInt();
+		} else {
+			binom = new Binomial(population, prob, randomGenerator);
+			nmut = binom.nextInt();
+		}
+		return nmut;
 	}
 
 	public void setInitialMediaNames(String[] arr){initialMediaNames = arr;}

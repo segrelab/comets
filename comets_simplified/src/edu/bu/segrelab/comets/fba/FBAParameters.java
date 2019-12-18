@@ -142,17 +142,21 @@ public class FBAParameters implements PackageParameters
 	writeBiomassLog,
 	writeVelocityLog,
 	writeTotalBiomassLog,
+	writeSpecificMediaLog,
 	writeMatFile,
 	useLogNameTimeStamp,
 	randomOrder = true, //shuffle the order each model in a cell is run
 	monodOverride,
-	pseudoOverride; 
+	pseudoOverride, 
+	costlyGenome = false; 
 
 	private String fluxLogName,
 	mediaLogName,
 	biomassLogName,
 	velocityLogName,
 	totalBiomassLogName,
+	specificMediaLogName,
+	specificMedia, // different fron specificMediaLogName.  This string stores the names of the extracelluar mets t log
 	matFileName;
 
 	private String manifestFileName = "COMETS_manifest.txt";
@@ -165,6 +169,7 @@ public class FBAParameters implements PackageParameters
 			biomassLogRate = 1,
 			velocityLogRate = 1,
 			totalBiomassLogRate = 1,
+			specificMediaLogRate = 1,
 			numExRxnSubsteps = 12, //12 chosen as default so if timestep is 1h, minimum substep is < 1sec
 			matFileRate = 1;
 
@@ -186,7 +191,8 @@ public class FBAParameters implements PackageParameters
 			defaultHill = 2,
 			defaultAlpha = 1,
 			defaultW = 10,
-			defaultDiffConst = 1e-5,
+			defaultDiffConst = 1e-5, 
+			geneFractionalCost = 0,	
 			minConcentration = 1e-26; //Here's hoping 1 atom per liter is enough precision
 
 	private double[] defaultVelocityVector={0.0,0.0,0.0};
@@ -211,6 +217,7 @@ public class FBAParameters implements PackageParameters
 		writeBiomassLog = false;
 		writeVelocityLog = false;
 		writeTotalBiomassLog = false;
+		writeSpecificMediaLog = false;
 		writeMatFile = false;
 		useLogNameTimeStamp = true;
 
@@ -220,6 +227,8 @@ public class FBAParameters implements PackageParameters
 		velocityLogName = "velocity_log.txt";
 		matFileName = "comets_log.mat";
 		totalBiomassLogName = "total_biomass_log.txt";
+		specificMediaLogName = "specific_media_log.txt";
+		specificMedia = "";
 
 		paramValues = new HashMap<String, Object>();
 		paramTypes = new HashMap<String, ParameterType>();
@@ -253,6 +262,9 @@ public class FBAParameters implements PackageParameters
 		
 		paramValues.put("writetotalbiomasslog", new Boolean(writeTotalBiomassLog));
 		paramTypes.put("writetotalbiomasslog", ParameterType.BOOLEAN);
+		
+		paramValues.put("writespecificmedialog", new Boolean(writeSpecificMediaLog));
+		paramTypes.put("writespecificmedialog", ParameterType.BOOLEAN);
 
 		paramValues.put("writematfile", new Boolean(writeMatFile));
 		paramTypes.put("writematfile", ParameterType.BOOLEAN);
@@ -274,6 +286,12 @@ public class FBAParameters implements PackageParameters
 		
 		paramValues.put("totalbiomasslogname", totalBiomassLogName);
 		paramTypes.put("totalbiomasslogname", ParameterType.STRING);
+		
+		paramValues.put("specificmedialogname", specificMediaLogName); 
+		paramTypes.put("specificmedialogname", ParameterType.STRING);
+		
+		paramValues.put("specificmedia", specificMedia); 
+		paramTypes.put("specificmedia", ParameterType.STRING);
 
 		paramValues.put("matfilename", matFileName);
 		paramTypes.put("matfilename", ParameterType.STRING);
@@ -292,6 +310,9 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("numrunthreads", new Integer(numRunThreads));
 		paramTypes.put("numrunthreads", ParameterType.INT);
+		
+		paramValues.put("specificmedialograte", new Integer(specificMediaLogRate)); 
+		paramTypes.put("specificmedialograte", ParameterType.INT);
 
 		paramValues.put("growthdiffrate", new Double(growthDiffRate));
 		paramTypes.put("growthdiffrate", ParameterType.DOUBLE);
@@ -352,6 +373,13 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("randomorder", new Boolean(randomOrder));
 		paramTypes.put("randomorder", ParameterType.BOOLEAN);
+		
+		paramValues.put("costlygenome", new Boolean(costlyGenome));
+		paramTypes.put("costlygenome", ParameterType.BOOLEAN);
+		
+		paramValues.put("genefractionalcost", new Double(geneFractionalCost));
+		paramTypes.put("genefractionalcost", ParameterType.DOUBLE);
+
 	}
 
 	public void loadParameterState()
@@ -361,6 +389,7 @@ public class FBAParameters implements PackageParameters
 		writeBiomassLog(((Boolean)paramValues.get("writebiomasslog")).booleanValue());
 		writeVelocityLog(((Boolean)paramValues.get("writevelocitylog")).booleanValue());
 		writeTotalBiomassLog(((Boolean)paramValues.get("writetotalbiomasslog")).booleanValue());
+		writeSpecificMediaLog(((Boolean)paramValues.get("writespecificmedialog")).booleanValue());
 		writeMatFile(((Boolean)paramValues.get("writematfile")).booleanValue());
 		useLogNameTimeStamp(((Boolean)paramValues.get("uselognametimestamp")).booleanValue());
 		setFluxLogName((String)paramValues.get("fluxlogname"));
@@ -368,8 +397,12 @@ public class FBAParameters implements PackageParameters
 		setBiomassLogName((String)paramValues.get("biomasslogname"));
 		setVelocityLogName((String)paramValues.get("velocitylogname"));
 		setTotalBiomassLogName((String)paramValues.get("totalbiomasslogname"));
+		setSpecificMediaLogName((String)paramValues.get("specificmedialogname"));
+		setSpecificMedia((String)paramValues.get("specificmedia"));
 		setMatFileName((String)paramValues.get("matfilename"));
 		setRandomOrder(((Boolean)paramValues.get("randomorder")).booleanValue());
+		setCostlyGenome(((Boolean)paramValues.get("costlygenome")).booleanValue());		
+		setGeneFractionalCost(((Double)paramValues.get("genefractionalcost")).doubleValue());
 
 		if(paramValues.get("fluxlogformat") instanceof String)
 			setFluxLogFormat(LogFormat.findByName((String)paramValues.get("fluxlogformat")));
@@ -422,6 +455,7 @@ public class FBAParameters implements PackageParameters
 		setBiomassLogRate(((Integer)paramValues.get("biomasslograte")).intValue());
 		setVelocityLogRate(((Integer)paramValues.get("velocitylograte")).intValue());
 		setTotalBiomassLogRate(((Integer)paramValues.get("totalbiomasslograte")).intValue());
+		setSpecificMediaLogRate(((Integer)paramValues.get("specificmedialograte")).intValue());
 		setMatFileRate(((Integer)paramValues.get("matfilerate")).intValue());
 		setNumDiffusionsPerStep(((Integer)paramValues.get("numdiffperstep")).intValue());
 		setDefaultDiffusionConstant(((Double)paramValues.get("defaultdiffconst")).doubleValue());
@@ -648,6 +682,25 @@ public class FBAParameters implements PackageParameters
 		if (i > 0)
 			totalBiomassLogRate = i;
 	}
+	
+	/**
+	 * Sets the number of steps that occur between every specific media log write. If <code>i</code>
+	 * is less than 1, nothing is changed.
+	 * @param i
+	 */
+	public void setSpecificMediaLogRate(int i)
+	{
+		if (i > 0)
+			specificMediaLogRate = i;
+	}
+	
+	/**
+	 * @return the number of simulation steps that occur between every specific media log write
+	 */
+	public int getSpecificMediaLogRate() 
+	{ 
+		return specificMediaLogRate; 
+	}	
 
 	/**
 	 * @return the number of simulation steps that occur between every .mat file log write
@@ -837,7 +890,20 @@ public class FBAParameters implements PackageParameters
 			}
 		}
 	}
+	
+	public double getGeneFractionalCost()
+	{
+		return geneFractionalCost;
+	}
 
+	public static void setGeneFractionalCost(double d)
+	{
+		if (d <= 0)
+			return;
+		geneFractionalCost = d;
+	}
+
+	
 	/**
 	 * Returns the current style of media exchange occuring within the model
 	 * @return either <code>STANDARD_EXCHANGE</code>, <code>MM_EXCHANGE</code>, or
@@ -947,6 +1013,22 @@ public class FBAParameters implements PackageParameters
 	{
 		return writeMediaLog; 
 	}
+	/**
+	 * @param b if true, write a specific media log
+	 * 
+	 */
+	public void writeSpecificMediaLog(boolean b)
+	{
+		writeSpecificMediaLog = b; 
+	}
+	/**
+	 * 
+	 * @return true if a specific media log will be written.
+	 */
+	public boolean writeSpecificMediaLog()
+	{
+		return writeSpecificMediaLog; 
+	}	
 
 	/**
 	 * Tells COMETS to write a media log or not. See the COMETS documentation for format
@@ -1122,7 +1204,43 @@ public class FBAParameters implements PackageParameters
 	{
 		return mediaLogName; 
 	}
+	
+	/**
+	 * @param name
+	 * Sets the name of the specific media log file, if one is going to be written
+	 */
+	public void setSpecificMediaLogName(String name) { specificMediaLogName = name; }
+	
+	/**
+	 * @return the name of the specific media log file.
+	 */
+	public String getSpecificMediaLogName()
+	{
+		return specificMediaLogName; 
+	}
 
+	
+	/**
+	 * @param name 
+	 * Sets the string with the list of the specific media
+	 * these are a comma-separated string, e.g.
+	 * lcts[e],ac[e]
+	 */	
+	public void setSpecificMedia(String name){ 
+		// ideally, this would check at this moment to see if the media names in name 
+		// match those in c.getMediaNames().  However, those are not yet set, so this
+		// cannot be done.
+		specificMedia = name; 
+	} 
+	
+	/**
+	 * @return the string with the comma-separated list of specific media
+	 */
+	public String getSpecificMedia() 
+	{
+		return specificMedia; 
+	}
+	
 	/**
 	 * Sets the format of the media log file. Currently only supports either
 	 * MATLAB_FORMAT or COMETS_FORMAT, others are ignored.
@@ -1320,6 +1438,21 @@ public class FBAParameters implements PackageParameters
 		this.randomOrder = randomOrder;
 	}
 
+	/** Should the models in a cell be run in a random order?
+	 * @return the randomOrder
+	 */
+	public boolean getCostlyGenome() {
+		return costlyGenome;
+	}
+
+	/** Should the models in a cell be run in a random order?
+	 * @param randomOrder the randomOrder to set
+	 */
+	public void setCostlyGenome(boolean costlyGenome) {
+		this.costlyGenome= costlyGenome;
+	}
+
+	
 	public String getLastDirectory()
 	{
 		return c.getParameters().getLastDirectory();
