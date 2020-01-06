@@ -3242,10 +3242,12 @@ public class FBAWorld extends World2D
 		List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
 		for (int i = 0; i < totalBiomass.length; i++)
 		{
-			if (totalBiomass[i] > cParams.getCellSize())
-			{
+			// JEREMY : I commented this out because otherwise the totalBiomass log is oddly skewed
+			// and I think we'd rather always see zeros.
+			//if (totalBiomass[i] > cParams.getCellSize())
+			//{
 				newModelsList.add(models[i]);					
-			}
+			//}
 		}
 		FBAModel[] newModels = new FBAModel[newModelsList.size()];
 		newModels = newModelsList.toArray(newModels);

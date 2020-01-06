@@ -635,9 +635,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			// i = the current model index to run.
 			int i = a;
 
+
 			// if no biomass, or the total biomass has overflowed, skip to the next.
 			if (biomass[i] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
 			{
+				deltaBiomass[i] = 0;
+				dyingBiomass[i] = 0;
 				continue;
 			}
 			//try to activate, if not active skip to next.
@@ -660,7 +663,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				media = world.getModelMediaAt(x, y, i);
 			else if (cParams.getNumLayers() > 1)
 				media = world3D.getModelMediaAt(x, y, z, i);
-		
+
 			//split media
 			for (int j=0; j<media.length; j++)
 				media[j] = media[j]*modelShare[i];
@@ -672,7 +675,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				mediaDelta[j] = 0;
 			}
 			deltaMedia[i] = mediaDelta;
-			
+		
 			
 			double[] lb = ((FBAModel)models[i]).getBaseExchLowerBounds();
 			double[] ub = ((FBAModel)models[i]).getBaseExchUpperBounds();
@@ -872,14 +875,16 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				// deltaMedia[i] is null when a model is not feasible
 				deltaMedia[i][key] -= consumed_mets.get(key);
 			}
+
 		}
 		
 		//DJORDJE Section.moved to partition media by model and then update media collectively at the end.
 		for (int a=0; a<models.length; a++)
 		{	
-			// JMC: removed if statement so toxins can degrade.  
-			//if (biomass[a] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass() || 	deltaBiomass[a]==0.0)
-			//	continue;
+			// JMC: removed if statement so toxins can degrade. 
+			// I think we need to have deltaMedia[a] ini
+			if (biomass[a] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
+				continue;
 			if(cParams.getNumLayers() == 1)
 				world.changeModelMedia(x, y, a, deltaMedia[a]);
 			else if (cParams.getNumLayers() > 1)
@@ -1012,6 +1017,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	 */
 	public int updateCellData(double[] deltaBiomass, double[][] fluxes)
 	{
+
+
 		this.deltaBiomass = deltaBiomass;
 		this.fluxes = fluxes;
 		
