@@ -875,6 +875,7 @@ public class Utility implements CometsConstants
         double[][] convectionRHS=new double[biomassDensity.length][biomassDensity[0].length];
         double[][] advection=advection2D(totalBiomassDensity, biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
         //double[][] diffusion=diffusionGradDGradRho(biomassDensity,convDiffConstField,barrier,dX,advection)+diffusionDLaplaceRho(biomassDensity,convDiffConstField,barrier,dX,advection);
+        //System.out.println("Input "+biomassDensity[50][50]);
         double[][] diffusion=diffusionDLaplacianRho2(biomassDensity,convDiffConstField,barrier,dX);
 		for(int i=0;i<biomassDensity.length;i++)
 		{
@@ -888,7 +889,50 @@ public class Utility implements CometsConstants
 				}
 			}
 		}		
+		//System.out.println("Convection "+convectionRHS[50][50]);
 		return convectionRHS;
+	}
+	
+	/**
+	 * Returns the right hand side of the 2D convection equation with nonlinear diffusion; includes both advective and diffusive terms.
+	 * @param biomass
+	 * @return
+	 */
+	public static double[][] getConvectionRHSNonLinD(double[][] totalBiomassDensity, double [][] deltaDensity, double[][] biomassDensity,double[] nonLinDiffConst,double nonLinDiffExponent, double packedDensity,boolean[][] barrier,double dX,double elasticModulusConstant,double frictionConstant,double hillK, double hillN)
+	{   
+        double[][] convectionRHS=new double[biomassDensity.length][biomassDensity[0].length];
+        double[][] advection=advection2D(totalBiomassDensity, biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
+        //double[][] diffusion=diffusionGradDGradRho(biomassDensity,convDiffConstField,barrier,dX,advection)+diffusionDLaplaceRho(biomassDensity,convDiffConstField,barrier,dX,advection);
+        double[][] diffusion=nablaDnablaRho(deltaDensity, biomassDensity,nonLinDiffConst,nonLinDiffExponent,barrier,dX,hillK,hillN);
+		for(int i=0;i<biomassDensity.length;i++)
+		{
+			for(int j=0;j<biomassDensity[0].length;j++)
+			{
+				convectionRHS[i][j]=0.0;
+				if(!barrier[i][j])
+				{
+					convectionRHS[i][j]+=advection[i][j];
+					convectionRHS[i][j]+=diffusion[i][j];
+				}
+			}
+		}		
+		return convectionRHS;
+	}
+	
+	/**
+	 * Returns the right hand side of the 2D convection equation with nonlinear diffusion; includes both advective and diffusive terms.
+	 * @param biomass
+	 * @return
+	 */
+	public static double[][] getRHSJointNonLinD( double [][] deltaDensity, double[][] biomassDensity, double[][] biomassDensityModel,double[] nonLinDiffConst,double nonLinDiffExponent,boolean[][] barrier,double dX,double hillK, double hillN)
+	{   
+        //double[][] convectionRHS=new double[biomassDensity.length][biomassDensity[0].length];
+        //double[][] advection=advection2D(totalBiomassDensity, biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
+        //double[][] diffusion=diffusionGradDGradRho(biomassDensity,convDiffConstField,barrier,dX,advection)+diffusionDLaplaceRho(biomassDensity,convDiffConstField,barrier,dX,advection);
+		//System.out.println("Input "+deltaDensity[50][50]+" "+biomassDensity[50][50]+" "+biomassDensityModel[50][50]);
+		double[][] diffusion=nablaDRhoNablaRhoModel(deltaDensity, biomassDensity,biomassDensityModel,nonLinDiffConst,nonLinDiffExponent,barrier,dX,hillK,hillN);
+		//System.out.println("NonlinDiff "+diffusion[50][50]);
+		return diffusion;
 	}
 	
 	/**
@@ -1091,11 +1135,11 @@ public class Utility implements CometsConstants
 	 * @return
 	 */
 	
-	public static double[][] advection2D(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double frictionConstant,double packedDensity)
+	public static double[][][] velocity2D(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double frictionConstant,double packedDensity)
 	{
 		int numCols=biomassDensity.length;
 		int numRows=biomassDensity[0].length;
-		double[][] advection=new double[numCols][numRows];
+		double[][][] velocity=new double[numCols][numRows][2];
 		double[][] pressure=pressure2D(totalBiomassDensity, elasticModulusConst/frictionConstant, packedDensity, dX);
 		
 		for(int i=0;i<numCols;i++)
@@ -1115,56 +1159,90 @@ public class Utility implements CometsConstants
 		{
 			for(int j=0;j<numRows;j++)
 			{
-				advection[i][j]=0.0;
+				velocity[i][j][0]=0.0;
+				velocity[i][j][1]=0.0;
 				//Do x direction first
 				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
 				{
-					advection[i][j]+=0.0;
+					velocity[i][j][0]=0.0;
 				}
 				else if(i==0 || barrier[i-1][j])
 				{
-					advection[i][j]+=(pressure[i+1][j]-pressure[i][j])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i+1][j]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
 				}
 				else if(i==(numCols-1) || barrier[i+1][j])
 				{
-					advection[i][j]+=(pressure[i-1][j]-pressure[i][j])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i-1][j]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
 				}
 				else
 				{
-					advection[i][j]+=(pressure[i+1][j]-2.0*pressure[i][j]+pressure[i-1][j])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i+1][j]-pressure[i-1][j])/(2.0*dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
 				}
 				
 				//Then do y direction
 				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) ||(j!=0 && j!=(numCols-1) && barrier[i][j-1] && barrier[i][j+1]))
 				{
-					advection[i][j]+=0.0;
+					velocity[i][j][1]=0.0;
 				}
 				else if(j==0 || barrier[i][j-1])
 				{
-					advection[i][j]+=(pressure[i][j+1]-pressure[i][j])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j+1]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
 				}
 				else if(j==(numRows-1) || barrier[i][j+1])
 				{
-					advection[i][j]+=(pressure[i][j-1]-pressure[i][j])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j-1]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
 				}
 				else
 				{
-					advection[i][j]+=(pressure[i][j+1]-2.0*pressure[i][j]+pressure[i][j-1])/(dX*dX);
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j+1]-pressure[i][j-1])/(2.0*dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
 				}
-				
-				/*
-				if(totalBiomassDensity[i][j]==0.0)
-				{
-					advection[i][j]=0.0;
-				}
-				else
-				{
-					advection[i][j]=advection[i][j]*(biomassDensity[i][j]/totalBiomassDensity[i][j]);
-				}
-				*/
+				velocity[i][j][0]=-1.0*velocity[i][j][0];
+				velocity[i][j][1]=-1.0*velocity[i][j][1];
 			}
 		}
-		return advection;
+		return velocity;
 	}
 	/**
 	 * Approximates the advective term in the 2D convection model of growth. It calculates the 
@@ -1466,7 +1544,1429 @@ public class Utility implements CometsConstants
 		}
 		return diffusion;
 	}
+	
+	
+	/**
+	 * Approximates the diffusive term in the 2D convection model. It calculates the 
+	 * finite differences approximation of the Laplacian of the 2D density field. The boundary conditions
+	 * are Neumann. The boundary condition replaces biomass[-1][j] with biomass[0][j] etc.
+	 * @param biomassDensity
+	 * @param convDiffConstField
+	 * @param barrier
+	 * @param dX
+	 * @return
+	 */
+	
+	public static double[][] nablaDnablaRho(double [][] deltaBiomass, double[][] biomass,double[] nonLinDiffConst, double nonLinDiffExponent, boolean[][] barrier,double dX,double hillK, double hillN)
+	{
+		int numCols=biomass.length;
+		int numRows=biomass[0].length;
+		double[][] diffusion=new double[numCols][numRows];
+		double hill=0.0;
+		double hillRight=0.0;
+		double hillLeft=0.0;
+		double diffConsRhoN=0.0;
+		double diffConsRhoNRight=0.0;
+		double diffConsRhoNLeft=0.0;
+		double avrgDiffConstRhoNHillRight=0.0;
+		double avrgDiffConstRhoNHillLeft=0.0;
+		
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				//System.out.println(i+" "+j+"\n" );
+				diffusion[i][j]=0.0;
+				//Do x direction first Hill*D1*(nablaRho)^2+Hill*(D0+D1rho)*LaplacianRho+D1NablaHill*NablaRho
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+					diffusion[i][j]+=0.0;
+				}
+				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && barrier[i-1][j] && barrier[i+2][j]))
+				{
+					if(biomass[i][j]==0.0)
+					{
+						hill=0.0;
+					}
+					else
+					{
+						hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+					}
+					
+					if(biomass[i+1][j]==0.0)
+					{
+						hillRight=0.0;
+					}
+					else
+					{
+						hillRight=(Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN));
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*biomass[i][j];
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*biomass[i+1][j];
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomass[i+1][j]-biomass[i][j]);
+					//System.out.println("1  "+ diffusion[i][j]);
+				}
+				else if((numCols==2 && i==1 && i!=0) || (i!=0 && i==numCols-1 && barrier[i-2][j]) || (i!=0 && i!=1 && i!=numCols-1 && barrier[i-2][j] && barrier[i+1][j]))
+				{
 
+					if(biomass[i][j]==0.0)
+					{
+						hill=0.0;
+					}
+					else
+					{
+						hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+					}
+					
+					if(biomass[i-1][j]==0.0)
+					{
+						hillLeft=0.0;
+					}
+					else
+					{
+						hillLeft=(Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN));
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*biomass[i][j];
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*biomass[i-1][j];
+					
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomass[i][j]-biomass[i-1][j]);
+					//System.out.println("2  "+ diffusion[i][j]);
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					if(biomass[i][j]==0.0)
+					{
+						hill=0.0;
+					}
+					else
+					{
+						hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+					}
+					
+					if(biomass[i+1][j]==0.0)
+					{
+						hillRight=0.0;
+					}
+					else
+					{
+						hillRight=(Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN));
+					}
+					
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*biomass[i][j];
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*biomass[i+1][j];
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomass[i+1][j]-biomass[i][j]);
+					//System.out.println("3  "+ diffusion[i][j]);
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					if(biomass[i][j]==0.0)
+					{
+						hill=0.0;
+					}
+					else
+					{
+						hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+					}
+					
+					if(biomass[i-1][j]==0.0)
+					{
+						hillLeft=0.0;
+					}
+					else
+					{
+						hillLeft=(Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN));
+					}
+					
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*biomass[i][j];
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*biomass[i-1][j];
+					
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomass[i][j]-biomass[i-1][j]);
+					//System.out.println("4  "+ diffusion[i][j]);
+				}
+				else
+				{
+					if(biomass[i][j]==0.0)
+					{
+						hill=0.0;
+					}
+					else
+					{
+					
+						hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+					}
+					
+					if(biomass[i+1][j]==0.0)
+					{
+						hillRight=0.0;
+					}
+					else
+					{
+						hillRight=(Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN));
+					}
+					
+					if(biomass[i-1][j]==0.0)
+					{
+						hillLeft=0.0;
+					}
+					else
+					{
+						hillLeft=(Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN));
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i+1][j],nonLinDiffExponent);
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i-1][j],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					//System.out.println("5a  "+ diffusion[i][j]+"  "+biomass[i][j]+"   "+Math.pow(biomass[i][j],nonLinDiffExponent));
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomass[i+1][j]-biomass[i][j])-avrgDiffConstRhoNHillLeft*(biomass[i][j]-biomass[i-1][j]);
+					//System.out.println("5b  "+ diffusion[i][j]+"  "+biomass[i][j]+"   "+Math.pow(biomass[i][j],nonLinDiffExponent));
+				}
+				
+				//Then do y direction 
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) || (j!=0 && j!=(numRows-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					diffusion[i][j]+=0.0;
+				}
+				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && barrier[i][j-1] && barrier[i][j+2]))
+				{
+					if(biomass[i][j]==0.0)
+					{
+						hill=0.0;
+					}
+					else
+					{
+						hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+					}
+					
+					if(biomass[i][j+1]==0.0)
+					{
+						hillRight=0.0;
+					}
+					else
+					{
+						hillRight=(Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN));
+					}
+					
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j+1],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomass[i][j+1]-biomass[i][j]);
+					//System.out.println("6  "+ diffusion[i][j]);
+				}
+				else if((numRows==2 && j==1 && j!=0) || (j!=0 && j==numRows-1 && barrier[i][j-2]) || (j!=0 && j!=1 && j!=numRows-1 && barrier[i][j-2] && barrier[i][j+1]))
+				{
+					if(biomass[i][j]==0.0)
+					{
+						hill=0.0;
+					}
+					else
+					{
+						hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+					}
+					
+					if(biomass[i][j-1]==0.0)
+					{
+						hillLeft=0.0;
+					}
+					else
+					{
+						hillLeft=(Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN));
+					}
+					
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j-1],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomass[i][j]-biomass[i][j-1]);
+					//System.out.println("7  "+ diffusion[i][j]);
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					if(biomass[i][j]==0.0)
+					{
+						hill=0.0;
+					}
+					else
+					{
+						hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+					}
+					
+					if(biomass[i][j+1]==0.0)
+					{
+						hillRight=0.0;
+					}
+					else
+					{
+						hillRight=(Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN));
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j+1],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomass[i][j+1]-biomass[i][j]);
+					//System.out.println("8  "+ diffusion[i][j]);
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					if(biomass[i][j]==0.0)
+					{
+						hill=0.0;
+					}
+					else
+					{
+						hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+					}
+					
+					if(biomass[i][j-1]==0.0)
+					{
+						hillLeft=0.0;
+					}
+					else
+					{
+						hillLeft=(Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN));
+					}
+					
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j-1],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomass[i][j]-biomass[i][j-1]);
+					//System.out.println("9  "+ diffusion[i][j]);
+				}
+				else
+				{
+					if(biomass[i][j]==0.0)
+					{
+						hill=0.0;
+					}
+					else
+					{
+						hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+					}
+					
+					if(biomass[i][j+1]==0.0)
+					{
+						hillRight=0.0;
+					}
+					else
+					{
+						hillRight=(Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN));
+					}
+					
+					if(biomass[i][j-1]==0.0)
+					{
+						hillLeft=0.0;
+					}
+					else
+					{
+						hillLeft=(Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN));
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j+1],nonLinDiffExponent);
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j-1],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomass[i][j+1]-biomass[i][j])-avrgDiffConstRhoNHillLeft*(biomass[i][j]-biomass[i][j-1]);
+					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
+					
+					//System.out.println("10b  "+avrgDiffConstRhoNHillRight+"  "+avrgDiffConstRhoNHillLeft+"  "+ biomass[i][j+1]+"  "+biomass[i][j]+"  "+biomass[i][j-1]);
+					//System.out.println("10c  "+hill+"  "+hillLeft+"  "+diffConsRhoNLeft+"  "+diffConsRhoN+"  "+diffConsRhoNRight);
+					
+				}
+			}
+		}
+		
+		return diffusion;
+	}
+
+	/**
+	 * Approximates the diffusive term in the 2D convection model. It calculates the 
+	 * finite differences approximation of the Laplacian of the 2D density field. The boundary conditions
+	 * are Neumann. The boundary condition replaces biomass[-1][j] with biomass[0][j] etc.
+	 * @param biomassDensity
+	 * @param convDiffConstField
+	 * @param barrier
+	 * @param dX
+	 * @return
+	 */
+	
+	public static double[][] nablaDRhoNablaRhoModel(double [][] deltaBiomass, double[][] biomass,double[][] biomassModel,double[] nonLinDiffConst, double nonLinDiffExponent, boolean[][] barrier,double dX,double hillK, double hillN)
+	{
+		int numCols=biomass.length;
+		int numRows=biomass[0].length;
+		double[][] diffusion=new double[numCols][numRows];
+		double hill=0.0;
+		double hillRight=0.0;
+		double hillLeft=0.0;
+		double diffConsRhoN=0.0;
+		double diffConsRhoNRight=0.0;
+		double diffConsRhoNLeft=0.0;
+		double avrgDiffConstRhoNHillRight=0.0;
+		double avrgDiffConstRhoNHillLeft=0.0;
+		
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				//System.out.println(i+" "+j+"\n" );
+				diffusion[i][j]=0.0;
+				//Do x direction first Hill*D1*(nablaRho)^2+Hill*(D0+D1rho)*LaplacianRho+D1NablaHill*NablaRho
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+					diffusion[i][j]+=0.0;
+				}
+				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && barrier[i-1][j] && barrier[i+2][j]))
+				{
+					if(hillK==0.0)
+					{
+						hill=1.0;
+						hillRight=1.0;
+					}
+					else
+					{
+					
+						if(biomass[i][j]==0.0)
+						{
+							hill=0.0;
+						}
+						else
+						{
+							hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+						}
+					
+						if(biomass[i+1][j]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN));
+						}
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i+1][j],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i+1][j]-biomassModel[i][j])/(dX*dX);
+					System.out.println("Hill  "+ hill);
+				}
+				else if((numCols==2 && i==1 && i!=0) || (i!=0 && i==numCols-1 && barrier[i-2][j]) || (i!=0 && i!=1 && i!=numCols-1 && barrier[i-2][j] && barrier[i+1][j]))
+				{
+					if(hillK==0.0)
+					{
+						hill=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomass[i][j]==0.0)
+						{
+							hill=0.0;
+						}
+						else
+						{
+							hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+						}
+						
+						if(biomass[i-1][j]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN));
+						}
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i-1][j],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i-1][j])/(dX*dX);
+					//System.out.println("2  "+ diffusion[i][j]);
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					if(hillK==0.0)
+					{
+						hill=1.0;
+						hillRight=1.0;
+					}
+					else
+					{
+					
+						if(biomass[i][j]==0.0)
+						{
+							hill=0.0;
+						}
+						else
+						{
+							hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+						}
+						
+						if(biomass[i+1][j]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN));
+						}
+					}
+					
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i+1][j],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i+1][j]-biomassModel[i][j])/(dX*dX);
+					//System.out.println("3  "+ diffusion[i][j]);
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					if(hillK==0.0)
+					{
+						hill=1.0;
+						hillLeft=0.0;
+					}
+					else
+					{
+					
+						if(biomass[i][j]==0.0)
+						{
+							hill=0.0;
+						}
+						else
+						{
+							hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+						}
+						
+						if(biomass[i-1][j]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN));
+						}
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i-1][j],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i-1][j])/(dX*dX);
+					//System.out.println("4  "+ diffusion[i][j]);
+				}
+				else
+				{
+					if(hillK==0.0)
+					{
+						hill=1.0;
+						hillRight=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomass[i][j]==0.0)
+						{
+							hill=0.0;
+						}
+						else
+						{
+						
+							hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+						}
+						
+						if(biomass[i+1][j]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i+1][j]/biomass[i+1][j],hillN));
+						}
+						
+						if(biomass[i-1][j]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i-1][j]/biomass[i-1][j],hillN));
+						}
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i+1][j],nonLinDiffExponent);
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i-1][j],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					//System.out.println("5a  "+ diffusion[i][j]+"  "+biomass[i][j]+"   "+Math.pow(biomass[i][j],nonLinDiffExponent));
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i+1][j]-biomassModel[i][j])/(dX*dX)-avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i-1][j])/(dX*dX);
+					//System.out.println("Hill  "+ hill);
+					//System.out.println("5b  "+ diffusion[i][j]+"  "+biomass[i][j]+"   "+Math.pow(biomass[i][j],nonLinDiffExponent));
+				}
+				
+				//Then do y direction 
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) || (j!=0 && j!=(numRows-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					diffusion[i][j]+=0.0;
+				}
+				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && barrier[i][j-1] && barrier[i][j+2]))
+				{
+					if(hillK==0.0)
+					{
+						hill=1.0;
+						hillRight=1.0;
+					}
+					else
+					{
+						
+						if(biomass[i][j]==0.0)
+						{
+							hill=0.0;
+						}
+						else
+						{
+							hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+						}
+						
+						if(biomass[i][j+1]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN));
+						}
+					}
+					
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j+1],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i][j+1]-biomassModel[i][j])/(dX*dX);
+					//System.out.println("6  "+ diffusion[i][j]);
+				}
+				else if((numRows==2 && j==1 && j!=0) || (j!=0 && j==numRows-1 && barrier[i][j-2]) || (j!=0 && j!=1 && j!=numRows-1 && barrier[i][j-2] && barrier[i][j+1]))
+				{
+					if(hillK==0.0)
+					{
+						hill=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomass[i][j]==0.0)
+						{
+							hill=0.0;
+						}
+						else
+						{
+							hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+						}
+						
+						if(biomass[i][j-1]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN));
+						}
+					}
+					
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j-1],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i][j-1])/(dX*dX);
+					//System.out.println("7  "+ diffusion[i][j]);
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					if(hillK==0.0)
+					{
+						hill=1.0;
+						hillRight=1.0;
+					}
+					else
+					{
+					
+						if(biomass[i][j]==0.0)
+						{
+							hill=0.0;
+						}
+						else
+						{
+							hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+						}
+						
+						if(biomass[i][j+1]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN));
+						}
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j+1],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i][j+1]-biomassModel[i][j])/(dX*dX);
+					//System.out.println("8  "+ diffusion[i][j]);
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					if(hillK==0.0)
+					{
+						hill=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomass[i][j]==0.0)
+						{
+							hill=0.0;
+						}
+						else
+						{
+							hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+						}
+						
+						if(biomass[i][j-1]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN));
+						}
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j-1],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i][j-1])/(dX*dX);
+					//System.out.println("9  "+ diffusion[i][j]);
+				}
+				else
+				{
+					if(hillK==0.0)
+					{
+						hill=1.0;
+						hillRight=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomass[i][j]==0.0)
+						{
+							hill=0.0;
+						}
+						else
+						{
+							hill=(Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomass[i][j],hillN));
+						}
+						
+						if(biomass[i][j+1]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j+1]/biomass[i][j+1],hillN));
+						}
+						
+						if(biomass[i][j-1]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j-1]/biomass[i][j-1],hillN));
+						}
+					}
+					diffConsRhoN=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j],nonLinDiffExponent);
+					diffConsRhoNRight=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j+1],nonLinDiffExponent);
+					diffConsRhoNLeft=nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomass[i][j-1],nonLinDiffExponent);
+					
+					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
+					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
+					
+					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
+					
+					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i][j+1]-biomassModel[i][j])/(dX*dX)-avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i][j-1])/(dX*dX);
+					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
+					
+					//System.out.println("10b  "+avrgDiffConstRhoNHillRight+"  "+avrgDiffConstRhoNHillLeft+"  "+ biomass[i][j+1]+"  "+biomass[i][j]+"  "+biomass[i][j-1]);
+					//System.out.println("10c  "+hill+"  "+hillLeft+"  "+diffConsRhoNLeft+"  "+diffConsRhoN+"  "+diffConsRhoNRight);
+					
+				}
+			}
+		}
+		//System.out.println("Diff "+avrgDiffConstRhoNHillRight+" "+avrgDiffConstRhoNHillLeft);
+		
+		//System.out.println("Method "+diffusion[50][50]);
+		return diffusion;
+	}
+
+	
+	/* Old version of the method
+	public static double[][] nablaDnablaRho(double [][] deltaDensity, double[][] biomassDensity,double[] nonLinDiffConst, double nonLinDiffExponent, boolean[][] barrier,double dX,double hillK, double hillN)
+	{
+		int numCols=biomassDensity.length;
+		int numRows=biomassDensity[0].length;
+		double[][] diffusion=new double[numCols][numRows];
+		double biomassNeighborsAverage=0.0;
+		double growthNeighborsAverage=0.0;
+		double hill=0.0;
+		double hillForward=0.0;
+		double hillBackward=0.0;
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				//System.out.println(i+" "+j+"\n" );
+				diffusion[i][j]=0.0;
+				//Do x direction first Hill*D1*(nablaRho)^2+Hill*(D0+D1rho)*LaplacianRho+D1NablaHill*NablaRho
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+					diffusion[i][j]+=0.0;
+				}
+				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && barrier[i-1][j] && barrier[i+2][j]))
+				{
+					biomassNeighborsAverage=(biomassDensity[i+1][j]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i+1][j]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i+1][j]+biomassDensity[i+1][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i+1][j]+deltaDensity[i+1][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i+1][j],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i+1][j]-2.0*biomassDensity[i][j]+biomassDensity[i][j])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i+1][j]-biomassDensity[i][j])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				
+				}
+				else if((numCols==2 && i==1 && i!=0) || (i!=0 && i==numCols-1 && barrier[i-2][j]) || (i!=0 && i!=1 && i!=numCols-1 && barrier[i-2][j] && barrier[i+1][j]))
+				{
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i-1][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i-1][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i-1][j]+biomassDensity[i-1][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i-1][j]+deltaDensity[i-1][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i-1][j],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i][j]-2.0*biomassDensity[i][j]+biomassDensity[i-1][j])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i][j]-biomassDensity[i-1][j])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));				
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					biomassNeighborsAverage=(biomassDensity[i+1][j]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i+1][j]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i+2][j]+biomassDensity[i+1][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i+2][j]+deltaDensity[i+1][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i+1][j],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i+1][j]-2.0*biomassDensity[i][j]+biomassDensity[i][j])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i+1][j]-biomassDensity[i][j])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				}
+				else if(i==1 || barrier[i-2][j])
+				{
+					biomassNeighborsAverage=(biomassDensity[i+1][j]+biomassDensity[i][j]+biomassDensity[i-1][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i+1][j]+deltaDensity[i][j]+deltaDensity[i-1][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i+2][j]+biomassDensity[i+1][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i+2][j]+deltaDensity[i+1][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i-1][j]+biomassDensity[i-1][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i-1][j]+deltaDensity[i-1][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i+1][j],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i-1][j],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i+1][j]-2.0*biomassDensity[i][j]+biomassDensity[i-1][j])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i+1][j]-biomassDensity[i-1][j])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i-1][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i-1][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i-1][j]+biomassDensity[i-2][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i-1][j]+deltaDensity[i-2][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i-1][j],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i][j]-2.0*biomassDensity[i][j]+biomassDensity[i-1][j])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i][j]-biomassDensity[i-1][j])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				}
+				else if(i==(numCols-2) || barrier[i+2][j])
+				{
+					biomassNeighborsAverage=(biomassDensity[i+1][j]+biomassDensity[i][j]+biomassDensity[i-1][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i+1][j]+deltaDensity[i][j]+deltaDensity[i-1][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i+1][j]+biomassDensity[i+1][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i+1][j]+deltaDensity[i+1][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i-1][j]+biomassDensity[i-2][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i-1][j]+deltaDensity[i-2][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i+1][j],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i-1][j],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i+1][j]-2.0*biomassDensity[i][j]+biomassDensity[i-1][j])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i+1][j]-biomassDensity[i-1][j])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				}
+				else
+				{
+					biomassNeighborsAverage=(biomassDensity[i+1][j]+biomassDensity[i][j]+biomassDensity[i-1][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i+1][j]+deltaDensity[i][j]+deltaDensity[i-1][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i+2][j]+biomassDensity[i+1][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i+2][j]+deltaDensity[i+1][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i-1][j]+biomassDensity[i-2][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i-1][j]+deltaDensity[i-2][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i+1][j],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i-1][j],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i+1][j]-2.0*biomassDensity[i][j]+biomassDensity[i-1][j])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i+1][j]-biomassDensity[i-1][j])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				}
+				
+				//Then do y direction 
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) ||(j!=0 && j!=(numCols-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					diffusion[i][j]+=0.0;
+				}
+				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && barrier[i][j-1] && barrier[i][j+2]))
+				{
+					biomassNeighborsAverage=(biomassDensity[i][j+1]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j+1]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j+1]+biomassDensity[i][j+1]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j+1]+deltaDensity[i][j+1]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i][j+1],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i][j+1]-2.0*biomassDensity[i][j]+biomassDensity[i][j])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i][j+1]-biomassDensity[i][j])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				
+				}
+				else if((numRows==2 && j==1 && j!=0) || (j!=0 && j==numRows-1 && barrier[i][j-2]) || (j!=0 && j!=1 && j!=numRows-1 && barrier[i][j-2] && barrier[i][j+1]))
+				{
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i][j-1])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i][j-1])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j-1]+biomassDensity[i][j-1])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j-1]+deltaDensity[i][j-1])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i][j-1],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i][j]-2.0*biomassDensity[i][j]+biomassDensity[i][j-1])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i][j]-biomassDensity[i][j-1])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));				
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					biomassNeighborsAverage=(biomassDensity[i][j+1]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j+1]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j+2]+biomassDensity[i][j+1]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j+2]+deltaDensity[i][j+1]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i][j+1],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i][j+1]-2.0*biomassDensity[i][j]+biomassDensity[i][j])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i][j+1]-biomassDensity[i][j])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				}
+				else if(j==1 || barrier[i][j-2])
+				{
+					biomassNeighborsAverage=(biomassDensity[i][j+1]+biomassDensity[i][j]+biomassDensity[i][j-1])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j+1]+deltaDensity[i][j]+deltaDensity[i][j-1])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j+2]+biomassDensity[i][j+1]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j+2]+deltaDensity[i][j+1]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j-1]+biomassDensity[i][j-1])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j-1]+deltaDensity[i][j-1])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i][j+1],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i][j-1],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i][j+1]-2.0*biomassDensity[i][j]+biomassDensity[i][j-1])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i][j+1]-biomassDensity[i][j-1])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i][j-1])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i][j-1])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j-2]+biomassDensity[i][j-2])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j-2]+deltaDensity[i][j-2])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i][j-1],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i][j]-2.0*biomassDensity[i][j]+biomassDensity[i][j-1])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i][j]-biomassDensity[i][j-1])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				}
+				else if(j==(numRows-2) || barrier[i][j+2])
+				{
+					biomassNeighborsAverage=(biomassDensity[i][j+1]+biomassDensity[i][j]+biomassDensity[i][j-1])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j+1]+deltaDensity[i][j]+deltaDensity[i][j-1])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j+1]+biomassDensity[i][j+1]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j+1]+deltaDensity[i][j+1]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j-1]+biomassDensity[i][j-2])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j-1]+deltaDensity[i][j-2])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i][j+1],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i][j-1],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i][j+1]-2.0*biomassDensity[i][j]+biomassDensity[i][j-1])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i][j+1]-biomassDensity[i][j-1])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				}
+				else
+				{
+					biomassNeighborsAverage=(biomassDensity[i][j+1]+biomassDensity[i][j]+biomassDensity[i][j-1])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j+1]+deltaDensity[i][j]+deltaDensity[i][j-1])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hill=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hill=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j+2]+biomassDensity[i][j+1]+biomassDensity[i][j])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j+2]+deltaDensity[i][j+1]+deltaDensity[i][j])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillForward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillForward=0.0;
+					}	
+					
+					biomassNeighborsAverage=(biomassDensity[i][j]+biomassDensity[i][j-1]+biomassDensity[i][j-2])/3.0;
+					growthNeighborsAverage=(deltaDensity[i][j]+deltaDensity[i][j-1]+deltaDensity[i][j-2])/3.0;
+					
+					if(biomassNeighborsAverage>0.0)
+					{
+						hillBackward=(Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN))/(Math.pow(hillK,hillN)+Math.pow(growthNeighborsAverage/biomassNeighborsAverage,hillN));
+					}
+					else
+					{
+						hillBackward=0.0;
+					}	
+					
+					diffusion[i][j]+=hill*nonLinDiffConst[1]*((Math.pow(biomassDensity[i][j+1],nonLinDiffExponent+1.0)-2*Math.pow(biomassDensity[i][j],nonLinDiffExponent+1.0)+Math.pow(biomassDensity[i][j-1],nonLinDiffExponent+1.0))/((nonLinDiffExponent+1.0)*dX*dX));
+					diffusion[i][j]+=hill*nonLinDiffConst[0]*(biomassDensity[i][j+1]-2.0*biomassDensity[i][j]+biomassDensity[i][j-1])/(dX*dX);
+					diffusion[i][j]+=(nonLinDiffConst[0]+nonLinDiffConst[1]*Math.pow(biomassDensity[i][j],nonLinDiffExponent))*((biomassDensity[i][j+1]-biomassDensity[i][j-1])/(2.0*dX))*((hillForward-hillBackward)/(2.0*dX));
+				}
+				
+				//diffusion[i][j]=convDiffConstField[i][j]*diffusion[i][j];
+				//System.out.println("advection"+i+","+j+"    "+advection[i][j]);
+			}
+		}
+		
+		return diffusion;
+	}
+	*/
+	
 	public static double[][] diffusionDLaplacianRho2(double[][] biomassDensity,double[][] convDiffConstField, boolean[][] barrier,double dX)
 	{
 		int numCols=biomassDensity.length;
@@ -1534,8 +3034,13 @@ public class Utility implements CometsConstants
 				//System.out.println("advection"+i+","+j+"    "+advection[i][j]);
 			}
 		}
+		//System.out.println("Diff "+convDiffConstField[50][50]+" "+convDiffConstField[49][50]+" "+convDiffConstField[51][50]+" "+convDiffConstField[50][49]+" "+convDiffConstField[50][51]);
+		//System.out.println("Method "+diffusion[50][50]);
 		return diffusion;
 	}
+	
+	
+	
 	
 	public static double[][] diffusionDLaplacianRho2Flow(double[][] biomassDensity,double[][] convDiffConstField, boolean[][] barrier,double dX, double[] flowVelocityVector)
 	{
@@ -1859,36 +3364,7 @@ public class Utility implements CometsConstants
 		}
 		return diffusion;
 	}
-	
 
-	/**
-	 * Calculates the pressure according to the Farrel et. al. model: PRL 111, 168101(2013).
-	 * @param biomass
-	 * @return
-	 */
-	public static double[][] pressure2D(double[][] biomass,double elasticModulusConst,double packDensity,double dX)
-	{
-		double[][] pressure=new double[biomass.length][biomass[0].length];
-		for(int i=0;i<biomass.length;i++)
-		{
-			for(int j=0;j<biomass[0].length;j++)
-			{
-				//pressure[i][j]=elasticModulusConst*biomass[i][j];
-				
-				if(biomass[i][j]>packDensity*dX*dX)
-				{
-					pressure[i][j]=elasticModulusConst*Math.pow(1.0-packDensity*dX*dX/biomass[i][j],1.5);
-				}
-				else
-				{
-					pressure[i][j]=0.0;
-				}
-				
-				//System.out.println("pressure"+"    "+i+","+j+"   "+pressure[i][j]);
-			}
-		}		
-		return pressure;
-	}
 	
 	/**
 	 * Calculates the pressure according to the Farrel et. al. model: PRL 111, 168101(2013).
@@ -3010,6 +4486,247 @@ public class Utility implements CometsConstants
 		System.out.println("x: " + total);
 		System.out.println("diff: " + totalDiff);
 		
+	}
+
+	/**
+	 * Calculates the pressure according to the Farrel et. al. model: PRL 111, 168101(2013).
+	 * @param biomass
+	 * @return
+	 */
+	public static double[][] pressure2D(double[][] biomass,double elasticModulusConst,double packDensity,double dX)
+	{
+		double[][] pressure=new double[biomass.length][biomass[0].length];
+		for(int i=0;i<biomass.length;i++)
+		{
+			for(int j=0;j<biomass[0].length;j++)
+			{
+				//pressure[i][j]=elasticModulusConst*biomass[i][j];
+				
+				if(biomass[i][j]>packDensity*dX*dX)
+				{
+					pressure[i][j]=elasticModulusConst*Math.pow(1.0-packDensity*dX*dX/biomass[i][j],1.5);
+				}
+				else
+				{
+					pressure[i][j]=0.0;
+				}
+				
+				//System.out.println("pressure"+"    "+i+","+j+"   "+pressure[i][j]);
+			}
+		}		
+		return pressure;
+	}
+
+	/**
+	 * Approximates the advective term in the 2D convection model of growth. It calculates the 
+	 * finite differences approximation of the Laplacian of the 2D pressure field. The boundary conditions are 
+	 * Neumann.
+	 * @param biomassDensity
+	 * @param barrier
+	 * @param dX
+	 * @param elasticModulusConst
+	 * @param frictionConstant
+	 * @param packedDensity
+	 * @return
+	 */
+	
+	public static double[][] advection2D(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double frictionConstant,double packedDensity)
+	{
+		int numCols=biomassDensity.length;
+		int numRows=biomassDensity[0].length;
+		double[][] advection=new double[numCols][numRows];
+		double[][] pressure=pressure2D(totalBiomassDensity, elasticModulusConst/frictionConstant, packedDensity, dX);
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				if(totalBiomassDensity[i][j]>0.0)
+				{
+				pressure[i][j]=pressure[i][j]*(biomassDensity[i][j]/totalBiomassDensity[i][j]);
+				}
+				
+			}
+		}
+	
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				advection[i][j]=0.0;
+				//Do x direction first
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+					advection[i][j]+=0.0;
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					advection[i][j]+=(pressure[i+1][j]-pressure[i][j])/(dX*dX);
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					advection[i][j]+=(pressure[i-1][j]-pressure[i][j])/(dX*dX);
+				}
+				else
+				{
+					advection[i][j]+=(pressure[i+1][j]-2.0*pressure[i][j]+pressure[i-1][j])/(dX*dX);
+				}
+				
+				//Then do y direction
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) ||(j!=0 && j!=(numCols-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					advection[i][j]+=0.0;
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					advection[i][j]+=(pressure[i][j+1]-pressure[i][j])/(dX*dX);
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					advection[i][j]+=(pressure[i][j-1]-pressure[i][j])/(dX*dX);
+				}
+				else
+				{
+					advection[i][j]+=(pressure[i][j+1]-2.0*pressure[i][j]+pressure[i][j-1])/(dX*dX);
+				}
+				
+				/*
+				if(totalBiomassDensity[i][j]==0.0)
+				{
+					advection[i][j]=0.0;
+				}
+				else
+				{
+					advection[i][j]=advection[i][j]*(biomassDensity[i][j]/totalBiomassDensity[i][j]);
+				}
+				*/
+			}
+		}
+		return advection;
+	}
+
+	/**
+	 * Approximates the advective term in the 2D convection model of growth. It calculates the 
+	 * finite differences approximation of the Laplacian of the 2D pressure field. The boundary conditions are 
+	 * Neumann. This one is if the friction is in a spatial field context. 
+	 * @param biomassDensity
+	 * @param barrier
+	 * @param dX
+	 * @param elasticModulusConst
+	 * @param frictionConstant
+	 * @param packedDensity
+	 * @return
+	 */
+	
+	public static double[][][] velocity2D(double[][] totalBiomassDensity, double[][] biomassDensity,boolean[][] barrier,double dX,double elasticModulusConst, double[][] frictionConstant,double packedDensity)
+	{
+		int numCols=biomassDensity.length;
+		int numRows=biomassDensity[0].length;
+		double[][][] velocity=new double[numCols][numRows][2];
+		double[][] pressure=pressure2D(totalBiomassDensity, elasticModulusConst, packedDensity, dX);
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				if(totalBiomassDensity[i][j]>0.0)
+				{
+				pressure[i][j]=pressure[i][j]*(biomassDensity[i][j]/(frictionConstant[i][j]*totalBiomassDensity[i][j]));
+				}
+				
+			}
+		}
+	
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				velocity[i][j][0]=0.0;
+				velocity[i][j][1]=0.0;
+				//Do x direction first
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+					velocity[i][j][0]=0.0;
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i+1][j]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i-1][j]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
+				}
+				else
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][0]=(pressure[i+1][j]-pressure[i-1][j])/(2.0*dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][0]=0.0;
+					}
+				}
+				
+				//Then do y direction
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) ||(j!=0 && j!=(numCols-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					velocity[i][j][1]=0.0;
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j+1]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j-1]-pressure[i][j])/(dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
+				}
+				else
+				{
+					if(biomassDensity[i][j]>0.0)
+					{
+						velocity[i][j][1]=(pressure[i][j+1]-pressure[i][j-1])/(2.0*dX*biomassDensity[i][j]);
+					}
+					else
+					{
+						velocity[i][j][1]=0.0;
+					}
+				}
+				velocity[i][j][0]=-1.0*velocity[i][j][0];
+				velocity[i][j][1]=-1.0*velocity[i][j][1];
+			}
+		}
+		return velocity;
 	}
 	
 }

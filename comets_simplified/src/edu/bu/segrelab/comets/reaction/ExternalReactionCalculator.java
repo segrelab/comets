@@ -1,5 +1,9 @@
 package edu.bu.segrelab.comets.reaction;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.fba.FBACell;
 import edu.bu.segrelab.comets.fba.FBAParameters;
@@ -39,20 +43,20 @@ public class ExternalReactionCalculator{
 	//Factory method to make it simpler to create one of these from an FBA cell
 	public static ExternalReactionCalculator createCalculator(FBACell cell){
 		double[] concentrations = cell.getMedia(); //assumes that the media array in the World is *concentration*, not amount
-		double timestep_seconds = (double) cell.getComets().getParameters().getTimeStep() * 60 * 60;
+		double timestep_seconds = (double) cell.getCometsParameters().getTimeStep() * 60 * 60;
 		int[] exRxnEnzymes = null;
 		double[] exRxnRateConstants = null;
 		double[][] stoich = null;
 		double[][] params = null;
 		
-		if(cell.getComets().getParameters().getNumLayers() == 1){ //2d World
+		if(cell.getCometsParameters().getNumLayers() == 1){ //2d World
 			FBAWorld world = (FBAWorld) cell.getComets().getWorld();
 			exRxnEnzymes = IWorld.reactionModel.getExRxnEnzymes();
 			exRxnRateConstants = IWorld.reactionModel.getExRxnRateConstants();
 			stoich = IWorld.reactionModel.getExRxnStoich();
 			params = IWorld.reactionModel.getExRxnParams();
 		}
-		else if (cell.getComets().getParameters().getNumLayers() > 1){ //3D world
+		else if (cell.getCometsParameters().getNumLayers() > 1){ //3D world
 			FBAWorld3D world = (FBAWorld3D) cell.getComets().getWorld3D();
 			exRxnEnzymes = world.getExRxnEnzymes();
 			exRxnRateConstants = world.getExRxnRateConstants();
