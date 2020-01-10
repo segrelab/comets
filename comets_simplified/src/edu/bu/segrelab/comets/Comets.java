@@ -105,8 +105,8 @@ public class Comets implements CometsConstants,
 	// The setup pane 
 	private CometsSimRunner runner;
 	
-	private CometsParameters cParams;   // the global parameter set
-	private PackageParameters pParams;  // parameters specific to the package
+	protected CometsParameters cParams;   // the global parameter set
+	protected PackageParameters pParams;  // parameters specific to the package
 	
 	private Model[] initModels, models;
 	private World2D initWorld, world;

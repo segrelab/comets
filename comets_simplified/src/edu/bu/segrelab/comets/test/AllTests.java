@@ -13,14 +13,22 @@ import edu.bu.segrelab.comets.test.unit.fba.TestBiomassMotionStyle;
 import edu.bu.segrelab.comets.test.unit.fba.TestFBACometsLoader;
 import edu.bu.segrelab.comets.test.unit.fba.TestFBAOptimizerGurobi;
 import edu.bu.segrelab.comets.test.unit.fba.TestFBAParameters;
+import edu.bu.segrelab.comets.test.unit.reaction.TestExternalReactionCalculator;
+import edu.bu.segrelab.comets.test.unit.reaction.TestReactionModel;
+import edu.bu.segrelab.comets.test.unit.reaction.TestReactionODE;
 
 @RunWith(Suite.class)
 @SuiteClasses({
 	//Unit
+	//FBA
 	TestBiomassMotionStyle.class, 
 	TestFBACometsLoader.class, 
 	TestFBAOptimizerGurobi.class, 
 	TestFBAParameters.class,
+	//Extracellular Reactions
+	TestExternalReactionCalculator.class,
+	TestReactionModel.class,
+	TestReactionODE.class,
 	
 	//Integration
 	IntTestExternalReactions.class,

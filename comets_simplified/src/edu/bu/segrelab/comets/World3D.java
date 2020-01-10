@@ -54,6 +54,7 @@ public abstract class World3D implements CometsConstants, IWorld
 		barrier = new boolean[numCols][numRows][numLayers];
 		models = c.getModels();
 		mediaNames = new String[numMedia];
+		reactionModel.setWorld(this);
 
 		mediaRefresh = new double[numMedia];
 		staticMedia = new double[numMedia];

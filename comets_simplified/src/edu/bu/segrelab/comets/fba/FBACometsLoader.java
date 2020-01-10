@@ -761,9 +761,7 @@ CometsConstants
 						{
 							world.setSubstrateFriction(substrateFrictionConsts);
 						}
-						
-						IWorld.reactionModel.setWorld(world);
-						
+												
 						System.out.println("Done!");
 					}
 					else if(c.getParameters().getNumLayers()>1)
@@ -902,9 +900,7 @@ CometsConstants
 							}
 						}
 						world3D.setDiffusionConstants(diffusionConsts);
-						
-						IWorld.reactionModel.setWorld(world3D);
-						
+												
 						System.out.println("Done!");
 					}
 				}

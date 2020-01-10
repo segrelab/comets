@@ -72,6 +72,7 @@ public abstract class World2D implements CometsConstants, IWorld
 		barrier = new boolean[numCols][numRows];
 		models = c.getModels();
 		mediaNames = new String[numMedia];
+		reactionModel.setWorld(this);
 
 		mediaRefresh = new double[numMedia];
 		staticMedia = new double[numMedia];
