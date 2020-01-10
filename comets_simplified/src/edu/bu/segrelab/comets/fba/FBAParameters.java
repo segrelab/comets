@@ -59,7 +59,8 @@ public class FBAParameters implements PackageParameters
 		DIFFUSION_EP("Diffusion 2D(Eight Point)"),
 		DIFFUSION_3D("Diffusion 3D"),
 		CONVECTION_2D("Convection 2D"),
-		CONVECTION_3D("Convection 3D");
+		CONVECTION_3D("Convection 3D"),
+		CONV_NONLINDIFF_2D("ConvNonlin Diffusion 2D");
 		//LEVEL_SET("Level Set Relaxation");
 
 		private String name;
@@ -139,17 +140,23 @@ public class FBAParameters implements PackageParameters
 	private boolean writeFluxLog,
 	writeMediaLog,
 	writeBiomassLog,
+	writeVelocityLog,
 	writeTotalBiomassLog,
+	writeSpecificMediaLog,
 	writeMatFile,
 	useLogNameTimeStamp,
 	randomOrder = true, //shuffle the order each model in a cell is run
 	monodOverride,
-	pseudoOverride; 
+	pseudoOverride, 
+	costlyGenome = false; 
 
 	private String fluxLogName,
 	mediaLogName,
 	biomassLogName,
+	velocityLogName,
 	totalBiomassLogName,
+	specificMediaLogName,
+	specificMedia, // different fron specificMediaLogName.  This string stores the names of the extracelluar mets t log
 	matFileName;
 
 	private String manifestFileName = "COMETS_manifest.txt";
@@ -160,7 +167,9 @@ public class FBAParameters implements PackageParameters
 			fluxLogRate = 1,
 			mediaLogRate = 1,
 			biomassLogRate = 1,
+			velocityLogRate = 1,
 			totalBiomassLogRate = 1,
+			specificMediaLogRate = 1,
 			numExRxnSubsteps = 12, //12 chosen as default so if timestep is 1h, minimum substep is < 1sec
 			matFileRate = 1;
 
@@ -172,7 +181,8 @@ public class FBAParameters implements PackageParameters
 
 	private LogFormat biomassLogFormat = LogFormat.MATLAB,
 			mediaLogFormat = LogFormat.MATLAB,
-			fluxLogFormat = LogFormat.MATLAB;
+			fluxLogFormat = LogFormat.MATLAB,
+			velocityLogFormat = LogFormat.MATLAB;
 
 	private static double growthDiffRate = 1e-7,
 			flowDiffRate = 1e-7,
@@ -182,6 +192,7 @@ public class FBAParameters implements PackageParameters
 			defaultAlpha = 1,
 			defaultW = 10,
 			defaultDiffConst = 1e-5,
+			geneFractionalCost = 0,	
 			minConcentration = 1e-26; //Here's hoping 1 atom per liter is enough precision
 
 	private double[] defaultVelocityVector={0.0,0.0,0.0};
@@ -204,15 +215,20 @@ public class FBAParameters implements PackageParameters
 		writeFluxLog = false;
 		writeMediaLog = false;
 		writeBiomassLog = false;
+		writeVelocityLog = false;
 		writeTotalBiomassLog = false;
+		writeSpecificMediaLog = false;
 		writeMatFile = false;
 		useLogNameTimeStamp = true;
 
 		fluxLogName = "flux_log.txt";
 		mediaLogName = "media_log.txt";
 		biomassLogName = "biomass_log.txt";
+		velocityLogName = "velocity_log.txt";
 		matFileName = "comets_log.mat";
 		totalBiomassLogName = "total_biomass_log.txt";
+		specificMediaLogName = "specific_media_log.txt";
+		specificMedia = "";
 
 		paramValues = new HashMap<String, Object>();
 		paramTypes = new HashMap<String, ParameterType>();
@@ -241,8 +257,14 @@ public class FBAParameters implements PackageParameters
 		paramValues.put("writebiomasslog", new Boolean(writeBiomassLog));
 		paramTypes.put("writebiomasslog", ParameterType.BOOLEAN);
 
+		paramValues.put("writevelocitylog", new Boolean(writeVelocityLog));
+		paramTypes.put("writevelocitylog", ParameterType.BOOLEAN);
+		
 		paramValues.put("writetotalbiomasslog", new Boolean(writeTotalBiomassLog));
 		paramTypes.put("writetotalbiomasslog", ParameterType.BOOLEAN);
+
+		paramValues.put("writespecificmedialog", new Boolean(writeSpecificMediaLog));
+		paramTypes.put("writespecificmedialog", ParameterType.BOOLEAN);
 
 		paramValues.put("writematfile", new Boolean(writeMatFile));
 		paramTypes.put("writematfile", ParameterType.BOOLEAN);
@@ -259,8 +281,17 @@ public class FBAParameters implements PackageParameters
 		paramValues.put("biomasslogname", biomassLogName);
 		paramTypes.put("biomasslogname", ParameterType.STRING);
 
+		paramValues.put("velocitylogname", velocityLogName);
+		paramTypes.put("velocitylogname", ParameterType.STRING);
+		
 		paramValues.put("totalbiomasslogname", totalBiomassLogName);
 		paramTypes.put("totalbiomasslogname", ParameterType.STRING);
+
+		paramValues.put("specificmedialogname", specificMediaLogName); 
+		paramTypes.put("specificmedialogname", ParameterType.STRING);
+		
+		paramValues.put("specificmedia", specificMedia); 
+		paramTypes.put("specificmedia", ParameterType.STRING);
 
 		paramValues.put("matfilename", matFileName);
 		paramTypes.put("matfilename", ParameterType.STRING);
@@ -274,8 +305,14 @@ public class FBAParameters implements PackageParameters
 		paramValues.put("biomasslogformat", biomassLogFormat);
 		paramTypes.put("biomasslogformat", ParameterType.STRING);
 
+		paramValues.put("velocitylogformat", velocityLogFormat);
+		paramTypes.put("velocitylogformat", ParameterType.STRING);
+
 		paramValues.put("numrunthreads", new Integer(numRunThreads));
 		paramTypes.put("numrunthreads", ParameterType.INT);
+
+		paramValues.put("specificmedialograte", new Integer(specificMediaLogRate)); 
+		paramTypes.put("specificmedialograte", ParameterType.INT);
 
 		paramValues.put("growthdiffrate", new Double(growthDiffRate));
 		paramTypes.put("growthdiffrate", ParameterType.DOUBLE);
@@ -313,6 +350,9 @@ public class FBAParameters implements PackageParameters
 		paramValues.put("biomasslograte", new Integer(biomassLogRate));
 		paramTypes.put("biomasslograte", ParameterType.INT);
 
+		paramValues.put("velocitylograte", new Integer(velocityLogRate));
+		paramTypes.put("velocitylograte", ParameterType.INT);
+
 		paramValues.put("totalbiomasslograte", new Integer(totalBiomassLogRate));
 		paramTypes.put("totalbiomasslograte", ParameterType.INT);
 
@@ -333,6 +373,13 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("randomorder", new Boolean(randomOrder));
 		paramTypes.put("randomorder", ParameterType.BOOLEAN);
+		
+		paramValues.put("costlygenome", new Boolean(costlyGenome));
+		paramTypes.put("costlygenome", ParameterType.BOOLEAN);
+		
+		paramValues.put("genefractionalcost", new Double(geneFractionalCost));
+		paramTypes.put("genefractionalcost", ParameterType.DOUBLE);
+
 	}
 
 	public void loadParameterState()
@@ -340,16 +387,24 @@ public class FBAParameters implements PackageParameters
 		writeFluxLog(((Boolean)paramValues.get("writefluxlog")).booleanValue());
 		writeMediaLog(((Boolean)paramValues.get("writemedialog")).booleanValue());
 		writeBiomassLog(((Boolean)paramValues.get("writebiomasslog")).booleanValue());
+		writeVelocityLog(((Boolean)paramValues.get("writevelocitylog")).booleanValue());
 		writeTotalBiomassLog(((Boolean)paramValues.get("writetotalbiomasslog")).booleanValue());
+		writeSpecificMediaLog(((Boolean)paramValues.get("writespecificmedialog")).booleanValue());
 		writeMatFile(((Boolean)paramValues.get("writematfile")).booleanValue());
 		useLogNameTimeStamp(((Boolean)paramValues.get("uselognametimestamp")).booleanValue());
 		setFluxLogName((String)paramValues.get("fluxlogname"));
 		setMediaLogName((String)paramValues.get("medialogname"));
 		setBiomassLogName((String)paramValues.get("biomasslogname"));
+		setVelocityLogName((String)paramValues.get("velocitylogname"));
 		setTotalBiomassLogName((String)paramValues.get("totalbiomasslogname"));
+		setSpecificMediaLogName((String)paramValues.get("specificmedialogname"));
+		setSpecificMedia((String)paramValues.get("specificmedia"));
 		setMatFileName((String)paramValues.get("matfilename"));
 		setRandomOrder(((Boolean)paramValues.get("randomorder")).booleanValue());
 		setNumExRxnSubsteps((Integer)paramValues.get("numexrxnsubsteps"));
+		setCostlyGenome(((Boolean)paramValues.get("costlygenome")).booleanValue());		
+		setGeneFractionalCost(((Double)paramValues.get("genefractionalcost")).doubleValue());
+
 
 		if(paramValues.get("fluxlogformat") instanceof String)
 			setFluxLogFormat(LogFormat.findByName((String)paramValues.get("fluxlogformat")));
@@ -370,6 +425,11 @@ public class FBAParameters implements PackageParameters
 		else
 			setBiomassLogFormat((LogFormat)paramValues.get("biomasslogformat"));
 
+		if(paramValues.get("velocitylogformat") instanceof String)
+			setVelocityLogFormat(LogFormat.findByName((String)paramValues.get("velocitylogformat")));
+		else
+			setVelocityLogFormat((LogFormat)paramValues.get("velocitylogformat"));
+		
 		setNumRunThreads(((Integer)paramValues.get("numrunthreads")).intValue());
 		setGrowthDiffRate(((Double)paramValues.get("growthdiffrate")).doubleValue());
 		setFlowDiffRate(((Double)paramValues.get("flowdiffrate")).doubleValue());
@@ -395,7 +455,9 @@ public class FBAParameters implements PackageParameters
 		setFluxLogRate(((Integer)paramValues.get("fluxlograte")).intValue());
 		setMediaLogRate(((Integer)paramValues.get("medialograte")).intValue());
 		setBiomassLogRate(((Integer)paramValues.get("biomasslograte")).intValue());
+		setVelocityLogRate(((Integer)paramValues.get("velocitylograte")).intValue());
 		setTotalBiomassLogRate(((Integer)paramValues.get("totalbiomasslograte")).intValue());
+		setSpecificMediaLogRate(((Integer)paramValues.get("specificmedialograte")).intValue());
 		setMatFileRate(((Integer)paramValues.get("matfilerate")).intValue());
 		setNumDiffusionsPerStep(((Integer)paramValues.get("numdiffperstep")).intValue());
 		setDefaultDiffusionConstant(((Double)paramValues.get("defaultdiffconst")).doubleValue());
@@ -585,6 +647,25 @@ public class FBAParameters implements PackageParameters
 	}
 
 	/**
+	 * @return the number of simulation steps that occur between every flux log write
+	 */
+	public int getVelocityLogRate() 
+	{
+		return velocityLogRate; 
+	}
+
+	/**
+	 * Sets the number of steps that occur between every flux log write. If <code>i</code>
+	 * is less than zero, nothing is changed.
+	 * @param i
+	 */
+	public void setVelocityLogRate(int i)
+	{
+		if (i > 0)
+			velocityLogRate = i;
+	}
+	
+	/**
 	 * @return the number of simulation steps that occur between every total 
 	 * biomass log write
 	 */
@@ -603,6 +684,25 @@ public class FBAParameters implements PackageParameters
 		if (i > 0)
 			totalBiomassLogRate = i;
 	}
+
+	/**
+	 * Sets the number of steps that occur between every specific media log write. If <code>i</code>
+	 * is less than 1, nothing is changed.
+	 * @param i
+	 */
+	public void setSpecificMediaLogRate(int i)
+	{
+		if (i > 0)
+			specificMediaLogRate = i;
+	}
+	
+	/**
+	 * @return the number of simulation steps that occur between every specific media log write
+	 */
+	public int getSpecificMediaLogRate() 
+	{ 
+		return specificMediaLogRate; 
+	}	
 
 	/**
 	 * @return the number of simulation steps that occur between every .mat file log write
@@ -793,6 +893,19 @@ public class FBAParameters implements PackageParameters
 		}
 	}
 
+	public double getGeneFractionalCost()
+	{
+		return geneFractionalCost;
+	}
+
+	public static void setGeneFractionalCost(double d)
+	{
+		if (d <= 0)
+			return;
+		geneFractionalCost = d;
+	}
+
+	
 	/**
 	 * Returns the current style of media exchange occuring within the model
 	 * @return either <code>STANDARD_EXCHANGE</code>, <code>MM_EXCHANGE</code>, or
@@ -902,6 +1015,22 @@ public class FBAParameters implements PackageParameters
 	{
 		return writeMediaLog; 
 	}
+	/**
+	 * @param b if true, write a specific media log
+	 * 
+	 */
+	public void writeSpecificMediaLog(boolean b)
+	{
+		writeSpecificMediaLog = b; 
+	}
+	/**
+	 * 
+	 * @return true if a specific media log will be written.
+	 */
+	public boolean writeSpecificMediaLog()
+	{
+		return writeSpecificMediaLog; 
+	}	
 
 	/**
 	 * Tells COMETS to write a media log or not. See the COMETS documentation for format
@@ -969,6 +1098,63 @@ public class FBAParameters implements PackageParameters
 		return fluxLogFormat; 
 	}
 
+	/**
+	 * @return true if a velocity log will be written
+	 */
+	public boolean writeVelocityLog() 
+	{ 
+		return writeVelocityLog; 
+	}
+
+	/**
+	 * Tells COMETS to write a velocity log or not. See the COMETS documentation for format
+	 * details.
+	 * @param b if true, write a velocity log file
+	 */
+	public void writeVelocityLog(boolean b) 
+	{
+		writeVelocityLog = b; 
+	}
+	
+	/**
+	 * Sets the name of the flux log file, if one is going to be written.
+	 * <br>
+	 * See documentation for the format.
+	 * @param name the name of the flux log file.
+	 */
+	public void setVelocityLogName(String name)
+	{ 
+		velocityLogName = name; 
+	}
+
+	/**
+	 * @return the name of the flux log file.
+	 */
+	public String getVelocityLogName()
+	{
+		return velocityLogName; 
+	}
+
+	/**
+	 * Sets the format of the velocity log file. Currently only supports either
+	 * MATLAB_FORMAT or COMETS_FORMAT, others are ignored.
+	 * @param format
+	 */
+	public void setVelocityLogFormat(LogFormat format) 
+	{
+		velocityLogFormat = format;
+	}
+
+	/**
+	 * Returns the current velocity log file format
+	 * @return either MATLAB_FORMAT or COMETS_FORMAT
+	 */
+	public LogFormat getVelocityLogFormat()
+	{
+		return velocityLogFormat; 
+	}
+
+	
 	/** Gets the name of the manifest file
 	 *  without the path prepended.
 	 * 
@@ -1020,6 +1206,42 @@ public class FBAParameters implements PackageParameters
 		return mediaLogName; 
 	}
 
+	/**
+	 * @param name
+	 * Sets the name of the specific media log file, if one is going to be written
+	 */
+	public void setSpecificMediaLogName(String name) { specificMediaLogName = name; }
+	
+	/**
+	 * @return the name of the specific media log file.
+	 */
+	public String getSpecificMediaLogName()
+	{
+		return specificMediaLogName; 
+	}
+
+	
+	/**
+	 * @param name 
+	 * Sets the string with the list of the specific media
+	 * these are a comma-separated string, e.g.
+	 * lcts[e],ac[e]
+	 */	
+	public void setSpecificMedia(String name){ 
+		// ideally, this would check at this moment to see if the media names in name 
+		// match those in c.getMediaNames().  However, those are not yet set, so this
+		// cannot be done.
+		specificMedia = name; 
+	} 
+	
+	/**
+	 * @return the string with the comma-separated list of specific media
+	 */
+	public String getSpecificMedia() 
+	{
+		return specificMedia; 
+	}
+	
 	/**
 	 * Sets the format of the media log file. Currently only supports either
 	 * MATLAB_FORMAT or COMETS_FORMAT, others are ignored.
@@ -1217,6 +1439,21 @@ public class FBAParameters implements PackageParameters
 		this.randomOrder = randomOrder;
 	}
 
+	/** Should the models in a cell be run in a random order?
+	 * @return the randomOrder
+	 */
+	public boolean getCostlyGenome() {
+		return costlyGenome;
+	}
+
+	/** Should the models in a cell be run in a random order?
+	 * @param randomOrder the randomOrder to set
+	 */
+	public void setCostlyGenome(boolean costlyGenome) {
+		this.costlyGenome= costlyGenome;
+	}
+
+	
 	public String getLastDirectory()
 	{
 		return c.getParameters().getLastDirectory();

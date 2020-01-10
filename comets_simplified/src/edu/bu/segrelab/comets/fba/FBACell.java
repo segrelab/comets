@@ -1,16 +1,19 @@
 package edu.bu.segrelab.comets.fba;
 
+import java.io.*;
+
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.Model;
-import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Utility;
+import java.util.Arrays; //DJORDJE
 
 import org.apache.commons.math3.distribution.*;
+import jdistlib.*;
 
 /**
  * FBACell
@@ -23,6 +26,8 @@ import org.apache.commons.math3.distribution.*;
  * the simulation, the total set of fluxes from the most recent run, and the most recent
  * change in biomass (as given by FBA).
  * @author Bill Riehl briehl@bu.edu
+ * DJORDJE changes to script have been implemented by JEAN. This involves changing the way in which multiple models are simulated,
+ * from randomised order, to split media. Email jean.vila@yale.edu for details
  */
 public class FBACell extends edu.bu.segrelab.comets.Cell 
 					 implements edu.bu.segrelab.comets.CometsConstants
@@ -36,17 +41,26 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private double[] biomass;
 	private double[] convectionRHS1;
 	private double[] convectionRHS2;
+	private double jointRHS1;
+	private double jointRHS2;
 	private double[] deltaBiomass;
+
+	private double[] allModelsGrowthRates;
+
+	private double[][] deltaMedia; // DJORDJE
+	private boolean stationaryStatus = false; //Jean
+  
 	private double[][] fluxes;
 	private int[] FBAstatus;
 	  
 	private CometsParameters cParams;
 	private FBAParameters pParams;
 	
-	//Distributions for neutral drift of the biomass.   
-	private PoissonDistribution poissonDist;
-	private GammaDistribution gammaDist;
+	//Distributions for neutral drift of the biomass.
+	private Poisson poissonDist;
+	private Gamma gammaDist;
 	
+	private PrintWriter PoissWriter;
 	/**
 	 * Creates a new <code>FBACell</code> with randomized biomass from 0->1 g for each species.
 	 * @param x the new cell's column
@@ -94,6 +108,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.y = y;
 		id = getNewCellID();
 		deltaBiomass = new double[biomass.length];
+		deltaMedia = new double[biomass.length][]; // DJORDJE
+
 		FBAstatus = new int[biomass.length];
 		this.fbaModels = fbaModels;
 		this.world = world;
@@ -258,6 +274,25 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		{
 				convectionRHS2[i] = values[i];
 		}
+	}
+	
+	
+	/**
+	 * Sets the previous step jointRHS1.
+	 * @param values
+	 */
+	public void setJointRHS1(double value)
+	{
+				jointRHS1 = value;
+	}
+	
+	/**
+	 * Sets the previous step jointRHS2.
+	 * @param values
+	 */
+	public void setJointRHS2(double value)
+	{
+				jointRHS2 = value;
 	}
 	
 	/**
@@ -482,6 +517,17 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		return biomass;
 	}
 	
+	public synchronized String[] getCellModelIDs()
+	{
+		String[] cellModelIDs = new String[fbaModels.length];
+		for (int i=0; i<fbaModels.length; i++)
+		{
+			cellModelIDs[i] = fbaModels[i].getModelID();
+		}
+		return cellModelIDs;
+	}
+
+	
 	/**
 	 * Returns the convectionRHS1 from the previous step in the <code>FBACell</code>
 	 * @return a double[] containing the calculated ConvectionRHS1 from a previous step in the <code>FBACell</code>.
@@ -501,6 +547,26 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	}
 	
 	/**
+	 * Returns the jointRHS1 from 2 steps away in the <code>FBACell</code>
+	 * @return a double[] containing the total jointRHS2 from two steps away in the <code>FBACell</code>.
+	 */
+	public synchronized double getJointRHS2()
+	{
+		return jointRHS2;
+	}
+	
+	
+	/**
+	 * Returns the jointRHS1 from the previous step in the <code>FBACell</code>
+	 * @return a double[] containing the calculated jointRHS1 from a previous step in the <code>FBACell</code>.
+	 */
+	public synchronized double getJointRHS1()
+	{
+		return jointRHS1;
+	}
+	
+	
+	/**
 	 * @return the most recent change in biomass that occurred in the cell, typically due
 	 * to cell growth through FBA.
 	 */
@@ -515,6 +581,21 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	public int[] getFBAstatus()
 	{
 		return FBAstatus;
+	}
+	/**
+	 * @return thwhether cell is in stationary phase (only applicable to batch dilute and evolution runs)
+	 */ // JEAN
+	public boolean getStationaryStatus()
+	{
+		return stationaryStatus;
+	}
+	
+	/**
+	 * @sets the cell to not be in stationary phase (only applicable to batch dilute and evolution runs)
+	 */	
+	public void setStationaryStatus()
+	{
+		stationaryStatus = false;
 	}
 	
 	/**
@@ -575,27 +656,37 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //		if (Comets.DIFFUSION_TEST_MODE)
 //			return CELL_OK;
 		deltaBiomass = new double[models.length];
+
+		allModelsGrowthRates = new double[models.length];
+    
+		deltaMedia = new double[models.length][]; //DJORDJE
+
+		// compute share of each model in total cell biomass
+		double[] modelShare = getBiomassFraction();
+
+
 		FBAstatus = new int[models.length];
 		
+		double biomassGrowthRate = 0.0;
 		double rho = 1.0;
 		
 		// If we have multiple concurrent models in the cell, we want to update
-		// them all in random order.
-		int[] updateOrder = Utility.randomOrder(models.length);
+		// them all in random order
 		//unless cParams.randomOrder is false, 
-		//in which case we run each model in the same order every time
+		//in which case we run each model in the same order every time - DEPRECATED
+		// DJORDJE Changes to partition media between models and simulate simultaneously rather than simulating in random order.
+		/*int[] updateOrder = Utility.randomOrder(models.length);
 		if (!pParams.getRandomOrder()){ 
-			updateOrder = new int[models.length];
+		updateOrder = new int[models.length];
+		for (int a=0; a<models.length; a++){
+		updateOrder[a]=a;
+		}
+		}*/
+		
 			for (int a=0; a<models.length; a++)
 			{
-				updateOrder[a]=a;
-			}
-		}
-		
-		for (int a=0; a<updateOrder.length; a++)
-		{
 			// i = the current model index to run.
-			int i = updateOrder[a];
+			int i = a;
 
 			// if no biomass, or the total biomass has overflowed, skip to the next.
 			if (biomass[i] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
@@ -607,6 +698,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		    {
 		    	continue;
 		    }
+		    
+		    // if in stationary phase do not bother with the optimisation.
+		    if (stationaryStatus == true){
+		    	continue;
+
+		    }
 			/************************* CALCULATE MAX EXCHANGE FLUXES ******************************/
 			double[] media=null;//=world3D.getModelMediaAt(x, y, z, i);
 			if(cParams.getNumLayers() == 1)
@@ -614,10 +711,104 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			else if (cParams.getNumLayers() > 1)
 				media = world3D.getModelMediaAt(x, y, z, i);
 			
-			double modelBiomass = biomass[i];
+			//split media
+			for (int j=0; j<media.length; j++)
+				media[j] = media[j]*modelShare[i];
 			
-		    double[] lb = calculateMaxExchangeFluxes((FBAModel)models[i], media, modelBiomass, rho);
-		    //for(int j=0;j<lb.length;j++)lb[j]=-10;//System.out.println(j+"  lb  "+lb[j]);
+			double[] lb = ((FBAModel)models[i]).getBaseExchLowerBounds();
+			double[] ub = ((FBAModel)models[i]).getBaseExchUpperBounds();
+//			String[] exchNames = ((FBAModel)models[i]).getExchangeReactionNames();
+			if (DEBUG)
+				System.out.println("Exchange reaction bounds:");
+
+			double[] rates = new double[lb.length];
+			
+			switch (pParams.getExchangeStyle())
+			{
+				case MONOD :
+					double[] kmArr = ((FBAModel)models[i]).getExchangeKm();
+					double[] vMaxArr = ((FBAModel)models[i]).getExchangeVmax();
+					double[] hillCoeffArr = ((FBAModel)models[i]).getExchangeHillCoefficients();
+
+//					double[] vTilde = new double[hillCoeffArr.length];
+
+					for (int j=0; j<lb.length; j++)
+					{
+
+						double km = pParams.getDefaultKm();
+						if (kmArr != null && kmArr.length > j && kmArr[j] > 0)
+							km = kmArr[j];
+						double vMax = pParams.getDefaultVmax();
+						if (vMaxArr != null && vMaxArr.length > j && vMaxArr[j] > 0)
+							vMax = vMaxArr[j];
+						double hill = pParams.getDefaultHill();
+						if (hillCoeffArr != null && hillCoeffArr.length > j && hillCoeffArr[j] > 0)
+							hill = hillCoeffArr[j];
+
+						// Start of modified code corrected lb 9/19/13 Ilija D. updated by DJORDJE 
+						if(media[j]/(cParams.getTimeStep()*biomass[i])<calcMichaelisMentenRate(media[j]/(cParams.getSpaceVolume()*modelShare[i]), km, vMax, hill))
+						{
+							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(media[j]/(cParams.getTimeStep()*biomass[i])));
+						}
+						else
+							rates[j] = Math.min(Math.abs(lb[j]),
+											Math.abs(calcMichaelisMentenRate(media[j]/(cParams.getSpaceVolume()*modelShare[i]), km, vMax, hill)));
+					}
+					break;
+					// end of modified code
+					
+					
+				case PSEUDO_MONOD :
+					double[] alphaArr = ((FBAModel)models[i]).getExchangeAlphaCoefficients();
+					double[] wArr = ((FBAModel)models[i]).getExchangeWCoefficients();
+					
+					for (int j=0; j<lb.length; j++)
+					{
+						double alpha = pParams.getDefaultAlpha();
+						if (alphaArr != null && alphaArr.length > j && alphaArr[j] > 0)
+							alpha = alphaArr[j];
+						
+						double w = pParams.getDefaultW();
+						if (wArr != null && wArr.length > j && wArr[j] > 0)
+							w = wArr[j];
+											
+						rates[j] = Math.min(Math.abs(lb[j]),
+											Math.abs(calcPseudoMonodRate(media[j]/(cParams.getSpaceVolume()*modelShare[i]), alpha, w)));
+
+//						lb[j] = -1 * Math.min(alpha * media[j], w * cParams.getSpaceVolume()) / biomass[i];
+					}
+					break;
+					
+					
+				default :  // STANDARD_EXCHANGE
+					for (int j=0; j<lb.length; j++)
+					{
+//						lb[j] = -1 * Math.abs(media[j] / (biomass[i] * cParams.getTimeStep()));
+
+//						lb[j] = -1 * Math.min(Math.abs(lb[j] / (biomass[i] * cParams.getTimeStep())),
+//											  Math.abs(media[j] / (biomass[i] * cParams.getTimeStep())));
+						
+						rates[j] = Math.min(Math.abs(lb[j]),
+								Math.abs(calcStandardExchange(media[j]/(cParams.getSpaceVolume()*modelShare[i]))));
+					}	
+					break;
+				
+			}
+			
+			for (int j=0; j<lb.length; j++)
+			{
+				lb[j] = -1 * rates[j]/rho;
+;
+			}
+			if (DEBUG)
+			{
+				System.out.println("LOWER BOUNDS");
+				for (int j=0; j<lb.length; j++) 
+				{
+					System.out.println(lb[j]);
+				}
+				System.out.println("//");
+			}
 		    ((FBAModel)models[i]).setExchLowerBounds(lb);
 		    
 			/************************* SET MAX BIOMASS *****************************/
@@ -629,11 +820,11 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			if (DEBUG)
 			{
 				System.out.println("ALL FLUX BOUNDS");
-				double[] debug_lb = ((FBAModel)models[i]).getLowerBounds();
-				double[] debug_ub = ((FBAModel)models[i]).getUpperBounds();
+				lb = ((FBAModel)models[i]).getLowerBounds();
+				ub = ((FBAModel)models[i]).getUpperBounds();
 				for (int j=0; j<lb.length; j++)
 				{
-					System.out.println(debug_lb[j] + "\t" + debug_ub[j]);
+					System.out.println(lb[j] + "\t" + ub[j]);
 				}
 			}
 			
@@ -641,11 +832,14 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			
 			int stat = models[i].run();
 			fluxes[i] = ((FBAModel)models[i]).getFluxes();
-			//System.out.println("biomass "+fluxes[281]);
+
 			if (stat != 5 && stat != 180)
 			{
 				// failure! don't do anything right now.
 				// System.out.println("FBA failure status: " + stat);
+				//error check for JEAN (again may be redundant in later versions).
+				deltaBiomass[i]=0.0;
+
 			}
 			if (stat == 5 || stat == 180)
 			{
@@ -659,23 +853,35 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				// into concentrations
 				// delta = v * biomass * time_step
 
-				//System.out.print("Model "+i+" fluxes");
+//				System.out.print("flux");
 				for (int j=0; j<mediaDelta.length; j++)
 				{
 					mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
-					//System.out.print("mediaDelta "+j+"  "+mediaDelta[j]+"\n");
+//					System.out.print("\t" + exchFlux[j]);
 				}
-				if(cParams.getNumLayers() == 1)
-					world.changeModelMedia(x, y, i, mediaDelta);
-				else if (cParams.getNumLayers() > 1)
-					world3D.changeModelMedia(x, y, z, i, mediaDelta);
+				deltaMedia[i] = mediaDelta; // DJORDJE
+
 
 				/***************** GET BIOMASS CONCENTRATION CHANGE ****************/
-				//System.out.println("biomass "+((FBAModel)models[i]).getBiomassFluxSolution());
 				// biomass is in grams
+				biomassGrowthRate = (double)(((FBAModel)models[i]).getBiomassFluxSolution());
 				deltaBiomass[i] = (double)(((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];
-				//System.out.println("deltaBiomass "+deltaBiomass[i]);
-				if(deltaBiomass[i]<0.0)deltaBiomass[i]=0.0;
+
+				allModelsGrowthRates[i]=biomassGrowthRate;
+				
+				deltaBiomass[i] *= (1-(double)(((FBAModel)models[i]).getGenomeCost()));
+				
+				// if no biomass change dont change media //JEAN 
+				// This may be redundant in newer version of COMETS.
+				if(deltaBiomass[i]<0.0){
+					deltaBiomass[i]=0.0;
+					for (int j=0; j<deltaMedia[i].length; j++)
+					{
+						deltaMedia[i][j] = 0.0;
+					}
+				}
+				
+
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
 //				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());
 //				System.out.println("solution: " + ((FBAModel)models[i]).getObjectiveSolution());
@@ -698,141 +904,100 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			}
 		}
 
-		return updateCellData(deltaBiomass, fluxes);
-	}
-	
-	/**Returns the maximum exchange flux (lower bound) based on the set ExchangeStyle
-	 * 
-	 * @param model
-	 * @param media the model-relevant media in the current cell as evaluated by 
-	 * FBAWorld.getModelMediaAt(), *Not* the complete list of media
-	 * @param modelBiomass the biomass of the model in the current cell
-	 * @param rho
-	 * @return
-	 */
-	private double[] calculateMaxExchangeFluxes(FBAModel model, double[] media, double modelBiomass, double rho){
-
-		double[] lb = model.getBaseExchLowerBounds();
-		//double[] ub = model.getBaseExchUpperBounds();
-		
-		if (DEBUG)
-			System.out.println("Exchange reaction bounds:");
-
-		double[] rates = new double[lb.length];
-		
-		switch (pParams.getExchangeStyle())
+		//DJORDJE Section.moved to partition media by model and then update media collectively at the end.
+		for (int a=0; a<models.length; a++)
 		{
-			case MONOD :
-				double[] kmArr = model.getExchangeKmWithDefaults();
-				double[] vMaxArr = model.getExchangeVmaxWithDefaults();
-				double[] hillCoeffArr = model.getExchangeHillCoefficientsWithDefaults();
+			if (biomass[a] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass() || 	deltaBiomass[a]==0.0)
+				continue;
 
-//				double[] vTilde = new double[hillCoeffArr.length];
+			if(cParams.getNumLayers() == 1)
+				world.changeModelMedia(x, y, a, deltaMedia[a]);
+			else if (cParams.getNumLayers() > 1)
+				world3D.changeModelMedia(x, y, z, a, deltaMedia[a]);
 
-				for (int j=0; j<lb.length; j++)
-				{
-					double km = FBAParameters.getDefaultKm();
-					if (kmArr != null && kmArr.length > j && kmArr[j] > 0)
-						km = kmArr[j];
-					double vMax = FBAParameters.getDefaultVmax();
-					if (vMaxArr != null && vMaxArr.length > j && vMaxArr[j] > 0)
-						vMax = vMaxArr[j];
-					double hill = FBAParameters.getDefaultHill();
-					if (hillCoeffArr != null && hillCoeffArr.length > j && hillCoeffArr[j] > 0)
-						hill = hillCoeffArr[j];
-
-					// Start of modified code corrected lb 9/19/13 Ilija D.
-					if(media[j]/(cParams.getTimeStep()*modelBiomass)<calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill))
-					{
-						//If lb is positive, set rate to negative lb:
-						if(lb[j]>0)
-						{
-							rates[j] = -Math.abs(lb[j]);
 						}
-						//If lb is negative, take absolute minimum of lb or monod:
-						else
-						{
-							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(media[j]/(cParams.getTimeStep()*modelBiomass)));
+		//Jean Section for batch dilute Checks if models are growing and if they all stopped growing sets stationary phase in cell.
+		// This flag will remain on until the environment is updated.
+		if(cParams.getBatchDilution()==true){
+			stationaryStatus =true;
+			for (int a=0; a<models.length; a++){
+				if(deltaBiomass[a]>0.0){
+					stationaryStatus =false;
 						}
 					}
-					else
-					{
-						//If lb is positive, set rate to negative lb:
-						if(lb[j]>0)
-						{
-							rates[j] = -Math.abs(lb[j]);
 						}
-						//If lb is negative, take absolute minimum of lb or monod:
-						else
-						{
-							rates[j] = Math.min(Math.abs(lb[j]),Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
-						}
-					}
+		return updateCellData(deltaBiomass, fluxes, allModelsGrowthRates);
 				}
 
-				break;
-				
-				
-			case PSEUDO_MONOD :
-				double[] alphaArr = model.getExchangeAlphaCoefficientsWithDefaults();
-				double[] wArr = model.getExchangeWCoefficientsWithDefaults();
-				
-				for (int j=0; j<lb.length; j++)
-				{
-					double alpha = pParams.getDefaultAlpha();
-					if (alphaArr != null && alphaArr.length > j && alphaArr[j] > 0)
-						alpha = alphaArr[j];
-					
-					double w = pParams.getDefaultW();
-					if (wArr != null && wArr.length > j && wArr[j] > 0)
-						w = wArr[j];
-					
-					rates[j] = Math.min(Math.abs(lb[j]),
-										Math.abs(calcPseudoMonodRate(media[j]/cParams.getSpaceVolume(), alpha, w)));
-				}
-				break;
-				
-				
-			default :  // STANDARD_EXCHANGE
-				for (int j=0; j<lb.length; j++)
-				{
-					rates[j] = Math.min(Math.abs(lb[j]),
-										Math.abs(calcStandardExchange(media[j]/cParams.getSpaceVolume())));
-				}	
-				break;
-		}
-
-		for (int j=0; j<lb.length; j++)
-		{
-			lb[j] = -1 * rates[j]/rho;
-		}
-		
-		if (DEBUG)
-		{
-			System.out.println("LOWER BOUNDS");
-			for (int j=0; j<lb.length; j++) 
-			{
-				System.out.println(lb[j]);
-			}
-			System.out.println("//");
-		}
-		
-		return lb;
-	}
-	
 	private double calcMichaelisMentenRate(double mediaConc, double km, double vMax, double hill)
-	{
+				{
 		return mediaConc * vMax / (km + mediaConc);
-	}
-	
+				}
+				
 	private double calcPseudoMonodRate(double mediaConc, double alpha, double w)
-	{
+				{
 		return Math.min(mediaConc * alpha, w);
+		}
+
+	private double calcStandardExchange(double mediaConc)
+		{
+		return mediaConc;
+		}
+		
+	
+	
+	/** Adds demographic noise to the biomass according to the procedure in 
+	 *  Phys. Rev. Lett. 94, 100601 (2005). 
+	 *
+	 * @param currentBiomass
+	 * @param biomassGrowthRate
+	 * @param demographicNoiseSigmaZero
+	 * @return noisyBiomass
+	 */
+	private double addDemographicNoise(double currentBiomass, double biomassGrowthRate, double demographicNoiseSigmaZero)
+	{
+		double noisyBiomass=currentBiomass;
+		if(biomassGrowthRate>0.0)
+		{	
+			double noiseSigma = biomassGrowthRate*demographicNoiseSigmaZero;
+			//System.out.println("sigma  "+noiseSigma);
+			double poissonLambda=2.0*currentBiomass/(cParams.getTimeStep()*noiseSigma*noiseSigma);
+			//System.out.println("poiss  "+poissonLambda);
+			if(poissonLambda>0)
+		{
+				poissonDist=new Poisson(poissonLambda);
+			
+				double gammaAlpha=poissonDist.random();
+				//System.out.println("alpha  "+gammaAlpha);
+				if(gammaAlpha>0)
+			{
+					//System.out.println(gammaAlpha);
+					gammaDist=new Gamma(gammaAlpha,1.0);
+					double gammaSample=gammaDist.random();
+					noisyBiomass=0.5*gammaSample*(cParams.getTimeStep()*noiseSigma*noiseSigma);
+					//System.out.println("biomass  "+noisyBiomass);
+			}
+				else if(gammaAlpha==0)
+				{
+					noisyBiomass=0.0;
+		}
+	}
+			else if(poissonLambda==0)
+	{
+				noisyBiomass=0.0;
+			}
+		}
+		return noisyBiomass;
 	}
 	
-	private double calcStandardExchange(double mediaConc)
+	
+	//DJORDJE, get fraction of biomass of each model. 
+	private double[] getBiomassFraction()
 	{
-		return mediaConc;
+		double[] biomassShare = new double[biomass.length];
+		for (int i=0; i<biomass.length; i++)
+			biomassShare[i] = biomass[i]/Utility.sum(biomass); 
+		return biomassShare;		
 	}
 	
 	/**
@@ -843,7 +1008,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	 * @return Cell.CELL_DEAD if this cell has no more active biomass, Cell.CELL_OK 
 	 * otherwise
 	 */
-	public int updateCellData(double[] deltaBiomass, double[][] fluxes)
+	public int updateCellData(double[] deltaBiomass, double[][] fluxes, double[] biomassGrowthRates)
 	{
 		this.deltaBiomass = deltaBiomass;
 		this.fluxes = fluxes;
@@ -855,34 +1020,17 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			deltaBiomass[i] -= cParams.getDeathRate() * biomass[i] * cParams.getTimeStep();
 			biomass[i] += deltaBiomass[i];
 			
-			//Neutral drift block. Get the sigmas from the model and 
+
+			//Neutral drift block. Only if the death rate is zero. Get the sigmas from the model and 
 			// calculate biomass=(sigma^2*timestep/2)*Gamm(Poiss(2*biomass/sigma^2*timesteo))
-			if(fbaModels[i].getNeutralDrift() && deltaBiomass[i]>0.0)
+			if(fbaModels[i].getNeutralDrift() && deltaBiomass[i]>0.0 && cParams.getDeathRate()==0.0)
 			{   
-				double poissLambda=2.0*biomass[i]/(cParams.getTimeStep()*
-						fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
-				
-				if(poissLambda>0)
-				{
-					poissonDist=new PoissonDistribution(poissLambda);
-					int gammaAlpha=poissonDist.sample();
-					
-					if(gammaAlpha>0)
-					{
-						gammaDist=new GammaDistribution(gammaAlpha,1.0);
-						double gammaSample=gammaDist.sample();
-						biomass[i]=0.5*gammaSample*(cParams.getTimeStep()*
-								fbaModels[i].getNeutralDriftSigma()*fbaModels[i].getNeutralDriftSigma());
+				biomass[i]=addDemographicNoise(biomass[i], biomassGrowthRates[i], fbaModels[i].getNeutralDriftSigma());
 					}
-					else if(gammaAlpha==0)
+			else if(fbaModels[i].getNeutralDrift() && cParams.getDeathRate()!=0.0)
 					{
-						biomass[i]=0.0;
-					}
-				}
-				else if(poissLambda==0)
-				{
-					biomass[i]=0.0;
-				}
+				System.out.println("Error in model "+i+": Demographic noise is applies only if the death rate for the model is zero. Noise will not be applied.");
+				System.err.println("Error in model "+i+": Demographic noise is applies only if the death rate for the model is zero. Noise will not be applied.");
 			}
 			
 			
@@ -1030,6 +1178,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		for (int i=0; i<newModels.length; i++)
 			fbaModels[i] = (FBAModel)newModels[i];
 	}
+	
+	public CometsParameters getCometsParameters() {
+		// Get the comets parameters
+		return cParams;
+	}
+	
 	
 	/**Return the full list of media in this cell position
 	 * 

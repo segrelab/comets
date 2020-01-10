@@ -61,6 +61,9 @@ public abstract class Cell implements CometsConstants
 	 */
 	public abstract double[] getBiomass();
 	
+	public abstract double[] getDeltaBiomass();
+
+	
 	/**
 	 * Modify the biomass of the <code>Cell</code> by an array of delta values, where each
 	 * element <i>i</i> corresponds to the <i>i</i>th <code>Model</code> currently loaded. 
@@ -138,10 +141,17 @@ public abstract class Cell implements CometsConstants
 	public abstract void setConvectionRHS1(double[] values);
 	public abstract void setConvectionRHS2(double[] values);
 	
+	public abstract void setJointRHS1(double value);
+	public abstract void setJointRHS2(double value);
+	
 	/**
 	 * 
 	 * @param oldModels
 	 * @param newModels
 	 */
 	public abstract void changeModelsInCell(Model[] oldModels, Model[] newModels);
+	
+	//Jean Sets the cell to not be in stationary phase needed if batch dilute is in use.
+	public abstract void setStationaryStatus();
+	
 }

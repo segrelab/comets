@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.swing.JComponent;
+// import javax.swing.JComponent;
 
 import edu.bu.segrelab.comets.util.Utility;
 
@@ -235,6 +235,17 @@ public abstract class World3D implements CometsConstants, IWorld
 			return media[x][y][z];
 		else
 			return null;
+	}
+	
+	/**
+	 * @return A <code>String</code> array of names for each nutrient in the media. This
+	 * will be in the same order at the other various media access methods.
+	 * @see #getAllMedia()
+	 * @see #getMediaAt(int, int)
+	 */
+	public String[] getMediaNames()
+	{
+		return mediaNames;
 	}
 	
 	/**
@@ -1103,10 +1114,7 @@ public abstract class World3D implements CometsConstants, IWorld
 	 * @see #getAllMedia()
 	 * @see #getMediaAt(int, int)
 	 */
-	public String[] getMediaNames(){
-		return mediaNames;
-	}
-	
+
 	public Comets getComets(){
 		return c;
 	}

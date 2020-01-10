@@ -62,13 +62,19 @@ public class CometsParameters implements CometsConstants
 //	}
 	
 	private double timeStep = 1,				// hours
-				   deathRate = 0.1,				// percent per time point
-				   activateRate = 0.001,          // 1/hours
+				   deathRate = 0.1,				// fraction per hour
+				   activateRate = 0.001,        // 1/hours
 				   maxSpaceBiomass = 10,		// grams
 				   minSpaceBiomass = 1e-10,		// grams
 				   spaceWidth = 0.1,			// cm
-				   slideshowColorValue = 10,	
-				   spaceVolume = 0.001;				// ml (1 mL = 1 cm^3)
+				   slideshowColorValue = 10,
+				   spaceVolume = 0.001,			// ml (1 mL = 1 cm^3)
+				   cellSize = 4.3e-13,			// grams DW
+				   dilFactor = 1e-2,
+				   dilTime = 12,				// hours
+				   mutRate = 1e-9,				// per genome and cycle
+				   addRate = 1e-9,				// per genome and cycle	
+				   metaboliteDilutionRate = 0.0;// fraction per hour
 	
 	private boolean isCommandLine = false,
 					showGraphics = true,
@@ -82,8 +88,10 @@ public class CometsParameters implements CometsConstants
 					showText = true,
 					colorRelative = true,
 					slideshowColorRelative = true,
-					simulateActivation = false;
-	
+					simulateActivation = false,
+					batchDilution = false,
+					evolution = false;
+
 	private int displayLayer = 0,
 				pixelScale = 4,
 				gridRows = 100,
@@ -159,6 +167,9 @@ public class CometsParameters implements CometsConstants
 		setSpaceWidth(((Double)paramValues.get("spacewidth")).doubleValue());
 		setSpaceVolume(Math.pow(((Double)paramValues.get("spacewidth")), 3));
 		setActivateRate(((Double)paramValues.get("activaterate")).doubleValue());
+		setMutRate(((Double)paramValues.get("mutrate")).doubleValue());
+		setAddRate(((Double)paramValues.get("addrate")).doubleValue());
+		setMetaboliteDilutionRate(((Double)paramValues.get("metabolitedilutionrate")).doubleValue());
 
 		setCommandLineOnly(((Boolean)paramValues.get("iscommandline")).booleanValue());
 		showGraphics(((Boolean)paramValues.get("showgraphics")).booleanValue());
@@ -172,6 +183,8 @@ public class CometsParameters implements CometsConstants
 		showText(((Boolean)paramValues.get("showtext")).booleanValue());
 		setColorRelative(((Boolean)paramValues.get("colorrelative")).booleanValue());
 		setSimulateActivation(((Boolean)paramValues.get("simulateactivation")).booleanValue());
+		setBatchDilution(((Boolean)paramValues.get("batchdilution")).booleanValue());
+		setEvolution(((Boolean)paramValues.get("evolution")).booleanValue());
 		
 		setPixelScale(((Integer)paramValues.get("pixelscale")).intValue());
 		setNumRows(((Integer)paramValues.get("gridrows")).intValue());
@@ -191,7 +204,9 @@ public class CometsParameters implements CometsConstants
 		setSlideshowExt(((String)paramValues.get("slideshowext")));
 		setSlideshowName(((String)paramValues.get("slideshowname")));
 		setLastDirectory(((String)paramValues.get("lastdirectory")));
-
+		setDilutionFactor(((Double)paramValues.get("dilfactor")).doubleValue());
+		setDilutionTime(((Double)paramValues.get("diltime")).doubleValue());
+		setCellSize(((Double)paramValues.get("cellsize")).doubleValue());
 	}
 	
 	public void saveParameterState()
@@ -300,7 +315,31 @@ public class CometsParameters implements CometsConstants
 		
 		paramValues.put("simulateactivation", new Boolean(simulateActivation));
 		paramTypes.put("simulateactivation", ParameterType.BOOLEAN);
+
+		paramValues.put("dilfactor", new Double(dilFactor));
+		paramTypes.put("dilfactor", ParameterType.DOUBLE);
 		
+		paramValues.put("diltime", new Double(dilTime));
+		paramTypes.put("diltime", ParameterType.DOUBLE);
+		
+		paramValues.put("cellsize", new Double(cellSize));
+		paramTypes.put("cellsize", ParameterType.DOUBLE);
+
+		paramValues.put("batchdilution", new Boolean(batchDilution));
+		paramTypes.put("batchdilution", ParameterType.BOOLEAN);
+		
+		paramValues.put("mutrate", new Double(mutRate));
+		paramTypes.put("mutrate", ParameterType.DOUBLE);
+		
+		paramValues.put("addrate", new Double(addRate));
+		paramTypes.put("addrate", ParameterType.DOUBLE);
+
+		paramValues.put("evolution", new Boolean(evolution));
+		paramTypes.put("evolution", ParameterType.BOOLEAN);
+		
+		paramValues.put("metabolitedilutionrate", new Double(metaboliteDilutionRate));
+		paramTypes.put("metabolitedilutionrate", ParameterType.DOUBLE);
+
 		//paramValues.put("seed", new Long(seed));
 		//paramTypes.put("seed", ParameterType.LONG);
 	}
@@ -439,6 +478,130 @@ public class CometsParameters implements CometsConstants
 //	{
 //		return defaultDiffConst;
 //	}
+
+	/**
+	 * Sets if there are batch dilutions in the simulation 
+	 */
+	public void setBatchDilution(boolean b)
+	{
+		batchDilution = b;
+	}
+		
+	/**
+	 * @return do we perform batch dilutions? 
+	 */
+	public boolean getBatchDilution()
+	{
+		return batchDilution;
+	}
+	
+	/**
+	 * Sets if there is evolution in the simulation 
+	 */
+	public void setEvolution(boolean b)
+	{
+		evolution = b;
+	}
+		
+	/**
+	 * @return do we perform evolution? 
+	 */
+	public boolean getEvolution()
+	{
+		return evolution;
+	}
+	
+	
+	
+	/**
+	 * @return the dilution factor for batch dilution
+	 */
+	public double getDilutionFactor() 
+	{ 
+		return dilFactor; 
+	}
+	
+	/**
+	 * Sets the dilution factor if batchDilution = True
+	 */
+	public void setDilutionFactor(double d)
+	{
+		if (d >= 1)
+			dilFactor = 1/d;
+		else 
+			dilFactor = d;
+	}
+
+	/**
+	 * @return the dilution time for batch dilution
+	 */
+	public double getDilutionTime() 
+	{ 
+		return dilTime; 
+	}
+	
+	/**
+	 * Sets the dilution factor if batch dilution = True
+	 * djordje
+	 */
+	public void setDilutionTime(double d)
+	{
+		if (d >= 0)
+			dilTime = d;
+	}
+	
+	/**
+	 * @return the metabolite dilution rate
+	 * chacon
+	 */
+	public double getMetaboliteDilutionRate()
+	{
+		return metaboliteDilutionRate;
+	}
+	
+	private void checkMetaboliteDilutionRate(double rate) throws NumberFormatException
+	{
+		if (rate < 0 | rate > 1){
+			throw new NumberFormatException();
+		}
+	}
+	/**
+	 * Sets the metaboliteDilutionRate
+	 * @param rate
+	 */
+	public void setMetaboliteDilutionRate(double rate)
+	{
+		try
+		{
+			checkMetaboliteDilutionRate(rate);
+		}
+		catch(NumberFormatException e)
+		{
+			throw new NumberFormatException("metaboliteDilutionRate must be between 0-1");
+		}
+		metaboliteDilutionRate = rate;
+		System.out.println("itgotset");
+	}
+
+	
+	/**
+	 * @return cell size
+	 * djordje
+	 */
+	public double getCellSize() 
+	{ 
+		return cellSize; 
+	}
+	
+	/**
+	 * Sets the cell size
+	 */
+	public void setCellSize(double d)
+	{
+		if (d >= 0)
+			cellSize = d;
+	}
+	
 	
 	public void setSpaceVolume(double d)
 	{
@@ -1178,6 +1341,7 @@ public class CometsParameters implements CometsConstants
 		s += "maxSpaceBiomassConc = " + maxSpaceBiomass + "\n";
 		s += "spaceWidth = " + spaceWidth + "\n";
 //		s += "numRunThreads = " + numRunThreads + "\n";
+		s += "metaboliteDilutionRate = " + metaboliteDilutionRate + "\n";
 
 		s += "isCommandLine = " + isCommandLine + "\n";
 		s += "showGraphics = " + showGraphics + "\n";
@@ -1263,5 +1427,40 @@ public class CometsParameters implements CometsConstants
 	{
 		activateRate = r;
 	}
+	
+	/** Returns the value of the mutRate parameter
+	 * 
+	 * @return mutRate value
+	 */
+	public double getMutRate()
+	{
+		return mutRate;
+	}
+	
+	/** Sets the value of the mutRate parameter
+	 * 
+	 * @param r The double value for the parameter.
+	 */
+	public void setMutRate(double r)
+	{
+		mutRate = r;
+	}
 
+	/** Returns the value of the mutRate parameter
+	 * 
+	 * @return mutRate value
+	 */
+	public double getAddRate()
+	{
+		return addRate;
+	}
+	
+	/** Sets the value of the mutRate parameter
+	 * 
+	 * @param r The double value for the parameter.
+	 */
+	public void setAddRate(double r)
+	{
+		addRate = r;
+	}
 }
