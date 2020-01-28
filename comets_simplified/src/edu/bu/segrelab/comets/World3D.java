@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import edu.bu.segrelab.comets.fba.FBAParameters;
+
 // import javax.swing.JComponent;
 
 import edu.bu.segrelab.comets.util.Utility;
@@ -1131,4 +1133,5 @@ public abstract class World3D implements CometsConstants, IWorld
 	public String[] getInitialMediaNames(){return initialMediaNames;}
 
 	public boolean is3D(){return true;}
+
 }

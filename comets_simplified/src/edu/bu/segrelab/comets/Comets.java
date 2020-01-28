@@ -503,7 +503,7 @@ public class Comets implements CometsConstants,
 		}
     }
 
-	private void doCommandLineRun()
+	protected void doCommandLineRun()
 	{
 		cParams.pause(false);
 		cParams.pauseOnStep(false);

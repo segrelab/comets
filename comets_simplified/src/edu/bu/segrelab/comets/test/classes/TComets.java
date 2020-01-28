@@ -146,4 +146,12 @@ public class TComets extends Comets {
 	}
 	reader.close();
 	}
+	
+	/**Because run() will load from a script, and some tests want to modify the program 
+	 * state between loading and execution
+	 * 
+	 */
+	public void doCommandLineRunWithoutLoading() {
+		doCommandLineRun();
+		}
 }

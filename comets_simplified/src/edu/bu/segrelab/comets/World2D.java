@@ -11,7 +11,7 @@ import javax.swing.JComponent;
 
 import cern.jet.random.engine.*;
 import cern.jet.random.*;
-
+import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.util.Utility;
 
 /**
