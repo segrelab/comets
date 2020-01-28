@@ -299,7 +299,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		exchMetabNames = new String[numExch];
 		
 		int[] exch_tmp = exch.clone();
-		int cnt = 0;		
+		int cnt = 0;
+		
 		for (int i=0; i<m.length; i++)
 		{		
 			/* look for reaction in exch_tmp; if found, remove from exch_tmp 
@@ -2345,12 +2346,12 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					if (numRxns <= 0)
 					{
 						reader.close();
-						throw new ModelFileException("The stoichiometric matrix should be loaded before the Hill coefficients at line " + lineNum);
+						throw new ModelFileException("The stoichiometric matrix should be loaded before the Light coefficients at line " + lineNum);
 					}
 					if (exchRxns == null)
 					{
 						reader.close();
-						throw new ModelFileException("The list of exchange reactions should be loaded before the Hill coefficients at line " + lineNum);
+						throw new ModelFileException("The list of exchange reactions should be loaded before the Light coefficients at line " + lineNum);
 					}
 					if (tokens.length != 2)
 					{
