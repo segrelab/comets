@@ -300,7 +300,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		
 		int[] exch_tmp = exch.clone();
 		int cnt = 0;
-		
+
 		for (int i=0; i<m.length; i++)
 		{		
 			/* look for reaction in exch_tmp; if found, remove from exch_tmp 
@@ -314,12 +314,13 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			{
 				int rxn = curr_rxn.intValue();
 				int mtb = curr_mtb.intValue();
-				ArrayUtils.removeElement(exch_tmp, rxn);
-				exchRxnNames[cnt] = rxnNames[rxn-1];
-				exchMetabNames[cnt] = metabNames[mtb-1];
+				// ArrayUtils.removeElement(exch_tmp, rxn);
+				exchRxnNames[is_exch] = rxnNames[rxn-1];
+				exchMetabNames[is_exch] = metabNames[mtb-1];
 				cnt++;
 			}				
 		}
+		
 		this.lightAbsorption = lightAbsorption;
 
 		baseExchLB = new double[numExch];
