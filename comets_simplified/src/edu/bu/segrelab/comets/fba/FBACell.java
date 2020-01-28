@@ -806,8 +806,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			for (int j=0; j<lb.length; j++)
 			{
 				if (lightAbsorption[j] > 0) {
+					// multiply by modelShare to undo the division performed on line 656
 					rates[j] = Math.min(Math.abs(lb[j]), calcMaxLightUptake(media[j], biomass[i], cParams.getSpaceWidth()*cParams.getSpaceWidth(), lightAbsorption[j], lightAbsSurfaceToWeight));
-					System.out.println(rates[j]+ "\t"+ media[j]+ "\t"+ lightAbsSurfaceToWeight+ "\t"+ biomass[i]+"\t"+  cParams.getSpaceWidth());
+					//System.out.println(rates[j]+ "\t"+ media[j]+ "\t"+ lightAbsSurfaceToWeight+ "\t"+ biomass[i]+"\t"+  cParams.getSpaceWidth());
 				}
 				lb[j] = -1 * rates[j]/rho;
 			}

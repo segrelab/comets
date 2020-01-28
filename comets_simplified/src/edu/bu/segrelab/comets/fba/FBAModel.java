@@ -304,7 +304,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		exchMetabNames = new String[numExch];
 		
 		int[] exch_tmp = exch.clone();
-		int cnt = 0;
 
 		for (int i=0; i<m.length; i++)
 		{		
@@ -322,7 +321,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				// ArrayUtils.removeElement(exch_tmp, rxn);
 				exchRxnNames[is_exch] = rxnNames[rxn-1];
 				exchMetabNames[is_exch] = metabNames[mtb-1];
-				cnt++;
 			}				
 		}
 		
