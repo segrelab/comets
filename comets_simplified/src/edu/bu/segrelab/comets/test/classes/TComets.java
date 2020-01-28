@@ -15,12 +15,8 @@ import java.util.Set;
 import org.junit.rules.TemporaryFolder;
 
 import edu.bu.segrelab.comets.Comets;
-import edu.bu.segrelab.comets.IWorld;
-import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.fba.FBACometsLoader;
 import edu.bu.segrelab.comets.fba.FBAModel;
-import edu.bu.segrelab.comets.fba.FBAWorld;
-import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
 
 /**A class to allow modifications to the Comets class in order to facilitate 
@@ -64,8 +60,8 @@ public class TComets extends Comets {
 	public String createScriptForLayout(String layoutFileName) throws IOException {
 		URL scriptFolderURL = TestKineticParameters.class.getResource("../resources/");
 		String folderPath = scriptFolderURL.getPath();
-		String scriptPath = folderPath + File.separator + "comets_script_temp.txt";
-		String layoutPath = folderPath + File.separator + layoutFileName;
+		String scriptPath = folderPath + "comets_script_temp.txt";
+		String layoutPath = folderPath + layoutFileName;
 		FileWriter fw = new FileWriter(new File(scriptPath), false);
 		fw.write("load_layout " + layoutPath);
 		fw.close();

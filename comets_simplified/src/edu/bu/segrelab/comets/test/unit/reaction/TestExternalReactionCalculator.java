@@ -25,11 +25,21 @@ public class TestExternalReactionCalculator {
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		//Load layout and models
-		URL scriptURL = TestExternalReactionCalculator.class.getResource("../../resources/resKineticParameters/comets_script_exRxn.txt");
-		TComets tcomets = new TComets(new String[]{"-loader", FBACometsLoader.class.getName(),
+		//create the comets_script file in the proper location, and populate it with the absolute path to the layout
+		URL scriptFolderURL = TestKineticParameters.class.getResource("../resources/resKineticParameters/");
+		String folderPath = scriptFolderURL.getPath();
+		String scriptPath = folderPath + File.separator + "comets_script_exRxn.txt";
+		String layoutPath = folderPath + File.separator + "sampleRxnLayout.txt";
+		FileWriter fw = new FileWriter(new File(scriptPath), false);
+		fw.write("load_layout " + layoutPath);
+		fw.close();
+		
+		URL scriptURL = TestKineticParameters.class.getResource("../resources/resKineticParameters/comets_script_exRxn.txt");
+
+		comets = new TComets(new String[]{"-loader", FBACometsLoader.class.getName(),
 				"-script", scriptURL.getPath()});
-		tcomets.loadScript();
-		TestExternalReactionCalculator.comets = tcomets;
+		comets.loadScript();
+		//TestExternalReactionCalculator.comets = comets;
 	}
 
 	@AfterClass

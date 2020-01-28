@@ -41,9 +41,9 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 	private GRBEnv env;     // Gurobi environment
 	private GRBModel model; // Gurobi model
-	private GRBVar[] rxnFluxes; //These are optimization variables, i.e. fluxes
+	private GRBVar[] rxnFluxes; //These are optimization variables, i.e. fluxes. Indexed 0 to N-1
 	private GRBLinExpr[] rxnExpressions; //These are constraints on fluxes, one for each metabolite
-	private double[] fluxesModel;
+	private double[] fluxesModel; //Indexed 0 to N-1
 
 	private double[][] stoichMatrix; //This is used only in the clone() method. TODO eliminate this.
 
@@ -1002,7 +1002,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 	 */
 	private void setObjectiveFluxToSpecificValue(int objIdx, double objectiveFlux){
 		GRBConstr[] objFluxVar = new GRBConstr[1]; 
-		int rxnIdx = objReactions[objIdx];//the index in Gurobi
+		int rxnIdx = objReactions[objIdx];//the index in Gurobi (1 to N)
 		// grab the constraint by name (this is the row constraint associated with the objective reaction -- row 3 in the example) 
 		try{
 			objFluxVar[0] = modelMin.getConstrByName(objConstraintNames[objIdx]);
