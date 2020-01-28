@@ -800,11 +800,21 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					break;
 				
 			}
-
+			/***************** Calculate bounds for Light (photon) uptake **********/
+			double lightAbsSurfaceToWeight = ((FBAModel)models[i]).getLightAbsSurfaceToWeight();
+			double [] lightAbsorption = ((FBAModel)models[i]).getLightAbsorption();
+			for (int j=0; j<lb.length; j++)
+			{
+				if (lightAbsorption[j] > 0) {
+					rates[j] = Math.min(Math.abs(lb[j]), calcMaxLightUptake(media[j], biomass[i], cParams.getSpaceWidth()*cParams.getSpaceWidth(), lightAbsorption[j], lightAbsSurfaceToWeight));
+					System.out.println(rates[j]+ "\t"+ media[j]+ "\t"+ lightAbsSurfaceToWeight+ "\t"+ biomass[i]+"\t"+  cParams.getSpaceWidth());
+				}
+				lb[j] = -1 * rates[j]/rho;
+			}
+			
 			for (int j=0; j<lb.length; j++)
 			{
 				lb[j] = -1 * rates[j]/rho;
-;
 			}
 			if (DEBUG)
 			{
@@ -861,6 +871,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				{	
 					mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
 //					System.out.print("\t" + exchFlux[j]);
+					if (lightAbsorption[j] > 0) {
+						// Light is not used up as this is a flux
+						mediaDelta[j] = 0;
+					}
+					else
+						mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
 				}
 				deltaMedia[i] = mediaDelta; // DJORDJE
 
@@ -1001,6 +1017,29 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		for (int i=0; i<biomass.length; i++)
 			biomassShare[i] = biomass[i]/Utility.sum(biomass); 
 		return biomassShare;		
+	}
+
+
+	/**
+	 * Calculates the maximum light uptake.
+	 * This is determined by the minimum value of:
+	 * 1) The amount of light the organism can take up
+	 * 2) The amount of light entering the grid cell
+	 * @param lightFlux The "concentration" of photons i actually a flux [mmol photons/m^2/s]
+	 * @param biomass The total biomass in the grid cell of this organism [gDW]
+	 * @param gridSize The length scale of each grid in the cell [m]
+	 * @param absorption The absorption coefficient [unitless]
+	 * @param lightAbsSurfaceToWeight The ratio between the surface area absorbing photons and the dry weight [mm/gDW]
+	**/
+	private double calcMaxLightUptake(double lightFlux, double biomass, double gridArea, 
+									  double absorption, double lightAbsSurfaceToWeight)
+	{
+		// *3600 converts from per second to per hour
+		double maxLightRateOrganism = lightFlux*3600*lightAbsSurfaceToWeight*absorption;
+		// Grid area is the surface area of the grid cell, assuming sqaure grid cells
+		// The absolute maximum uptake rate of light is the total flux into the grid cell divided by the biomass 
+		double maxLightRateGrid = lightFlux*3600*gridArea/biomass;
+		return Math.min(maxLightRateOrganism, maxLightRateGrid);
 	}
 
 	/**
