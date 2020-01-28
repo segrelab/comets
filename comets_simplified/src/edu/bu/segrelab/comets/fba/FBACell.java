@@ -672,20 +672,22 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		double rho = 1.0;
 		
 		// If we have multiple concurrent models in the cell, we want to update
-		// them all in random order
-		//unless cParams.randomOrder is false, 
-		//in which case we run each model in the same order every time - DEPRECATED
+		// them all in random order- DEPRECATED
+		// int[] updateOrder = Utility.randomOrder(models.length);
 		// DJORDJE Changes to partition media between models and simulate simultaneously rather than simulating in random order.
-		/*int[] updateOrder = Utility.randomOrder(models.length);
-		if (!pParams.getRandomOrder()){ 
-		updateOrder = new int[models.length];
-		for (int a=0; a<models.length; a++){
-		updateOrder[a]=a;
-		}
-		}*/
 		
-			for (int a=0; a<models.length; a++)
-			{
+		//unless cParams.randomOrder is false, 
+		//in which case we run each model in the same order every time
+//		if (!pParams.getRandomOrder()){ 
+//			updateOrder = new int[models.length];
+//			for (int a=0; a<models.length; a++)
+//			{
+//				updateOrder[a]=a;
+//			}
+//		}
+		
+		for (int a=0; a<models.length; a++)
+		{
 			// i = the current model index to run.
 			int i = a;
 
@@ -711,7 +713,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				media = world.getModelMediaAt(x, y, i);
 			else if (cParams.getNumLayers() > 1)
 				media = world3D.getModelMediaAt(x, y, z, i);
-			
+		
 			//split media
 			for (int j=0; j<media.length; j++)
 				media[j] = media[j]*modelShare[i];
@@ -795,11 +797,21 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					break;
 				
 			}
+			/***************** Calculate bounds for Light (photon) uptake **********/
+			double lightAbsSurfaceToWeight = ((FBAModel)models[i]).getLightAbsSurfaceToWeight();
+			double [] lightAbsorption = ((FBAModel)models[i]).getLightAbsorption();
+			for (int j=0; j<lb.length; j++)
+			{
+				if (lightAbsorption[j] > 0) {
+					rates[j] = Math.min(Math.abs(lb[j]), calcMaxLightUptake(media[j], biomass[i], cParams.getSpaceWidth()*cParams.getSpaceWidth(), lightAbsorption[j], lightAbsSurfaceToWeight));
+					System.out.println(rates[j]+ "\t"+ media[j]+ "\t"+ lightAbsSurfaceToWeight+ "\t"+ biomass[i]+"\t"+  cParams.getSpaceWidth());
+				}
+				lb[j] = -1 * rates[j]/rho;
+			}
 			
 			for (int j=0; j<lb.length; j++)
 			{
 				lb[j] = -1 * rates[j]/rho;
-;
 			}
 			if (DEBUG)
 			{
@@ -810,8 +822,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				}
 				System.out.println("//");
 			}
-		    ((FBAModel)models[i]).setExchLowerBounds(lb);
-		    
+			((FBAModel)models[i]).setExchLowerBounds(lb);
+
+
 			/************************* SET MAX BIOMASS *****************************/
 		    //only set if the upper bound due to space constraints is lower than the default UB
 		    double bioub = (cParams.getMaxSpaceBiomass() - (Utility.sum(biomass) + Utility.sum(deltaBiomass))) / (biomass[i] * cParams.getTimeStep());
@@ -830,7 +843,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			}
 			
 			/*************************** RUN THE FBA! ****************************/
-			
 			int stat = models[i].run();
 			fluxes[i] = ((FBAModel)models[i]).getFluxes();
 
@@ -859,6 +871,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				{
 					mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
 //					System.out.print("\t" + exchFlux[j]);
+					if (lightAbsorption[j] > 0) {
+						// Light is not used up as this is a flux
+						mediaDelta[j] = 0;
+					}
+					else
+						mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
 				}
 				deltaMedia[i] = mediaDelta; // DJORDJE
 
@@ -916,7 +934,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			else if (cParams.getNumLayers() > 1)
 				world3D.changeModelMedia(x, y, z, a, deltaMedia[a]);
 
-						}
+		}
 		//Jean Section for batch dilute Checks if models are growing and if they all stopped growing sets stationary phase in cell.
 		// This flag will remain on until the environment is updated.
 		if(cParams.getBatchDilution()==true){
@@ -924,27 +942,27 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			for (int a=0; a<models.length; a++){
 				if(deltaBiomass[a]>0.0){
 					stationaryStatus =false;
-						}
-					}
-						}
+				}
+			}
+		}
 		return updateCellData(deltaBiomass, fluxes, allModelsGrowthRates);
-				}
-
+	}
+	
 	private double calcMichaelisMentenRate(double mediaConc, double km, double vMax, double hill)
-				{
+	{
 		return mediaConc * vMax / (km + mediaConc);
-				}
-				
+	}
+	
 	private double calcPseudoMonodRate(double mediaConc, double alpha, double w)
-				{
+	{
 		return Math.min(mediaConc * alpha, w);
-		}
-
+	}
+	
 	private double calcStandardExchange(double mediaConc)
-		{
+	{
 		return mediaConc;
-		}
-		
+	}
+
 	
 	
 	/** Adds demographic noise to the biomass according to the procedure in 
@@ -1000,7 +1018,30 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			biomassShare[i] = biomass[i]/Utility.sum(biomass); 
 		return biomassShare;		
 	}
-	
+
+
+	/**
+	 * Calculates the maximum light uptake.
+	 * This is determined by the minimum value of:
+	 * 1) The amount of light the organism can take up
+	 * 2) The amount of light entering the grid cell
+	 * @param lightFlux The "concentration" of photons i actually a flux [mmol photons/m^2/s]
+	 * @param biomass The total biomass in the grid cell of this organism [gDW]
+	 * @param gridSize The length scale of each grid in the cell [m]
+	 * @param absorption The absorption coefficient [unitless]
+	 * @param lightAbsSurfaceToWeight The ratio between the surface area absorbing photons and the dry weight [mm/gDW]
+	**/
+	private double calcMaxLightUptake(double lightFlux, double biomass, double gridArea, 
+									  double absorption, double lightAbsSurfaceToWeight)
+	{
+		// *3600 converts from per second to per hour
+		double maxLightRateOrganism = lightFlux*3600*lightAbsSurfaceToWeight*absorption;
+		// Grid area is the surface area of the grid cell, assuming sqaure grid cells
+		// The absolute maximum uptake rate of light is the total flux into the grid cell divided by the biomass 
+		double maxLightRateGrid = lightFlux*3600*gridArea/biomass;
+		return Math.min(maxLightRateOrganism, maxLightRateGrid);
+	}
+
 	/**
 	 * Updates the data owned by this FBACell. The fluxes are stored internally, while the
 	 * deltaBiomass is used to calculate the change in biomass applied to the FBACell.
@@ -1027,15 +1068,14 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			if(fbaModels[i].getNeutralDrift() && deltaBiomass[i]>0.0 && cParams.getDeathRate()==0.0)
 			{   
 				biomass[i]=addDemographicNoise(biomass[i], biomassGrowthRates[i], fbaModels[i].getNeutralDriftSigma());
-					}
+			}
 			else if(fbaModels[i].getNeutralDrift() && cParams.getDeathRate()!=0.0)
-					{
+			{
 				System.out.println("Error in model "+i+": Demographic noise is applies only if the death rate for the model is zero. Noise will not be applied.");
 				System.err.println("Error in model "+i+": Demographic noise is applies only if the death rate for the model is zero. Noise will not be applied.");
 			}
 			
-			
-			
+
 			if (biomass[i] < cParams.getMinSpaceBiomass())
 				biomass[i] = 0;
 			if (biomass[i] == 0)
@@ -1179,7 +1219,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		for (int i=0; i<newModels.length; i++)
 			fbaModels[i] = (FBAModel)newModels[i];
 	}
-	
+
 	public CometsParameters getCometsParameters() {
 		// Get the comets parameters
 		return cParams;
