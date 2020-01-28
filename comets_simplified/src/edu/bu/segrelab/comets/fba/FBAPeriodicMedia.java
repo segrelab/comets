@@ -4,6 +4,13 @@ package edu.bu.segrelab.comets.fba;
 //import java.lang.*;
 import java.util.Arrays;
 
+/**
+ * FBAPeriodicMedia
+ * -------------
+ * Defines the code for calculating periodic media conditions. Used primarily to calculate day/night cycle
+ *
+ * @author Snorre Sulheim snorre.sulheim@sintef.no
+ */
 public class FBAPeriodicMedia{
 	private int numCols;
 	private int numRows;

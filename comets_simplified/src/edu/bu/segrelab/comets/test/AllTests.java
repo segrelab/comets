@@ -6,6 +6,7 @@ import org.junit.runners.Suite.SuiteClasses;
 
 import edu.bu.segrelab.comets.test.integration.IntTestExternalReactions;
 import edu.bu.segrelab.comets.test.integration.IntTestFBAModelOptimization;
+import edu.bu.segrelab.comets.test.integration.IntTestRunningLayouts;
 import edu.bu.segrelab.comets.test.integration.TestGurobi;
 import edu.bu.segrelab.comets.test.integration.TestGurobiObjectiveFunctions;
 import edu.bu.segrelab.comets.test.integration.TestParametersIntegration;
@@ -35,6 +36,7 @@ import edu.bu.segrelab.comets.test.unit.reaction.TestReactionODE;
 	//Integration
 	IntTestExternalReactions.class,
 	IntTestFBAModelOptimization.class,
+	IntTestRunningLayouts.class,
 	TestGurobi.class,
 	TestGurobiObjectiveFunctions.class,
 	TestParametersIntegration.class
