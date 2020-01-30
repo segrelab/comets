@@ -3,18 +3,18 @@
 	allowCellOverlap = true
 	deathRate = 0
 	maxCycles = 2
-	maxSpaceBiomass = 1000000
+	maxSpaceBiomass = 0.00022
 	minSpaceBiomass = 2.5e-11
 	pauseOnStep = false
 	randomOrder = true
-	spaceWidth = 2.1544
+	spaceWidth = 0.01
 	simulateActivation = false
 	timeStep = 1
 	toroidalWorld = false
 	randomSeed = 0
 	colorRelative = true
 	displayLayer = 0
-	pixelScale = 10
+	pixelScale = 5
 	showCycleTime = true
 	showCycleCount = true
 	saveslideshow = false
@@ -36,13 +36,13 @@
 	defaultW = 10
 	numExRxnSubsteps = 10
 	writeFluxLog = false
-	fluxLogName = C:\sync\biomes\cellulose\optima\temp\log_flux.m
+	fluxLogName = ./flux.m
 	fluxLogRate = 1
 	writeMediaLog = false
-	mediaLogName = C:\sync\biomes\cellulose\optima\temp\log_media.m
+	mediaLogName = ./media.m
 	mediaLogRate = 1
 	writeBiomassLog = false
-	biomassLogName = C:\sync\biomes\cellulose\optima\temp\log_biomass.m
+	biomassLogName = ./biomass.m
 	biomassLogRate = 1
 	writeTotalBiomassLog = false
 	totalBiomassLogRate = 1
@@ -51,24 +51,23 @@
 	writeMatFile = false
 	MatFileName = ./comets_log.mat
 //
-model_file yeastGEMxml.txt
+model_file yeastGEM_renamedmat_noMaintRxn.txt
 	model_world
 		grid_size 1 1
 		world_media
 		ac[e] 0
-		cellulose 1
+		cellulose 100
 		co2[e] 100
-		enzyme[e] 0.0001
+		enzyme[e] 100
 		ergst[e] 100
 		etoh[e] 0
 		fe2[e] 100
 		glc-D[e] 100
 		gthox[e] 0
-		h+[e] 100
 		h2o[e] 100
 		k[e] 100
 		nh4[e] 100
-		o2[e] 0
+		o2[e] 100
 		oleate[e] 100
 		palmitoleate[e] 100
 		pi[e] 100
@@ -139,6 +138,7 @@ model_file yeastGEMxml.txt
 		s_0780[e] 0
 		s_0788[e] 0
 		s_0791[e] 0
+		s_0796[e] 0
 		s_0826[e] 0
 		s_0844[e] 0
 		s_0851[e] 0
@@ -298,7 +298,6 @@ model_file yeastGEMxml.txt
 		zymst[e] 100
 	//
 	diffusion_constants 1.000000e-06
-		1 0
 	//
 	media
 	//
@@ -315,10 +314,10 @@ initial_pop
 //
 reactions
 	reactants
-		1 2 7.000000e-01
-		2 4 1 1.157407e-05
+		1 2 7.000000e-02
+		2 4 1 1.000000e-01
 	enzymes
-		1 4 1.466544e-01
+		1 4 1.600000e-01
 	products
-		1 8 2.182000e+02
+		1 8 200
 //

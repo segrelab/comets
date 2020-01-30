@@ -580,7 +580,6 @@ public class CometsParameters implements CometsConstants
 			throw new NumberFormatException("metaboliteDilutionRate must be between 0-1");
 		}
 		metaboliteDilutionRate = rate;
-		System.out.println("itgotset");
 	}
 
 	
