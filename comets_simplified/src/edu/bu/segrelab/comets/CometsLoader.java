@@ -56,17 +56,6 @@ public interface CometsLoader
 	public int loadLayoutFile(String filename, Comets c, boolean gui) throws IOException;
 	
 	/**
-	 * Retrieves the world loaded by this <code>CometsLoader</code> or <code>null</code>
-	 * @return a freshly loaded <code>World2D</code>
-	 */
-	public World3D getWorld3D();	
-	/**
-	 * Retrieves the world loaded by this <code>CometsLoader</code> or <code>null</code>
-	 * @return a freshly loaded <code>World2D</code>
-	 */
-	public World2D getWorld();
-
-	/**
 	 * Retrieves the array of <code>Models</code> loaded in loadLayoutFile().
 	 * @return an array of <code>Models</code>
 	 */

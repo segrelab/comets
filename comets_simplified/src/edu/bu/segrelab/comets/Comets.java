@@ -44,6 +44,7 @@ import edu.bu.segrelab.comets.event.SimulationStateChangeEvent;
 import edu.bu.segrelab.comets.event.SimulationStateChangeListener;
 import edu.bu.segrelab.comets.exception.CometsArgumentException;
 import edu.bu.segrelab.comets.exception.ParameterFileException;
+import edu.bu.segrelab.comets.fba.FBAWorld;
 import edu.bu.segrelab.comets.ui.CometsInfoFrame;
 import edu.bu.segrelab.comets.ui.CometsMenuBar;
 import edu.bu.segrelab.comets.ui.CometsParametersPanel;
@@ -90,7 +91,7 @@ public class Comets implements CometsConstants,
 							   CometsChangeListener
 {
 
-	private String versionString = "2.7.3, Branch singleton_world r1, 31 January 2020";
+	private String versionString = "2.7.3, Branch singleton_world r2, 31 January 2020";
 
 	
 	/**
@@ -101,7 +102,7 @@ public class Comets implements CometsConstants,
 
 	//More debug/test features
 	public static boolean AUTORUN = true; //Have the constructor run the script it's given?
-	public static boolean EXIT_AFTER_SCRIPT = true; //Disable to allow debugging & tests
+	public static boolean EXIT_AFTER_SCRIPT = true; //Disable to allow debugging & tests (see the TComets class) 
 	public static boolean DEBUG_COMMAND_LINE_MODE = false;
 	
 	// The setup pane 
@@ -111,8 +112,6 @@ public class Comets implements CometsConstants,
 	protected PackageParameters pParams;  // parameters specific to the package
 	
 	private Model[] initModels, models;
-	private World2D initWorld, world;
-	private World3D initWorld3D, world3D;
 	private List<Cell> initCellList, cellList;
 
 	private int mode;
@@ -467,7 +466,7 @@ public class Comets implements CometsConstants,
 		reader.close();
 		
 		// everything's loaded... supposedly. make sure, then run.
-		if (world == null && world3D == null)
+		if (World.getInstance() == null)
 			throw new IOException("No world loaded - halting execution. You might want to check your layout file.");
 		else if (models == null || models.length == 0)
 			throw new IOException("No models loaded - halting execution. You might want to check the location of the model files or the model files themselves.");
@@ -604,7 +603,7 @@ public class Comets implements CometsConstants,
 	 */
 	public BufferedImage takeScreenshot(int displayToggle, boolean colorRelative, double colorValue)
 	{	
-		int numMedia = world.getNumMedia();
+		int numMedia = World.getNumMedia();
 		int pixelScale = cParams.getPixelScale();
 		int numCols = cParams.getNumCols();
 		int numRows = cParams.getNumRows();
@@ -640,8 +639,7 @@ public class Comets implements CometsConstants,
 					}
 				}
 			}
-			else
-				m[0] = Utility.max(world.getAllMedia(), displayToggle);
+			else m[0] = Utility.max(((FBAWorld) World.getInstance()).getAllMedia(), displayToggle);
 		}
 		else
 		{
@@ -661,14 +659,14 @@ public class Comets implements CometsConstants,
 				// I'll come back later and do it right.
 
 				int col = cParams.getBackgroundColor();
-				if (world.isBarrier(x, y))
+				if (World.getInstance().isBarrier(x, y, 0)) //we're assuming 2D worlds for now
 				{
 					col = Utility.pColor(125, 125, 125);
 				}
 
 				else if (displayToggle == numMedia) // if it's numMedia, then display biomass levels.
 				{
-					Cell cell = world.getCellAt(x, y);
+					Cell cell = World.getInstance().getCellAt(x, y, 0); 
 					if (cell != null)
 					{
 						double[] biomass = cell.getBiomass();
@@ -701,7 +699,7 @@ public class Comets implements CometsConstants,
 				}
 				else // otherwise, use media levels
 				{
-					double[] media = world.getMediaAt(x, y);
+					double[] media = World.getInstance().getMediaAt(x, y, 0);
 					col = Utility.pColor((int)(media[displayToggle]*(255/m[0])), 0, 0);
 				}
 				
@@ -803,29 +801,15 @@ public class Comets implements CometsConstants,
 			}
 			newModels[newModels.length-1] = model;
 			
-			//If there is a 3D world get rid of it
-			if (world3D != null)
-			{
-				world3D.destroy();
+			// Make a new World
+			loader.createNewWorld(this, newModels);
+			cellList = new ArrayList<Cell>();
+			World.setInitInstance(World.getInstance().backup());
+			initModels = new Model[newModels.length];
+			for (int i=0; i<initModels.length; i++)	{
+				initModels[i] = newModels[i].clone();
 			}
-			//Destroy 2D world too
-			if (world != null)
-			{
-				world.destroy();
-			}
-			// If there's no world loaded, make a new one! Done!
-			if (world == null)
-			{
-				world = loader.createNewWorld(this, newModels);
-				cellList = new ArrayList<Cell>();
-				initWorld = world.backup();
-				initModels = new Model[newModels.length];
-				for (int i=0; i<initModels.length; i++)
-				{
-					initModels[i] = newModels[i].clone();
-				}
-				initCellList = new ArrayList<Cell>();
-			}
+			initCellList = new ArrayList<Cell>();
 
 			// Otherwise, update the old one and all cells that may (or may not) exist
 /*			else
@@ -844,7 +828,7 @@ public class Comets implements CometsConstants,
 */
 			
 			models = newModels;
-			world.updateWorld();
+			World.getInstance().updateWorld();
 			backupState(true);
 			if(!cParams.isCommandLineOnly())
 			{
@@ -892,7 +876,7 @@ public class Comets implements CometsConstants,
 	 */
 	public String[] getMediaNames()
 	{
-		return world.getMediaNames();
+		return World.getMediaNames();
 	}
 	
 	/**
@@ -914,29 +898,7 @@ public class Comets implements CometsConstants,
 	{
 		return cellList;
 	}
-	
-	/**
-	 * Returns the World2D being used in the program.<br>
-	 * Note that this will likely be a subclass (<code>FBAWorld</code>, etc),
-	 * but the abstract type is used here.
-	 *
-	 * @return a World2D or <code>null</code> if it hasn't been instantiated.
-	 */
-	public World2D getWorld()
-	{
-		return world;
-	}
-	/**
-	 * Returns the World3D being used in the program.<br>
-	 * Note that this will likely be a subclass (<code>FBAWorld</code>, etc),
-	 * but the abstract type is used here.
-	 *
-	 * @return a World2D or <code>null</code> if it hasn't been instantiated.
-	 */
-	public World3D getWorld3D()
-	{
-		return world3D;
-	}
+
 	/**
 	 * Returns the array of loaded Models.<br>
 	 * These will likely be subclasses, but the abstract type is used here.
@@ -986,7 +948,7 @@ public class Comets implements CometsConstants,
 			JOptionPane.showMessageDialog(cFrame, "No cells initialized!");
 			return;
 		}
-		else if (world == null && world3D == null)
+		else if (World.getInstance() == null)
 		{
 			JOptionPane.showMessageDialog(cFrame, "World not initialized!");
 			return;
@@ -1097,7 +1059,7 @@ public class Comets implements CometsConstants,
 			}
 			cParams.setNumCols(newCols);
 			cParams.setNumRows(newRows);
-			world.updateWorld();
+			World.getInstance().updateWorld();
 
 			setupPane.revalidate();
 		}
@@ -1137,7 +1099,7 @@ public class Comets implements CometsConstants,
 	 */
 	public void editModelParametersDialog()
 	{
-		if (world == null && world3D == null)
+		if (World.getInstance() == null)
 		{
 			JOptionPane.showMessageDialog(cFrame, "No World loaded!");
 			return;
@@ -1158,16 +1120,8 @@ public class Comets implements CometsConstants,
 					JOptionPane.DEFAULT_OPTION);
 		if (response == JOptionPane.OK_OPTION)
 		{
-			for (int i=0; i<models.length; i++)
-				models[i].applyParameters();
-			if (world != null)
-			{
-				world.updateWorld();
-			}
-			if (world3D != null)
-			{
-				world3D.updateWorld();
-			}
+			for (int i=0; i<models.length; i++)	models[i].applyParameters();
+			if (World.getInstance() != null) World.getInstance().updateWorld();
 		}
 	}
 	
@@ -1202,8 +1156,7 @@ public class Comets implements CometsConstants,
 		}
 		setupPane.revalidate();
 		setupPane.repaint();
-		if (world != null)
-			world.updateWorld();
+		if (World.getInstance() != null) World.getInstance().updateWorld();
 	}
 
 	/**
@@ -1263,7 +1216,7 @@ public class Comets implements CometsConstants,
 			cellUndoDeque.removeFirst();
 			modelUndoDeque.removeFirst();
 		}
-		World2D undoWorld = world.backup();
+		World2D undoWorld = ((World2D) World.getInstance()).backup();
 		List<Cell> undoCells = new ArrayList<Cell>();
 		Iterator<Cell> it = cellList.iterator();
 		while (it.hasNext())
@@ -1308,7 +1261,7 @@ public class Comets implements CometsConstants,
 			modelRedoStack.push(modelUndoDeque.removeLast());
 
 //			endSimulation();
-			world.destroy();
+			World.getInstance().destroy();
 			
 			cMenuBar.canRedo(true);
 			resetSimulationToLastUndo();
@@ -1332,7 +1285,7 @@ public class Comets implements CometsConstants,
 			modelUndoDeque.addLast(modelRedoStack.pop());
 			
 //			endSimulation();
-			world.destroy();
+			World.getInstance().destroy();
 			
 			cMenuBar.canUndo(true);
 			resetSimulationToLastUndo();
@@ -1349,7 +1302,8 @@ public class Comets implements CometsConstants,
 	 */
 	private void resetSimulationToLastUndo()
 	{
-		world = worldUndoDeque.removeLast();
+		World world = worldUndoDeque.removeLast();
+		World.setInstance(world);
 		// here's a disconnect... the old world might have a different
 		// size than the new world, but the main place where we keep
 		// track of world sizes is in the CometsParameters.
@@ -1388,16 +1342,16 @@ public class Comets implements CometsConstants,
 	 */
 	public void saveSimulationState()
 	{
-		if (world != null) // if there's no world, then don't bother backing anything up!
+		if (World.getInstance() != null) // if there's no world, then don't bother backing anything up!
 		{
-			initWorld = world.backup();
+			World.setInitInstance(World.getInstance().backup());
 			if (cellList != null || cellList.size() > 0)
 			{
 				initCellList = new ArrayList<Cell>();
 				Iterator<Cell> it = cellList.iterator();
 				while (it.hasNext())
 				{
-					initCellList.add(it.next().backup(initWorld));
+					initCellList.add(it.next().backup((World2D) World.getInitInstance()));
 				}
 			}
 		}
@@ -1428,7 +1382,7 @@ public class Comets implements CometsConstants,
 	 */
 	public void saveBiomassSnapshot()
 	{
-		if (world == null)
+		if (World.getInstance() == null)
 		{
 			JOptionPane.showMessageDialog(cFrame, "There's no model loaded!");
 			return;
@@ -1459,7 +1413,7 @@ public class Comets implements CometsConstants,
 							fw.write("\n\t");
 							for (int k=0; k<cParams.getNumRows(); k++)
 							{
-								double[] biomass = world.getBiomassAt(j, k);
+								double[] biomass = World.getInstance().getBiomassAt(j, k, 0);
 								fw.write(biomass[i] + " ");
 							}
 						}
@@ -1473,7 +1427,7 @@ public class Comets implements CometsConstants,
 						for (int j=0; j<cParams.getNumRows(); j++)
 						{
 							fw.write(i + "\t" + j);
-							double[] biomass = world.getBiomassAt(i, j);
+							double[] biomass = World.getInstance().getBiomassAt(i, j, 0);
 							for (int k=0; k<biomass.length; k++)
 							{
 								fw.write("\t" + biomass[k]);
@@ -1574,19 +1528,10 @@ public class Comets implements CometsConstants,
 		{
 			// Load the layout file.
 			loader.loadLayoutFile(filename, this, !cParams.isCommandLineOnly());
-			if (world != null)
+			if (World.getInstance() != null)
 			{
-				world.destroy();
-				initWorld.destroy();
-				world = null;
-				initWorld = null;
-			}
-			if (world3D != null)
-			{
-				world3D.destroy();
-				initWorld3D.destroy();
-				world3D = null;
-				initWorld3D = null;
+				World.getInstance().destroy();
+				World.getInitInstance().destroy();
 			}
 			
 			if(!cParams.isCommandLineOnly())
@@ -1607,13 +1552,11 @@ public class Comets implements CometsConstants,
 			
 			if (cParams.getNumLayers()==1)
 			{
-				world = loader.getWorld();
 				if(!cParams.isCommandLineOnly())
 					this.showLayoutToolbar(true);
 			}
 			else if(cParams.getNumLayers()>1)
 			{
-				world3D = loader.getWorld3D();
 				if(!cParams.isCommandLineOnly())
 					this.showLayoutToolbar(false);
 			}
@@ -1621,17 +1564,13 @@ public class Comets implements CometsConstants,
 				this.cMenuBar.setMode(SETUP_MODE);
 			models = loader.getModels();
 			cellList = loader.getCells();
-			if (cParams.getNumLayers()==1)
-				initWorld = world.backup();
-			else if(cParams.getNumLayers()>1)
-				initWorld3D = world3D.backup();
 			initCellList = new ArrayList<Cell>();
 			for (Cell cell : cellList)
 			{
 				if (cParams.getNumLayers()==1)
-					initCellList.add(cell.backup(initWorld));
+					initCellList.add(cell.backup((World2D) World.getInstance()));
 				else if(cParams.getNumLayers()>1)
-					initCellList.add(cell.backup(initWorld3D));
+					initCellList.add(cell.backup((World3D) World.getInstance()));
 			}
 			if (cParams.getNumLayers()==1)
 			{
@@ -1660,7 +1599,7 @@ public class Comets implements CometsConstants,
 	 */
 	public void resetSimulationToSavedState()
 	{
-		if (world != null)
+		if (World.getInstance() != null)
 		{
 			String str = "This will reset the simulation to the\nmost recently saved state.\n\nAny unsaved data will be lost!\n\nContinue?";
 			int result = JOptionPane.showConfirmDialog(cFrame, 
@@ -1671,24 +1610,28 @@ public class Comets implements CometsConstants,
 			if (result == JOptionPane.OK_OPTION)
 			{
 				endSimulation();
-				world.destroy();
+				World.getInstance().destroy();
 				
-				world = initWorld;
+				World.setInstance(World.getInitInstance());
 				// here's a disconnect... the old world might have a different
 				// size than the new world, but the main place where we keep
 				// track of world sizes is in the CometsParameters.
 				//
 				// so... crap. guess I have to throw in a hack to set that.
-				cParams.setNumCols(world.getNumCols());
-				cParams.setNumRows(world.getNumRows());
+				cParams.setNumCols(World.getInstance().getNumCols());
+				cParams.setNumRows(World.getInstance().getNumRows());
 				cellList = initCellList;
 				
-				initWorld = world.backup();
 				initCellList = new ArrayList<Cell>();
 				Iterator<Cell> it = cellList.iterator();
 				while (it.hasNext())
 				{
-					initCellList.add(it.next().backup(initWorld));
+					if (World.getInitInstance().getNumLayers() > 1) {
+						initCellList.add(it.next().backup((World3D) World.getInitInstance()));
+					}
+					else {
+						initCellList.add(it.next().backup((World2D) World.getInitInstance()));
+					}
 				}
 				
 				if(siFrame != null)
@@ -1863,9 +1806,9 @@ public class Comets implements CometsConstants,
 						}
 					});
 		}
-		if (siFrame.hasInfoPanel() == false && world != null)
+		if (siFrame.hasInfoPanel() == false && World.getInstance() != null)
 		{
-			siFrame.setInfoPanel(world.getInfoPanel(0, 0));
+			siFrame.setInfoPanel(World.getInstance().getInfoPanel(0, 0));
 		}
 		siFrame.setVisible(b);
 	}
@@ -1934,7 +1877,7 @@ public class Comets implements CometsConstants,
 		if (result == JOptionPane.OK_OPTION)
 		{
 			double maxFraction = noiseField.getDoubleValue();
-			world.addMediaNoise(maxFraction);
+			((World2D) World.getInstance()).addMediaNoise(maxFraction);
 			setupPane.repaint();
 		}		
 	}
@@ -1963,7 +1906,7 @@ public class Comets implements CometsConstants,
 		if (result == JOptionPane.OK_OPTION)
 		{
 			double maxFraction = noiseField.getDoubleValue();
-			world.addBiomassNoise(maxFraction);
+			((World2D) World.getInstance()).addBiomassNoise(maxFraction);
 			setupPane.repaint();
 		}				
 	}
@@ -1980,8 +1923,8 @@ public class Comets implements CometsConstants,
 		cParamsPanel.updateState(this);
 		setupPane.revalidate();
 		setupPane.repaint();
-		if (world != null)
-			world.updateWorld();		
+		if (World.getInstance() != null)
+			World.getInstance().updateWorld();		
 	}
 
 	public void loadParametersFile()

@@ -7,7 +7,6 @@ import java.util.Random;
 import java.util.Set;
 
 import edu.bu.segrelab.comets.CometsConstants;
-import edu.bu.segrelab.comets.CometsParameters;
 
 /**
  * Implements a number of static utility functions. For example, this includes a 

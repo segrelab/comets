@@ -11,7 +11,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.fba.FBAParameters.BiomassMotionStyle;
 
 /**A test case for the Enum FBAParameters.BiomassMotionStyle

@@ -1,23 +1,20 @@
 package edu.bu.segrelab.comets.test.etc;
 
-import static org.junit.Assert.*;
-
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Stack;
-import java.util.concurrent.CyclicBarrier;
 
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import edu.bu.segrelab.comets.Comets;
+import edu.bu.segrelab.comets.CometsConstants;
+import edu.bu.segrelab.comets.fba.FBACometsLoader;
+import edu.bu.segrelab.comets.fba.FBAModel;
+
 /**A test class to experiment with kinetic parameters in an attempt to reconcile 
  * PseudoOrganism behavior with single-enzyme Michaelis-Menten kinetics
  * 
@@ -28,22 +25,6 @@ import org.junit.Test;
  * @author mquintin 3/21/2017
  *
  */
-import org.junit.rules.TemporaryFolder;
-
-import edu.bu.segrelab.comets.Cell;
-import edu.bu.segrelab.comets.Comets;
-import edu.bu.segrelab.comets.CometsConstants;
-import edu.bu.segrelab.comets.CometsParameters;
-import edu.bu.segrelab.comets.Model;
-import edu.bu.segrelab.comets.PackageParameters;
-import edu.bu.segrelab.comets.World2D;
-import edu.bu.segrelab.comets.event.CometsChangeListener;
-import edu.bu.segrelab.comets.event.CometsLoadListener;
-import edu.bu.segrelab.comets.event.SimulationStateChangeListener;
-import edu.bu.segrelab.comets.fba.FBACometsLoader;
-import edu.bu.segrelab.comets.fba.FBAModel;
-import edu.bu.segrelab.comets.reaction.ReactionModel;
-import edu.bu.segrelab.comets.test.classes.TComets;
 public class TestKineticParameters implements CometsConstants{
 
 	static Comets comets;

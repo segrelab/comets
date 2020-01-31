@@ -14,6 +14,7 @@ import edu.bu.segrelab.comets.fba.ui.ThreadParametersPanel;
 import edu.bu.segrelab.comets.ui.ParametersPanel;
 import edu.bu.segrelab.comets.util.ParameterState;
 import edu.bu.segrelab.comets.ParameterType;
+import edu.bu.segrelab.comets.World;
 
 /**
  * FBAParameters
@@ -556,8 +557,8 @@ public class FBAParameters implements PackageParameters
 		//		{
 		//			((FBAModel)models[i]).setDefaultMetabDiffConst(d);
 		//		}
-		if (c.getWorld() != null)
-			((FBAWorld)c.getWorld()).setDefaultMediaDiffusionConstant(d);
+		if (World.getInstance() != null && !World.getInstance().is3D())
+			((FBAWorld) World.getInstance()).setDefaultMediaDiffusionConstant(d);
 	}
 
 	public void setDefaultVelocityVector(double Vx, double Vy, double Vz)

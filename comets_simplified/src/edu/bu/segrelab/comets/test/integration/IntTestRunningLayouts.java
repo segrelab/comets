@@ -1,16 +1,7 @@
 package edu.bu.segrelab.comets.test.integration;
 
-import static org.junit.Assert.*;
-
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.URL;
-import java.util.Arrays;
 
-import javax.swing.JFileChooser;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.junit.After;
@@ -19,8 +10,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.test.classes.TComets;
-import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
 
 /**A class to include complete simulation runs in order to check their results
  * 
@@ -98,9 +89,9 @@ public class IntTestRunningLayouts {
 		String layoutFilePath = "comets_layout_excessall_withrxns.txt";
 		String scriptFilePath = comets.createScriptForLayout(layoutFilePath);
 		comets.loadScript(scriptFilePath);
-		double initBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
+		double initBiomass = World.getInstance().getBiomassAt(0, 0, 0)[0];
 		comets.run();
-		double finalBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
+		double finalBiomass = World.getInstance().getBiomassAt(0, 0, 0)[0];
 		assert(finalBiomass > initBiomass);
 	}
 
@@ -122,9 +113,9 @@ public class IntTestRunningLayouts {
 		String layoutFilePath = "comets_layout_unnecessary_cellulase.txt";
 		String scriptFilePath = comets.createScriptForLayout(layoutFilePath);
 		comets.loadScript(scriptFilePath);
-		double initBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
+		double initBiomass = World.getInstance().getBiomassAt(0, 0, 0)[0];
 		comets.run();
-		double finalBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
+		double finalBiomass = World.getInstance().getBiomassAt(0, 0, 0)[0];
 		assert(finalBiomass > initBiomass);
 	}
 	
@@ -144,10 +135,10 @@ public class IntTestRunningLayouts {
 			if ("glc-D[e]".equals(medianames[i])) glcIdx = i;
 		}*/
 		
-		int glcIdx = ArrayUtils.indexOf(comets.getWorld().getMediaNames(), "glc-D[e]");
-		double initGlc = comets.getWorld().getMediaAt(0, 0)[glcIdx];
+		int glcIdx = ArrayUtils.indexOf(World.getMediaNames(), "glc-D[e]");
+		double initGlc = World.getInstance().getMediaAt(0, 0, 0)[glcIdx];
 		comets.run();
-		double finalGlc = comets.getWorld().getMediaAt(0, 0)[glcIdx];
+		double finalGlc = World.getInstance().getMediaAt(0, 0, 0)[glcIdx];
 		assert(finalGlc > initGlc);
 		
 	}

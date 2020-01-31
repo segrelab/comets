@@ -1,11 +1,13 @@
 package edu.bu.segrelab.comets;
 
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.swing.JComponent;
 
+import cern.jet.random.engine.DRand;
+import edu.bu.segrelab.comets.Comets;
+import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Utility;
 
 public abstract class World implements CometsConstants
@@ -14,6 +16,11 @@ public abstract class World implements CometsConstants
 							FILLED_SPACE = 2,
 							ANY_SPACE = 3;
 
+	protected static ReactionModel reactionModel = new ReactionModel(); //static. We only need one.
+	protected static World instance = null; //this is a Singleton class. There should never be two active Worlds.
+	
+	protected static World initInstance = null; //For occasions where we want to be able to load the original world state 
+	
 	protected int numCols,   // number of grid columns (x)
 				  numRows,   // number of grid rows (y)
 				  numLayers, // number of grid layers (z)
@@ -38,7 +45,9 @@ public abstract class World implements CometsConstants
 								  // that is to remain static, at a value given
 								  // by staticMedia[i]
 
-	public World(Comets c, int numMedia)
+	protected DRand randomGenerator;
+	
+	protected World(Comets c, int numMedia)
 	{
 		this.c = c;
 		cParams = c.getParameters();
@@ -60,6 +69,8 @@ public abstract class World implements CometsConstants
 		
 		refreshPoints = new RefreshPoint[numCols][numRows][numLayers];
 		staticPoints = new StaticPoint[numCols][numRows][numLayers];
+		
+		randomGenerator = new DRand(new java.util.Date());
 	}
 
 	public abstract World backup();
@@ -73,7 +84,7 @@ public abstract class World implements CometsConstants
 	
 
 	/**
-	 * @return the number of columns in the World2D
+	 * @return the number of columns in the World
 	 */
 	public int getNumCols()
 	{
@@ -150,10 +161,10 @@ public abstract class World implements CometsConstants
 			return new double[numModels];
 	}
 
-	/**
+	/*
 	 * Returns a 4D matrix with the levels of biomass in every spot that contains a Cell.
 	 * @return a 4D matrix
-	 */
+	 *
 	public double[][][][] getBiomass()
 	{
 		Iterator<Cell> it = c.getCells().iterator();
@@ -172,17 +183,19 @@ public abstract class World implements CometsConstants
 		}
 		return biomass;
 	}
+	*/
 
 	/**
 	 * Returns the entire 4D media matrix that this <code>World2D</code> is currently holding.
 	 * The first dimension is the columns (x), the second is the rows (y), and the third is
 	 * the media array at that point.
 	 * @return a 4D array of media.
-	 */
+	 *
 	public double[][][][] getAllMedia()
 	{
 		return media;
 	}
+	*/
 	
 	/**
 	 * Returns the <code>Cell</code> at point (x, y, z) or <code>null</code> if there's nothing
@@ -222,17 +235,17 @@ public abstract class World implements CometsConstants
 	 * @see #getAllMedia()
 	 * @see #getMediaAt(int, int)
 	 */
-	public String[] getMediaNames()
+	public static String[] getMediaNames()
 	{
-		return mediaNames;
+		return instance.mediaNames;
 	}
 	
 	/**
 	 * @return the number of nutrient components in the currently loaded media
 	 */
-	public int getNumMedia()
+	public static int getNumMedia()
 	{
-		return numMedia;
+		return instance.numMedia;
 	}
 	
 	/**
@@ -358,10 +371,11 @@ public abstract class World implements CometsConstants
 	public abstract void setBiomass(int x, int y, double[] biomassDelta);
 	
 	/**
-	 * Sets the media values at (x, y) to the values in delta. Note that this <b>sets</b> the
+	 * Sets the media values at (x, y, z) to the values in delta. Note that this <b>sets</b> the
 	 * values, it doesn't add or subtract them. 
 	 * @param x
 	 * @param y
+	 * @param z
 	 * @param delta
 	 * @return <code>CometsConstants.PARAMS_OK</code> if successful, 
 	 * <code>CometsConstants.PARAMS_ERROR</code> if the delta array is the wrong length, 
@@ -1083,5 +1097,42 @@ public abstract class World implements CometsConstants
 			return BOUNDS_ERROR;
 	}
 	
+	/**Get the size of the world. Should always return an array with
+	 * exactly three members 
+	 * @return [X, Y, Z]
+	 */
+	public abstract int[] getDims();
+	
+	public boolean is3D() {
+		return this.getDims()[2] > 1;
+	};
+	
+	abstract void runExternalReactions();
+	
+	public abstract Comets getComets();
+	
+	abstract void setInitialMediaNames(String[] arr);
+	
+	abstract String[] getInitialMediaNames();
 
+	public static ReactionModel getReactionModel() {
+		return reactionModel;
+	}
+	
+	public static World getInstance() {
+		return instance;
+	}
+
+	public static void setInstance(World world) {
+		if (instance != null) instance.destroy();
+		World.instance = world;
+	}
+	
+	public static World getInitInstance() {
+		return initInstance;
+	}
+
+	public static void setInitInstance(World initInstance) {
+		World.initInstance = initInstance;
+	}
 }

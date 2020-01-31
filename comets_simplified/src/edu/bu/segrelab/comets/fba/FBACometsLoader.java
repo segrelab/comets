@@ -38,19 +38,17 @@ import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.CometsLoader;
 import edu.bu.segrelab.comets.CometsParameters;
-import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.PackageParameterBatch;
 import edu.bu.segrelab.comets.ParametersFileHandler;
 import edu.bu.segrelab.comets.RefreshPoint;
 import edu.bu.segrelab.comets.StaticPoint;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.World2D;
-import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.exception.LayoutFileException;
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.exception.ParameterFileException;
 import edu.bu.segrelab.comets.fba.ui.LayoutSavePanel;
-import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 import edu.bu.segrelab.comets.util.Point3d;
@@ -79,8 +77,6 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		}
 	}
 
-	private FBAWorld world;
-	private FBAWorld3D world3D;
 	private FBAModel[] models;
 	//protected ReactionModel reactionModel;
 	private List<Cell> cellList;
@@ -132,21 +128,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			SUBSTRATE_LAYOUT = "substrate_layout",
 			SPECIFIC_MEDIA = "specific_media",
 			VELOCITY_VECTORS = "velocity_vectors";;
-	/**
-	 * Returns the recently loaded World2D.
-	 */
-	public World2D getWorld() 
-	{ 
-		return world; 
-	}
 
-	/**
-	 * Returns the recently loaded World3D.
-	 */
-	public World3D getWorld3D() 
-	{ 
-		return world3D; 
-	}
 	/**
 	 * Returns the recently loaded array of <code>Models</code>
 	 */
@@ -205,8 +187,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 	 */
 	public int loadLayoutFile(String filename, Comets c, boolean useGui) throws IOException
 	{
-		world = null;
-		world3D = null;
+		World.setInstance(null);
 		cellList = null;
 		models = null;
 		this.useGui = useGui;
@@ -523,7 +504,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							List<String> lines = collectLayoutFileBlock(reader);
 							int numRows = c.getParameters().getNumRows();
 							int numCols = c.getParameters().getNumCols();
-							String [] mediaNames = IWorld.reactionModel.getInitialMetNames();
+							String [] mediaNames = World.getReactionModel().getInitialMetNames();
 							System.out.println("Num media"+mediaNames.length);
 							this.periodicMedia.setSize(numRows, numCols, mediaNames);
 							//FBAPeriodicMedia periodicMedia = new FBAPeriodicMedia(numRows,numCols, numMedia);
@@ -654,15 +635,15 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 					//System.out.println("OK"+c.getParameters().getNumLayers());
 					if(c.getParameters().getNumLayers()==1)
 					{
-						world = new FBAWorld(c, mediaNames, mediaConc, models);
+						FBAWorld.createInstance(c, mediaNames, mediaConc, models);
 						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
-						if (initialMediaNames != null) world.setInitialMediaNames(initialMediaNames);
+						if (initialMediaNames != null) ((FBAWorld) World.getInstance()).setInitialMediaNames(initialMediaNames);
 						if (mediaRefresh != null)
 						{
-							world.setMediaRefreshAmount(mediaRefresh);
+							((FBAWorld) World.getInstance()).setMediaRefreshAmount(mediaRefresh);
 							for (RefreshPoint rp : refreshPoints)
 							{
-								world.addMediaRefreshSpace(rp);
+								((FBAWorld) World.getInstance()).addMediaRefreshSpace(rp);
 							}
 						}
 
@@ -670,21 +651,21 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 						{
 							for (StaticPoint sp : staticPoints)
 							{
-								world.addStaticMediaSpace(sp);
+								((FBAWorld) World.getInstance()).addStaticMediaSpace(sp);
 							}
-							world.setGlobalStaticMedia(staticMedia, globalStatic);
+							((FBAWorld) World.getInstance()).setGlobalStaticMedia(staticMedia, globalStatic);
 						}
 
 						// set barrier spaces.
 						for (Point p : barrier)
 						{
-							world.setBarrier((int)p.getX(), (int)p.getY(), true);
+							((FBAWorld) World.getInstance()).setBarrier((int)p.getX(), (int)p.getY(), true);
 						}
 
 						// set specifically determined media in given spaces
 						for (Point p : specMedia.keySet())
 						{
-							world.setMedia((int)p.getX(), (int)p.getY(), specMedia.get(p));
+							((FBAWorld) World.getInstance()).setMedia((int)p.getX(), (int)p.getY(), specMedia.get(p));
 						}
 
 						// set spaces where biomass isn't allowed to diffuse out
@@ -696,14 +677,14 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							{
 								for (int i=2; i<arr.length; i++)
 								{
-									world.setDiffuseBiomassOut(arr[0], arr[1], arr[i], false);
+									((FBAWorld) World.getInstance()).setDiffuseBiomassOut(arr[0], arr[1], arr[i], false);
 								}
 							}
 							else
 							{
 								for (int i=0; i<models.length; i++)
 								{
-									world.setDiffuseBiomassOut(arr[0], arr[1], i, false);
+									((FBAWorld) World.getInstance()).setDiffuseBiomassOut(arr[0], arr[1], i, false);
 								}
 							}
 						}
@@ -717,14 +698,14 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							{
 								for (int i=2; i<arr.length; i++)
 								{
-									world.setDiffuseBiomassIn(arr[0], arr[1], arr[i], false);
+									((FBAWorld) World.getInstance()).setDiffuseBiomassIn(arr[0], arr[1], arr[i], false);
 								}
 							}
 							else
 							{
 								for (int i=0; i<models.length; i++)
 								{
-									world.setDiffuseBiomassIn(arr[0], arr[1], i, false);
+									((FBAWorld) World.getInstance()).setDiffuseBiomassIn(arr[0], arr[1], i, false);
 								}
 							}
 						}
@@ -738,14 +719,14 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							{
 								for (int i=2; i<arr.length; i++)
 								{
-									world.setDiffuseMediaOut(arr[0], arr[1], arr[i], false);
+									((FBAWorld) World.getInstance()).setDiffuseMediaOut(arr[0], arr[1], arr[i], false);
 								}
 							}
 							else
 							{
 								for (int i=0; i<numMedia; i++)
 								{
-									world.setDiffuseMediaOut(arr[0], arr[1], i, false);
+									((FBAWorld) World.getInstance()).setDiffuseMediaOut(arr[0], arr[1], i, false);
 								}
 							}
 						}
@@ -759,14 +740,14 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							{
 								for (int i=2; i<arr.length; i++)
 								{
-									world.setDiffuseMediaIn(arr[0], arr[1], arr[i], false);
+									((FBAWorld) World.getInstance()).setDiffuseMediaIn(arr[0], arr[1], arr[i], false);
 								}
 							}
 							else
 							{
 								for (int i=0; i<numMedia; i++)
 								{
-									world.setDiffuseMediaIn(arr[0], arr[1], i, false);
+									((FBAWorld) World.getInstance()).setDiffuseMediaIn(arr[0], arr[1], i, false);
 								}
 							}
 						}
@@ -783,46 +764,42 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 								diffusionConsts[index] = diffConsts.get(index);
 							}
 						}
-						world.setDiffusionConstants(diffusionConsts);
+						((FBAWorld) World.getInstance()).setDiffusionConstants(diffusionConsts);
 						if(substrate)
 						{
-							world.setSubstrateDiffusion(substrateDiffConsts);
-							world.setSubstrateLayout(substrateLayout);
+							((FBAWorld) World.getInstance()).setSubstrateDiffusion(substrateDiffConsts);
+							((FBAWorld) World.getInstance()).setSubstrateLayout(substrateLayout);
 						}
 						if(modelDiffusion){
-							world.setModelDiffusivity(modelDiffConsts);		
+							((FBAWorld) World.getInstance()).setModelDiffusivity(modelDiffConsts);		
 						}
 						if(specific)
 						{
-							world.setSpecificMedia(specificMedia);
+							((FBAWorld) World.getInstance()).setSpecificMedia(specificMedia);
 						}
 						if(friction)
 						{
-							world.setSubstrateFriction(substrateFrictionConsts);
+							((FBAWorld) World.getInstance()).setSubstrateFriction(substrateFrictionConsts);
 						}
 
 						if (periodicMedia.isSet) {
-							world.setPeriodicMedia(periodicMedia);
+							((FBAWorld) World.getInstance()).setPeriodicMedia(periodicMedia);
 						}
-
-						IWorld.reactionModel.setWorld(world);
 						
 						System.out.println("Done!");
 					}
 					else if(c.getParameters().getNumLayers()>1)
 					{
 
-						world3D = new FBAWorld3D(c, mediaNames, mediaConc, models);
+						FBAWorld3D.createInstance(c, mediaNames, mediaConc, models);
 
-						//world = new FBAWorld(w, h, media, models.length, showGraphics, toroidalWorld);
-						//System.out.println(initialMediaNames[0]);
-						if (initialMediaNames != null) world3D.setInitialMediaNames(initialMediaNames);
+						if (initialMediaNames != null) ((FBAWorld3D) World.getInstance()).setInitialMediaNames(initialMediaNames);
 						if (mediaRefresh != null)
 						{
-							world3D.setMediaRefreshAmount(mediaRefresh);
+							((FBAWorld3D) World.getInstance()).setMediaRefreshAmount(mediaRefresh);
 							for (RefreshPoint rp : refreshPoints)
 							{
-								world3D.addMediaRefreshSpace(rp);
+								((FBAWorld3D) World.getInstance()).addMediaRefreshSpace(rp);
 							}
 						}
 
@@ -830,15 +807,15 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 						{
 							for (StaticPoint sp : staticPoints)
 							{
-								world3D.addStaticMediaSpace(sp);
+								((FBAWorld3D) World.getInstance()).addStaticMediaSpace(sp);
 							}
-							world3D.setGlobalStaticMedia(staticMedia, globalStatic);
+							((FBAWorld3D) World.getInstance()).setGlobalStaticMedia(staticMedia, globalStatic);
 						}
 
 						// set barrier spaces.
 						for (Point3d p : barrier3D)
 						{
-							world3D.setBarrier((int)p.getX(), (int)p.getY(), (int)p.getZ(), true);
+							((FBAWorld3D) World.getInstance()).setBarrier((int)p.getX(), (int)p.getY(), (int)p.getZ(), true);
 						}
 
 						// set specifically determined media in given spaces
@@ -856,14 +833,14 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							{
 								for (int i=3; i<arr.length; i++)
 								{
-									world3D.setDiffuseBiomassOut(arr[0], arr[1], arr[2], arr[i], false);
+									((FBAWorld3D) World.getInstance()).setDiffuseBiomassOut(arr[0], arr[1], arr[2], arr[i], false);
 								}
 							}
 							else
 							{
 								for (int i=0; i<models.length; i++)
 								{
-									world3D.setDiffuseBiomassOut(arr[0], arr[1], arr[2], i, false);
+									((FBAWorld3D) World.getInstance()).setDiffuseBiomassOut(arr[0], arr[1], arr[2], i, false);
 								}
 							}
 						}
@@ -877,14 +854,14 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							{
 								for (int i=3; i<arr.length; i++)
 								{
-									world3D.setDiffuseBiomassIn(arr[0], arr[1], arr[2], arr[i], false);
+									((FBAWorld3D) World.getInstance()).setDiffuseBiomassIn(arr[0], arr[1], arr[2], arr[i], false);
 								}
 							}
 							else
 							{
 								for (int i=0; i<models.length; i++)
 								{
-									world3D.setDiffuseBiomassIn(arr[0], arr[1], arr[2], i, false);
+									((FBAWorld3D) World.getInstance()).setDiffuseBiomassIn(arr[0], arr[1], arr[2], i, false);
 								}
 							}
 						}
@@ -898,14 +875,14 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							{
 								for (int i=3; i<arr.length; i++)
 								{
-									world3D.setDiffuseMediaOut(arr[0], arr[1], arr[2], arr[i], false);
+									((FBAWorld3D) World.getInstance()).setDiffuseMediaOut(arr[0], arr[1], arr[2], arr[i], false);
 								}
 							}
 							else
 							{
 								for (int i=0; i<numMedia; i++)
 								{
-									world3D.setDiffuseMediaOut(arr[0], arr[1], arr[2], i, false);
+									((FBAWorld3D) World.getInstance()).setDiffuseMediaOut(arr[0], arr[1], arr[2], i, false);
 								}
 							}
 						}
@@ -919,14 +896,14 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							{
 								for (int i=3; i<arr.length; i++)
 								{
-									world3D.setDiffuseMediaIn(arr[0], arr[1], arr[2], arr[i], false);
+									((FBAWorld3D) World.getInstance()).setDiffuseMediaIn(arr[0], arr[1], arr[2], arr[i], false);
 								}
 							}
 							else
 							{
 								for (int i=0; i<numMedia; i++)
 								{
-									world3D.setDiffuseMediaIn(arr[0], arr[1], arr[2], i, false);
+									((FBAWorld3D) World.getInstance()).setDiffuseMediaIn(arr[0], arr[1], arr[2], i, false);
 								}
 							}
 						}
@@ -944,7 +921,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 								diffusionConsts[index] = diffConsts.get(index);
 							}
 						}
-						world3D.setDiffusionConstants(diffusionConsts);
+						((FBAWorld3D) World.getInstance()).setDiffusionConstants(diffusionConsts);
 												
 						System.out.println("Done!");
 					}
@@ -961,20 +938,11 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 				else if (parsed[0].equalsIgnoreCase(INITIAL_POP))
 				{
 					cellList = new ArrayList<Cell>();
-					if(c.getParameters().getNumLayers()==1)
-					{
-						if (world == null || models == null)
-						{
-							throw new IOException("Gotta load FBA models and define the grid first! The 'initial_pop' tag\n     should be at the end of the file!");
-						}
+					
+					if (World.getInstance() == null || models == null){
+						throw new IOException("Gotta load FBA models and define the grid first! The 'initial_pop' tag\n     should be at the end of the file!");
 					}
-					else if(c.getParameters().getNumLayers()>1)
-					{
-						if (world3D == null || models == null)
-						{
-							throw new IOException("Gotta load FBA models and define the grid first! The 'initial_pop' tag\n     should be at the end of the file!");
-						}
-					}
+					
 					List<String> lines = collectLayoutFileBlock(reader);
 					parseInitialPopBlock(parsed, lines);
 				}
@@ -1016,10 +984,8 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			throw new IOException("Layout file error: " + e.getMessage() + " in layout file: " + filename);
 		}
 		// at the very end, set the display layer to biomass, since now we know how many layers there are.
-		if(c.getParameters().getNumLayers()==1)
-			c.getParameters().setDisplayLayer(world.getNumMedia());
-		else if(c.getParameters().getNumLayers()>1)
-			c.getParameters().setDisplayLayer(world3D.getNumMedia());
+		c.getParameters().setDisplayLayer(World.getNumMedia());
+
 		return PARAMS_OK;
 	}
 
@@ -1301,7 +1267,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		
 		initialMediaNames = new String[mediaCount];
 		for (int i = 0; i < mediaCount; i++) initialMediaNames[i] = mediaNames.get(i);
-		IWorld.reactionModel.setInitialMetNames(initialMediaNames);
+		World.getReactionModel().setInitialMetNames(initialMediaNames);
 		
 		return LoaderState.OK;
 	}
@@ -1710,14 +1676,13 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		}
 		
 		//set global External Reactions
-		IWorld.reactionModel.setWorld((IWorld) world);
-		IWorld.reactionModel.setMediaNames(initialMediaNames);
-		IWorld.reactionModel.setExRxnEnzymes(exRxnEnzymes);
-		IWorld.reactionModel.setExRxnParams(exRxnParams);
-		IWorld.reactionModel.setExRxnRateConstants(exRxnRateConstants);
-		IWorld.reactionModel.setExRxnStoich(exRxnStoich);
-		IWorld.reactionModel.saveState();
-		IWorld.reactionModel.setup();
+		World.getReactionModel().setMediaNames(initialMediaNames);
+		World.getReactionModel().setExRxnEnzymes(exRxnEnzymes);
+		World.getReactionModel().setExRxnParams(exRxnParams);
+		World.getReactionModel().setExRxnRateConstants(exRxnRateConstants);
+		World.getReactionModel().setExRxnStoich(exRxnStoich);
+		World.getReactionModel().saveState();
+		World.getReactionModel().setup();
 		
 		return LoaderState.OK;
 	}
@@ -1816,11 +1781,11 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			}
 			for (Point p : pointHash.keySet())
 			{
-				if (world.isOnGrid((int)p.getX(), (int)p.getY()) && 
-						!world.isBarrier((int)p.getX(), (int)p.getY()))
-					cellList.add(new FBACell((int)p.getX(), (int)p.getY(), pointHash.get(p), world, models, c.getParameters(), pParams));
+				if (((FBAWorld) World.getInstance()).isOnGrid((int)p.getX(), (int)p.getY()) && 
+						!((FBAWorld) World.getInstance()).isBarrier((int)p.getX(), (int)p.getY()))
+					cellList.add(new FBACell((int)p.getX(), (int)p.getY(), pointHash.get(p), ((FBAWorld) World.getInstance()), models, c.getParameters(), pParams));
 			}
-			world.setCircles(circleSet);
+			((FBAWorld) World.getInstance()).setCircles(circleSet);
 		}
 
 		/* Final case: it's only the 'initial_pop' tag (only one token)
@@ -1855,7 +1820,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 					{
 						startingBiomass[i] = Double.valueOf(popInfo[i+2]);
 					}
-					cellList.add(new FBACell(x, y, startingBiomass, world, models, c.getParameters(), pParams));
+					cellList.add(new FBACell(x, y, startingBiomass, ((FBAWorld) World.getInstance()), models, c.getParameters(), pParams));
 				}
 				else if(c.getParameters().getNumLayers()>1)
 				{
@@ -1867,7 +1832,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 					{
 						startingBiomass[i] = Double.valueOf(popInfo[i+3]);
 					}
-					cellList.add(new FBACell(x, y, z, startingBiomass, world3D, models, c.getParameters(), pParams));
+					cellList.add(new FBACell(x, y, z, startingBiomass, ((FBAWorld3D) World.getInstance()), models, c.getParameters(), pParams));
 				}
 			}
 		}
@@ -2214,15 +2179,15 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		}
 
 		// Make sure we're not trying to overpopulate the grid.
-		if (Utility.sum(numStartingSpaces) > world.numEmptySpaces(x, y, w, h))
+		if (Utility.sum(numStartingSpaces) > ((FBAWorld) World.getInstance()).numEmptySpaces(x, y, w, h))
 		{
 			if (!cParams.allowCellOverlap())
 			{
 				String str = "The number of new spaces this layout is trying to allocate (" + Utility.sum(numStartingSpaces) + ")\n     is larger than the number of empty spaces in the ";
 				if (layoutStyle == RANDOM_RECTANGLE_LAYOUT)
-					str += "selected area (" + world.numEmptySpaces(x, y, w, h) + ").";
+					str += "selected area (" + ((FBAWorld) World.getInstance()).numEmptySpaces(x, y, w, h) + ").";
 				else
-					str += "world (" + world.numEmptySpaces(x, y, w, h) + ").";
+					str += "world (" + ((FBAWorld) World.getInstance()).numEmptySpaces(x, y, w, h) + ").";
 				return str;
 			}
 			else
@@ -2253,19 +2218,14 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			{
 				Point p = startingPoints[j];
 
-				FBACell c = (FBACell)world.getCellAt((int)p.getX(), (int)p.getY());
+				FBACell c = (FBACell) ((FBAWorld) World.getInstance()).getCellAt((int)p.getX(), (int)p.getY());
 				if (c != null) // if there's already a cell there, just add more biomass
 				{
 					c.changeBiomass(curInitBiomass);
 				}
 				else
 				{
-					cellList.add(new FBACell((int)p.getX(), (int)p.getY(),
-							curInitBiomass,
-							world,
-							models,
-							cParams,
-							pParams));
+					cellList.add(new FBACell((int)p.getX(), (int)p.getY(),curInitBiomass,((FBAWorld) World.getInstance()),models,cParams,pParams));
 				}
 			}
 		}
@@ -2394,8 +2354,8 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			String pStr = Utility.pointToString(a, b);
 			// keep looking until we find an empty spot - make sure all startCells are placed
 			while (points.containsKey(pStr) || 
-					world.isBarrier(a, b) ||
-					(!cParams.allowCellOverlap() && world.isOccupied(a, b)))
+					((FBAWorld) World.getInstance()).isBarrier(a, b) ||
+					(!cParams.allowCellOverlap() && ((FBAWorld) World.getInstance()).isOccupied(a, b)))
 			{
 				a = x + Utility.randomInt(w);
 				b = y + Utility.randomInt(h);
@@ -2436,8 +2396,8 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			{
 				Point p = new Point(i, j);
 				String pStr = Utility.pointToString(p);
-				if (!world.isBarrier(i, j) &&
-						(cParams.allowCellOverlap() || !world.isOccupied(i, j)))
+				if (!((FBAWorld) World.getInstance()).isBarrier(i, j) &&
+						(cParams.allowCellOverlap() || !((FBAWorld) World.getInstance()).isOccupied(i, j)))
 				{
 					points.put(pStr, p);
 				}
@@ -2483,7 +2443,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		{
 			for (int j=y; j<y+h; j++)
 			{
-				if (!world.isBarrier(i,j))
+				if (!((FBAWorld) World.getInstance()).isBarrier(i,j))
 					pointList.add(new Point(i, j));
 			}
 		}
@@ -3000,7 +2960,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			i++;
 		}
 
-		return new FBAWorld(c, names, concs, fbaModels);
+		return FBAWorld.createInstance(c, names, concs, fbaModels);
 	}
 
 	public void saveLayoutFile(Comets c) throws IOException
@@ -3023,7 +2983,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		int returnVal = chooser.showSaveDialog(c.getFrame());
 		if (returnVal == JFileChooser.APPROVE_OPTION)
 		{
-			saveLayoutFile(chooser.getSelectedFile().getPath(), c.getWorld(), c.getModels(), c.getCells(), CometsLoader.DO_NOT_SAVE, c.getParameters());
+			saveLayoutFile(chooser.getSelectedFile().getPath(), (World2D) World.getInstance(), c.getModels(), c.getCells(), CometsLoader.DO_NOT_SAVE, c.getParameters());
 		}
 	}
 

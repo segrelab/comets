@@ -3,13 +3,9 @@
  */
 package edu.bu.segrelab.comets.test.integration;
 
-import static org.junit.Assert.*;
-
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.StringReader;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -20,7 +16,6 @@ import org.junit.Test;
 import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.PackageParameters;
 import edu.bu.segrelab.comets.ParametersFileHandler;
-import edu.bu.segrelab.comets.exception.ParameterFileException;
 import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.test.classes.TComets;
 

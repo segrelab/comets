@@ -7,8 +7,6 @@ import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.fba.FBACell;
 import edu.bu.segrelab.comets.fba.FBAParameters;
-import edu.bu.segrelab.comets.fba.FBAWorld;
-import edu.bu.segrelab.comets.fba.FBAWorld3D;
 
 /**A class to execute external reaction using the Runge-Kutta algorithm in a multithreaded
  * environment

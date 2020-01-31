@@ -3,7 +3,6 @@ package edu.bu.segrelab.comets.fba;
 import gurobi.*;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Collections;
 
 /**
  * This class provides the GUROBI optimizer functionality for the FBAModel class.

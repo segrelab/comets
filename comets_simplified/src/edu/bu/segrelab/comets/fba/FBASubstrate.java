@@ -1,11 +1,5 @@
 package edu.bu.segrelab.comets.fba;
 
-import edu.bu.segrelab.comets.Cell;
-import edu.bu.segrelab.comets.CometsParameters;
-import edu.bu.segrelab.comets.Model;
-import edu.bu.segrelab.comets.World2D;
-import edu.bu.segrelab.comets.World3D;
-import edu.bu.segrelab.comets.util.Utility;
 //TODO everything: complete get/set methods, make constructors
 /**
  * FBACell

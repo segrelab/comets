@@ -1,9 +1,5 @@
 package edu.bu.segrelab.comets.fba;
 
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.Point;
 import java.io.IOException;
 import java.io.File;
@@ -23,26 +19,19 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.Stack;
 
-import javax.swing.BorderFactory;
 import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
-import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
-import edu.bu.segrelab.comets.World2D;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 
 import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.reaction.RK4Runner;
-
-import java.io.*;
 
 /**
  * FBAWorld
@@ -96,13 +85,28 @@ implements CometsConstants
 
 	private double defaultDiffConst;
 
+	//Factory methods to access the private constructors for the Singleton
+	public static FBAWorld3D createInstance(Comets c, int numMedia) {
+		FBAWorld3D world = new FBAWorld3D(c,numMedia);
+		world.changeModelsInWorld(world.models, world.models);// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
+		World.setInstance(world);
+		return world;
+	}
+	
+	public static FBAWorld3D createInstance(Comets c, String[] mediaNames, double[] startingMedia, Model[] models) {
+		FBAWorld3D world = new FBAWorld3D(c,mediaNames, startingMedia, models);
+		world.changeModelsInWorld(world.models, world.models);// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
+		World.setInstance(world);
+		return world;
+	}
+	
 	/**
 	 * Initialize a new, empty world, tied the current <code>Comets</code> with a given
 	 * number of medium components
 	 * @param c
 	 * @param numMedia
 	 */
-	public FBAWorld3D(Comets c, int numMedia)
+	private FBAWorld3D(Comets c, int numMedia)
 	{
 		super(c, numMedia);
 	}
@@ -116,7 +120,7 @@ implements CometsConstants
 	 * @param startingMedia amount of media to start in each space
 	 * @param models models to apply to the world
 	 */
-	public FBAWorld3D(Comets c, String[] mediaNames, double[] startingMedia,
+	private FBAWorld3D(Comets c, String[] mediaNames, double[] startingMedia,
 			Model[] models)
 	{
 		this(c, startingMedia.length);
@@ -173,9 +177,6 @@ implements CometsConstants
 		runCells = new Stack<Cell>();
 		circleSet = null;
 
-		// applies all models to the world - puts names, etc, in the right order,
-		// and sets media diffusion constants where appropriate
-		changeModelsInWorld(models, models);
 		threadLock = 0;
 	}
 
@@ -466,11 +467,11 @@ implements CometsConstants
 		}
 		
 		//preserve metabolites which are involved in extracellular reactions
-		IWorld.reactionModel.reset();
-		IWorld.reactionModel.setup();
+		reactionModel.reset();
+		reactionModel.setup();
 		//String[] exRxnMets = IWorld.reactionModel.getMediaNames();
 		//if (exRxnMets == null || exRxnMets.length < 1) exRxnMets = IWorld.reactionModel.getInitialMetNames();
-		String[] exRxnMets = IWorld.reactionModel.getInitialMetNames();
+		String[] exRxnMets = reactionModel.getInitialMetNames();
 		if (exRxnMets != null){
 			for (int i = 0; i < exRxnMets.length; i++){
 				if (!mediaNamesMap.keySet().contains(exRxnMets[i])){
@@ -3360,7 +3361,7 @@ implements CometsConstants
 	//{
 	//	return circleSet;
 	//}
-
+	
 	public void setDiffusionConstants(final double[] diffConsts)
 	{
 		if(numMedia == diffConsts.length)
@@ -3401,5 +3402,40 @@ implements CometsConstants
 
 	public void setExRxnEnzymes(int[] exRxnEnzymes) {
 		this.exRxnEnzymes = exRxnEnzymes;
+	}
+
+	@Override
+	public void setBiomass(int x, int y, double[] biomassDelta) throws IllegalArgumentException {
+		throw new IllegalArgumentException("Attempted to invoke a method on a 3D World without a Z coordinate");
+	}
+
+	@Override
+	public JComponent getInfoPanel(int x, int y) throws UnsupportedOperationException {
+		throw new UnsupportedOperationException("GUI method has not been implemented for a 3D World.");
+		//TODO
+	}
+
+	@Override
+	public JComponent getInfoPanel(int x, int y, int z) {
+		throw new UnsupportedOperationException("GUI method has not been implemented for a 3D World.");
+		//TODO
+	}
+
+	@Override
+	public void updateInfoPanel(int x, int y) {
+		throw new UnsupportedOperationException("GUI method has not been implemented for a 3D World.");
+		//TODO
+	}
+
+	@Override
+	public void updateInfoPanel(int x, int y, int z) {
+		throw new UnsupportedOperationException("GUI method has not been implemented for a 3D World.");
+		//TODO
+	}
+
+	@Override
+	public void updateInfoPanel() {
+		throw new UnsupportedOperationException("GUI method has not been implemented for a 3D World.");
+		//TODO
 	}
 }

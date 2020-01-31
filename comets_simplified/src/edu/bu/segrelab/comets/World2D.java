@@ -9,9 +9,7 @@ import java.util.List;
 
 import javax.swing.JComponent;
 
-import cern.jet.random.engine.*;
 import cern.jet.random.*;
-import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.util.Utility;
 
 /**
@@ -26,7 +24,7 @@ import edu.bu.segrelab.comets.util.Utility;
  * 
  * @author Bill Riehl briehl@bu.edu
  */
-public abstract class World2D implements CometsConstants, IWorld
+public abstract class World2D extends World implements CometsConstants
 {
 	public static final int EMPTY_SPACE = 1,
 							FILLED_SPACE = 2,
@@ -56,7 +54,7 @@ public abstract class World2D implements CometsConstants, IWorld
 											  // that is to remain static, at a value given
 											  // by staticMedia[i]
 	
-	protected DRand randomGenerator; //djordje
+	
 
 	/**
 	 * The main constructor for the World2D. Every extending class should call this
@@ -64,28 +62,16 @@ public abstract class World2D implements CometsConstants, IWorld
 	 * @param c	the Comets this is being used in
 	 * @param numMedia the initial number of medium components, used to initialize the world
 	 */
-	public World2D(Comets c, int numMedia)
+	protected World2D(Comets c, int numMedia)
 	{
-		this.c = c;
-		cParams = c.getParameters();
-		pParams = c.getPackageParameters();
-		numCols = cParams.getNumCols();
-		numRows = cParams.getNumRows();
-		this.numMedia = numMedia;
+		super(c,numMedia);
+		//numLayers is not explicitly set to 1, but this shouldn't be called if Cparams.getNumLayers()>1
+		//these override super because there is no dimension for layers
 		cellGrid = new Cell[numCols][numRows];
 		media = new double[numCols][numRows][numMedia];
 		barrier = new boolean[numCols][numRows];
-		models = c.getModels();
-		mediaNames = new String[numMedia];
-		reactionModel.setWorld(this);
-
-		mediaRefresh = new double[numMedia];
-		staticMedia = new double[numMedia];
-		isStatic = new boolean[numMedia];
-		
 		refreshPoints = new RefreshPoint[numCols][numRows];
 		staticPoints = new StaticPoint[numCols][numRows];
-		randomGenerator = new DRand(new java.util.Date()); // djordje
 	}
 
 	public boolean isOnGrid(int x, int y)
@@ -94,20 +80,8 @@ public abstract class World2D implements CometsConstants, IWorld
 				y >= 0 && y < numRows);
 	}
 	
-	/**
-	 * @return the number of columns in the World2D
-	 */
-	public int getNumCols()
-	{
-		return numCols;
-	}
-	
-	/**
-	 * @return the number of rows in the World2D
-	 */
-	public int getNumRows()
-	{
-		return numRows;
+	public boolean isOnGrid(int x, int y, int z) {
+		return (isOnGrid(x,y) && z == 0);
 	}
 	
 	public int getNumModels()
@@ -277,14 +251,6 @@ public abstract class World2D implements CometsConstants, IWorld
 					Integer.valueOf(z).toString() + ") > 0, but the world is 2D.");
 		}
 		return getMediaAt(x,y);
-	}
-
-	/**
-	 * @return the number of nutrient components in the currently loaded media
-	 */
-	public int getNumMedia()
-	{
-		return numMedia;
 	}
 	
 	/**
@@ -1146,16 +1112,6 @@ public abstract class World2D implements CometsConstants, IWorld
 		return new int[]{numCols, numRows, 1};
 	}
 	
-	/**
-	 * @return A <code>String</code> array of names for each nutrient in the media. This
-	 * will be in the same order at the other various media access methods.
-	 * @see #getAllMedia()
-	 * @see #getMediaAt(int, int)
-	 */
-	public String[] getMediaNames(){
-		return mediaNames;
-	}
-	
 	public Comets getComets(){
 		return c;
 	}
@@ -1194,4 +1150,16 @@ public abstract class World2D implements CometsConstants, IWorld
 	public String[] getInitialMediaNames(){return initialMediaNames;}
 
 	public boolean is3D(){return false;}
+	
+	public void changeBiomass(int x, int y, int z, double[] biomassDelta) {
+		changeBiomass(x,y,biomassDelta);
+	}
+
+	public JComponent getInfoPanel(int x, int y, int z) {
+		return getInfoPanel(x,y);
+	}
+
+	public void updateInfoPanel(int x, int y, int z) {
+		updateInfoPanel(x,y);
+	}
 }

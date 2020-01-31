@@ -30,6 +30,7 @@ import javax.swing.JToggleButton;
 import javax.swing.SwingConstants;
 
 import edu.bu.segrelab.comets.Comets;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.ui.CometsSetupPanel;
 import edu.bu.segrelab.comets.ui.CometsToolbarPanel;
 import edu.bu.segrelab.comets.ui.DataContentPanel;
@@ -535,7 +536,7 @@ public class GradientTool extends AbstractTool
 		else
 			panel.add(biomassGradientPanel);
 		
-		if (c.getWorld().getNumMedia() > 8)
+		if (World.getNumMedia() > 8)
 		{
 			JScrollPane scrollPane = new JScrollPane(mediaGradientPanel);
 			scrollPane.setPreferredSize(new Dimension(200, 300));

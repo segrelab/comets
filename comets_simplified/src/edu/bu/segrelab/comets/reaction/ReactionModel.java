@@ -10,8 +10,8 @@ import org.apache.commons.math3.ode.FirstOrderIntegrator;
 import org.apache.commons.math3.ode.nonstiff.ClassicalRungeKuttaIntegrator;
 
 import edu.bu.segrelab.comets.CometsConstants;
-import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.reaction.ExternalReactionCalculator.CalcStatus;
 /**A class to hold the information necessary to run extracellular reactions
@@ -40,7 +40,6 @@ public class ReactionModel extends Model implements CometsConstants {
 	protected double[][] initialExRxnParams; 
 	protected String[] initialMetNames;
 
-	protected IWorld world;
 	//protected boolean worldIs3D = false;
 	//protected int x,y,z;
 	
@@ -49,10 +48,6 @@ public class ReactionModel extends Model implements CometsConstants {
 	public ReactionModel() {
 	}
 	
-	public void setWorld(IWorld world){
-		this.world = world;
-	}
-
 	/**The World may have sorted its media field. This function returns indexes to map
 	 * the new media order to the order media are listed in the ReactionModel's fields
 	 * 
@@ -60,7 +55,7 @@ public class ReactionModel extends Model implements CometsConstants {
 	 */
 	public int[] getMediaIdxs(){
 		int[] worldIdxs = new int[metNames.length];
-		List<String> worldNames = Arrays.asList(world.getMediaNames());
+		List<String> worldNames = Arrays.asList(World.getMediaNames());
 		for (int i = 0; i < metNames.length; i++){
 			String name = metNames[i];
 			int newIdx = worldNames.indexOf(name);
@@ -139,10 +134,6 @@ public class ReactionModel extends Model implements CometsConstants {
 	public void setExRxnParams(double[][] exRxnParams) {
 		this.exRxnParams = exRxnParams;
 		isSetUp = false;
-	}
-
-	public IWorld getWorld() {
-		return world;
 	}
 
 	/**Metabolite indexes in the input file referred to positions in
@@ -301,15 +292,15 @@ public class ReactionModel extends Model implements CometsConstants {
 		if (!isSetUp) return 0; //don't do anything if there aren't reactions to run
 		
 		int[] worldIdxs = getMediaIdxs(); //locations of the media in the world's lists
-		int[] dims = world.getDims();
-		double timestep_seconds = world.getComets().getParameters().getTimeStep() * 60 * 60;
-		int maxIterations = ((FBAParameters) world.getComets().getPackageParameters()).getNumExRxnSubsteps();
+		int[] dims = World.getInstance().getDims();
+		double timestep_seconds = World.getInstance().getComets().getParameters().getTimeStep() * 60 * 60;
+		int maxIterations = ((FBAParameters) World.getInstance().getComets().getPackageParameters()).getNumExRxnSubsteps();
 		//loop over all cells
 		for (int x = 0; x < dims[0]; x++){
 			for (int y = 0; y < dims[1]; y++){
 				for (int z = 0; z < dims[2]; z++){
 					//pull the concentrations of the media involved in the reactions
-					double[] worldMedia = world.getMediaAt(x, y, z);
+					double[] worldMedia = World.getInstance().getMediaAt(x, y, z);
 					double[] rxnMedia = new double[worldIdxs.length];
 					
 					for (int i = 0; i < worldIdxs.length; i++){
@@ -330,7 +321,7 @@ public class ReactionModel extends Model implements CometsConstants {
 					for (int i = 0; i < worldIdxs.length; i++){
 						worldMedia[worldIdxs[i]] = result[i];
 					}					
-					world.setMedia(x, y, z, worldMedia); //update the World.media
+					World.getInstance().setMedia(x, y, z, worldMedia); //update the World.media
 				}
 			}
 		}
@@ -397,7 +388,7 @@ public class ReactionModel extends Model implements CometsConstants {
 			}
 		}
 		//set any negative or very low concentrations to 0
-		double minConcentration = ((FBAParameters) world.getComets().getPackageParameters()).getMinConcentration();
+		double minConcentration = FBAParameters.getMinConcentration();
 		for (int i = 0; i < result.length; i++){
 			if (result[i] < minConcentration || Double.isNaN(result[i])){
 				result[i] = 0.0;

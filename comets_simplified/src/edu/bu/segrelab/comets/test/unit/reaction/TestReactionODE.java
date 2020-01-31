@@ -1,6 +1,5 @@
 package edu.bu.segrelab.comets.test.unit.reaction;
 
-import static edu.bu.segrelab.comets.IWorld.reactionModel;
 import static org.junit.Assert.*;
 
 import java.io.File;
@@ -13,8 +12,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import edu.bu.segrelab.comets.Comets;
-import edu.bu.segrelab.comets.IWorld;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.fba.FBACometsLoader;
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.reaction.ReactionODE;
@@ -48,7 +46,7 @@ public class TestReactionODE {
 	
 	@Before
 	public void setUp() throws Exception {
-		reactionModel = IWorld.reactionModel;
+		reactionModel = World.getInstance().getReactionModel();
 		reactionODE = reactionModel.getReactionODE();
 	}
 

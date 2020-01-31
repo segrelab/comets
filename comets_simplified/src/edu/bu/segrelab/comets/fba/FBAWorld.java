@@ -35,14 +35,13 @@ import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.Model;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 
 import edu.bu.segrelab.comets.fba.FBAParameters;
-import edu.bu.segrelab.comets.reaction.RK4Runner;
 import edu.bu.segrelab.comets.CometsParameters;
-import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.fba.FBAPeriodicMedia;
 
 import java.io.*;
@@ -51,8 +50,6 @@ import com.jmatio.io.*;
 import com.jmatio.types.*;
 
 import java.lang.reflect.Field;
-
-import java.lang.Math.*;
 
 import edu.bu.segrelab.comets.util.WeightedSample; //djordje 
 
@@ -129,7 +126,29 @@ public class FBAWorld extends World2D
 	
 	private int[] specificMediaNums; //Ideally this would be part of FBA parameters, but since mediaNames is not initialized when parameters are set, it must go here.
 	
+	//Factory methods to invoke the private singleton constructors
+	public static FBAWorld createInstance(Comets c, int numMedia) {
+		FBAWorld world = new FBAWorld(c,numMedia);
+		world.changeModelsInWorld(world.models, world.models);// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
+		World.setInstance(world);
+		
+		return world;
+	}
 	
+	public static FBAWorld createInstance(Comets c, String[] mediaNames, double[] startingMedia, Model[] models) {
+		FBAWorld world = new FBAWorld(c,mediaNames, startingMedia, models);
+		world.changeModelsInWorld(world.models, world.models);// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
+		World.setInstance(world);
+		return world;
+	}
+	
+	public static FBAWorld createInstance(Comets c, String[] mediaNames, double[] startingMedia,
+			Model[] models, double[] refreshMedia, double[] mediaStatic, boolean[] staticGlobal) {
+		FBAWorld world = new FBAWorld(c,mediaNames, startingMedia, models, refreshMedia, mediaStatic, staticGlobal);
+		world.changeModelsInWorld(world.models, world.models);// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
+		World.setInstance(world);
+		return world;
+	}
 	
 	/**
 	 * Initialize a new, empty world, tied the current <code>Comets</code> with a given
@@ -137,7 +156,7 @@ public class FBAWorld extends World2D
 	 * @param c
 	 * @param numMedia
 	 */
-	public FBAWorld(Comets c, int numMedia)
+	private FBAWorld(Comets c, int numMedia)
 	{
 		super(c, numMedia);
 	}
@@ -151,13 +170,12 @@ public class FBAWorld extends World2D
 	 * @param startingMedia amount of media to start in each space
 	 * @param models models to apply to the world
 	 */
-	public FBAWorld(Comets c, String[] mediaNames, double[] startingMedia,
+	private FBAWorld(Comets c, String[] mediaNames, double[] startingMedia,
 					Model[] models)
 	{
 		this(c, startingMedia.length);
 		pParams = (FBAParameters)c.getPackageParameters();		
 		cParams = (CometsParameters)c.getParameters();
-//		this.models = models;
 		numModels = models.length;
 		this.models = new FBAModel[numModels];
 		for (int i=0; i<numModels; i++)
@@ -205,10 +223,6 @@ public class FBAWorld extends World2D
 		runCells = new Stack<Cell>();
 		circleSet = null;
 
-		// applies all models to the world - puts names, etc, in the right order,
-		// and sets media diffusion constants where appropriate
-		changeModelsInWorld(models, models);		
-
 		// We need to know the composition of the fresh media, needed for batch dilutions
 		freshMedia = new double[numMedia];
 		for (int k = 0; k < numMedia; k++)
@@ -230,7 +244,7 @@ public class FBAWorld extends World2D
 	 * @param mediaStatic the amount at which the media is fixed
 	 * @param staticGlobal boolean if the the median is static or not  
 	 */
-	public FBAWorld(Comets c, String[] mediaNames, double[] startingMedia,
+	private FBAWorld(Comets c, String[] mediaNames, double[] startingMedia,
 					Model[] models, double[] refreshMedia, double[] mediaStatic, boolean[] staticGlobal)
 	{
 		this(c, startingMedia.length);
@@ -923,16 +937,13 @@ public class FBAWorld extends World2D
 		}
 		
 		//preserve metabolites which are involved in extracellular reactions
-		IWorld.reactionModel.reset();
-		IWorld.reactionModel.setup();
-		//String[] exRxnMets = IWorld.reactionModel.getMediaNames();
-		//if (exRxnMets == null || exRxnMets.length < 1) exRxnMets = IWorld.reactionModel.getInitialMetNames();
-		String[] exRxnMets = IWorld.reactionModel.getInitialMetNames();
+		reactionModel.reset();
+		reactionModel.setup();
+		String[] exRxnMets = reactionModel.getInitialMetNames();
 		if (exRxnMets != null){
 			for (int i = 0; i < exRxnMets.length; i++){
 				if (!mediaNamesMap.keySet().contains(exRxnMets[i])){
 				mediaNamesMap.put(exRxnMets[i], new Integer(1));
-//				newDiffConsts.putIfAbsent(exRxnMets[i], nutrientDiffConsts[i]);
 				newDiffConsts.put(exRxnMets[i], nutrientDiffConsts[i]);
 				}
 			}
@@ -5504,7 +5515,7 @@ public class FBAWorld extends World2D
 		// System.out.println("MUTS: " + Arrays.toString(nMut));
 	}
 
-	//TODO:This function is only included because the proper calculateDeltaBiomass seems to be missing. Do not commit this method!
+	//TODO:This function is only included because the proper calculateDeltaBiomass seems to be missing...
 	public double[] calculateDeltaBiomass() {
 		throw new Error("FBAWorld.calculateDeltaBiomass() has been invoked but is not yet implemented.");
 	}

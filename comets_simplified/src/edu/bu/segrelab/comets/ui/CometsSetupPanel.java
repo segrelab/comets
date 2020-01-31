@@ -12,7 +12,9 @@ import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.StaticPoint;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.World2D;
+import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.ui.tools.AbstractTool;
 import edu.bu.segrelab.comets.util.Utility;
 
@@ -202,14 +204,14 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 				new ActionListener() {
 					public void actionPerformed(ActionEvent e)
 					{
-						if (c.getWorld() != null)
+						if (World.getInstance() != null && !World.getInstance().is3D())
 						{
 							JComboBox cb = (JComboBox)e.getSource();
 							c.getParameters().setDisplayLayer(cb.getSelectedIndex());
 							gsp.repaint();
 //							gsp.setDisplayToggle(cb.getSelectedIndex());
 						}
-						else if (c.getWorld3D() != null)
+						else if (World.getInstance() != null && World.getInstance().is3D())
 						{
 							JComboBox cb = (JComboBox)e.getSource();
 							c.getParameters().setDisplayLayer(cb.getSelectedIndex());
@@ -264,9 +266,9 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 				new ChangeListener() {
 					public void stateChanged(ChangeEvent e)
 					{
-						if (c.getWorld() != null)
+						if (World.getInstance() != null && !World.getInstance().is3D())
 							gsp.setColorStyle(false, ((Double)colorValSpinner.getValue()).doubleValue());
-						else if(c.getWorld3D() != null)
+						else if(World.getInstance() != null && World.getInstance().is3D())
 							gsp3d.setColorStyle(false, ((Double)colorValSpinner.getValue()).doubleValue());
 					}
 				});
@@ -284,9 +286,9 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 					{
 						colorValSpinner.setEnabled(!colorStyleBox.isSelected());
 						colorLabel.setEnabled(!colorStyleBox.isSelected());
-						if (c.getWorld() != null)
+						if (World.getInstance() != null && !World.getInstance().is3D())
 							gsp.setColorStyle(colorStyleBox.isSelected(), ((Double)colorValSpinner.getValue()).doubleValue());
-						else if(c.getWorld3D() != null)
+						else if(World.getInstance() != null && World.getInstance().is3D())
 							gsp3d.setColorStyle(colorStyleBox.isSelected(), ((Double)colorValSpinner.getValue()).doubleValue());
 					}
 				});
@@ -324,9 +326,9 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	{
 		int layer = c.getParameters().getDisplayLayer();
 		displayComboBox.removeAllItems();
-		if (c.getWorld() != null)
+		if (World.getInstance() != null && !World.getInstance().is3D())
 		{
-			String[] mediaNames = c.getWorld().getMediaNames();
+			String[] mediaNames = World.getMediaNames();
 			for (int i=0; i<mediaNames.length; i++)
 			{
 				displayComboBox.addItem(mediaNames[i]);
@@ -346,9 +348,9 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 
 			gsp.repaint();
 		}
-		else if (c.getWorld3D() != null)
+		else if (World.getInstance() != null && World.getInstance().is3D())
 		{
-			String[] mediaNames = c.getWorld3D().getMediaNames();
+			String[] mediaNames = World.getMediaNames();
 			for (int i=0; i<mediaNames.length; i++)
 			{
 				displayComboBox.addItem(mediaNames[i]);
@@ -424,7 +426,7 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	 */
 	private void setupMediaPanel()
 	{
-		String[] names = c.getWorld().getMediaNames();
+		String[] names = World.getMediaNames();
 		mediaPanel = new DataContentPanel(names, new String[]{"mmol"}, true, new boolean[names.length]);
 	}
 
@@ -531,7 +533,7 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	{
 		if (overwrite)
 			removeMediaRefreshSpace(x, y);
-		c.getWorld().addMediaRefreshSpace(x, y, values);
+		((World2D) World.getInstance()).addMediaRefreshSpace(x, y, values);
 	}
 	
 	/**
@@ -564,7 +566,7 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	 */
 	public void removeMediaRefreshSpace(int x, int y)
 	{
-		c.getWorld().removeMediaRefreshSpace(x, y);
+		((World2D) World.getInstance()).removeMediaRefreshSpace(x, y);
 	}
 
 	/**
@@ -602,7 +604,7 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	{
 		if (overwrite)
 			removeStaticMediaSpace(x, y);
-		c.getWorld().addStaticMediaSpace(x, y, values, staticSet);
+		((World2D) World.getInstance()).addStaticMediaSpace(x, y, values, staticSet);
 	}
 	
 	/**
@@ -635,7 +637,7 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	 */
 	public void removeStaticMediaSpace(int x, int y)
 	{
-		c.getWorld().removeStaticMediaSpace(x, y);
+		((World2D) World.getInstance()).removeStaticMediaSpace(x, y);
 	}
 	
 	/**
@@ -677,9 +679,9 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	public void applyBiomassChange(double[] values, Point p, boolean overwrite)
 	{
 		if (overwrite)
-			c.getWorld().setBiomass((int)p.getX(), (int)p.getY(), values);
+			((World2D) World.getInstance()).setBiomass((int)p.getX(), (int)p.getY(), values);
 		else
-			c.getWorld().changeBiomass((int)p.getX(), (int)p.getY(), values);		
+			((World2D) World.getInstance()).changeBiomass((int)p.getX(), (int)p.getY(), values);		
 	}
 	
 	/**
@@ -748,9 +750,9 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	public void applyMediaChange(double[] values, Point p, boolean overwrite)
 	{
 		if (overwrite)
-			c.getWorld().setMedia((int)p.getX(), (int)p.getY(), values);
+			((World2D) World.getInstance()).setMedia((int)p.getX(), (int)p.getY(), values);
 		else
-			c.getWorld().changeMedia((int)p.getX(), (int)p.getY(), values);
+			((World2D) World.getInstance()).changeMedia((int)p.getX(), (int)p.getY(), values);
 	}
 	
 	/**
@@ -798,7 +800,7 @@ public class CometsSetupPanel extends JPanel implements CometsConstants
 	 */
 	public void setBarrier(Point p, boolean barrier)
 	{
-		c.getWorld().setBarrier((int)p.getX(), (int)p.getY(), barrier);
+		((World2D) World.getInstance()).setBarrier((int)p.getX(), (int)p.getY(), barrier);
 	}
 	
 	/**
@@ -1005,8 +1007,8 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 	{
 		p = new Point((int)Math.floor(p.getX()/cParams.getPixelScale()),
 					  (int)Math.floor(p.getY()/cParams.getPixelScale()));
-		if (c.getWorld() != null)
-			c.getWorld().updateInfoPanel((int)p.getX(), (int)p.getY());
+		if (World.getInstance() != null && !World.getInstance().is3D())
+			((World2D) World.getInstance()).updateInfoPanel((int)p.getX(), (int)p.getY());
 	}
 	
 	/**
@@ -1053,11 +1055,11 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 		if (oneSpace)
 		{
 			if (changeBiomass)
-				dataPanel.setValues(c.getWorld().getBiomassAt((int)clickPoint.getX(), (int)clickPoint.getY()));
+				dataPanel.setValues(((World2D) World.getInstance()).getBiomassAt((int)clickPoint.getX(), (int)clickPoint.getY()));
 			else
 			{
-				dataPanel.setValues(c.getWorld().getMediaAt((int)clickPoint.getX(), (int)clickPoint.getY()));
-				StaticPoint sp = c.getWorld().getStaticMediaSpace((int)clickPoint.getX(), (int)clickPoint.getY());
+				dataPanel.setValues(((World2D) World.getInstance()).getMediaAt((int)clickPoint.getX(), (int)clickPoint.getY()));
+				StaticPoint sp = ((World2D) World.getInstance()).getStaticMediaSpace((int)clickPoint.getX(), (int)clickPoint.getY());
 				if (sp != null)
 					dataPanel.setStatic(sp.getStaticSet());
 				else
@@ -1157,10 +1159,10 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 	{
 		biomassInBoxes = new JCheckBox[c.getModels().length];
 		biomassOutBoxes = new JCheckBox[c.getModels().length];
-		mediaInBoxes = new JCheckBox[c.getWorld().getNumMedia()];
-		mediaOutBoxes = new JCheckBox[c.getWorld().getNumMedia()];
+		mediaInBoxes = new JCheckBox[World.getNumMedia()];
+		mediaOutBoxes = new JCheckBox[World.getNumMedia()];
 		final JLabel[] biomassLabels = new JLabel[c.getModels().length];
-		final JLabel[] mediaLabels = new JLabel[c.getWorld().getNumMedia()];
+		final JLabel[] mediaLabels = new JLabel[World.getNumMedia()];
 		final JLabel biomassInLabel = new JLabel("in");
 		final JLabel biomassOutLabel = new JLabel("out");
 		final JLabel mediaInLabel = new JLabel("in");
@@ -1170,7 +1172,7 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 						selectAllBiomassOut,
 						selectAllMediaIn,
 						selectAllMediaOut;
-		String[] mediaNames = c.getWorld().getMediaNames(); 
+		String[] mediaNames = World.getMediaNames(); 
 		
 		boolean oneSpace = selectedSpaces.size() == 0;
 		
@@ -1382,7 +1384,7 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 				});
 		if (oneSpace)
 		{
-			barrierBox.setSelected(c.getWorld().isBarrier((int)clickPoint.getX(), (int)clickPoint.getY()));
+			barrierBox.setSelected(((World2D) World.getInstance()).isBarrier((int)clickPoint.getX(), (int)clickPoint.getY()));
 		}
 
 		
@@ -1409,14 +1411,14 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 			// update barrier stuff for now. ignore the rest, even though i spent
 			// fucking hours putting it together.
 			if (oneSpace)
-				c.getWorld().setBarrier((int)clickPoint.getX(), (int)clickPoint.getY(), barrierBox.isSelected());
+				((World2D) World.getInstance()).setBarrier((int)clickPoint.getX(), (int)clickPoint.getY(), barrierBox.isSelected());
 			else
 			{
 				Iterator<Point> it = selectedSpaces.iterator();
 				while(it.hasNext())
 				{
 					Point p = it.next();
-					c.getWorld().setBarrier((int)p.getX(), (int)p.getY(), barrierBox.isSelected());
+					((World2D) World.getInstance()).setBarrier((int)p.getX(), (int)p.getY(), barrierBox.isSelected());
 				}
 			}
 			c.backupState(true);
@@ -1435,13 +1437,13 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 	 */
 	public Color currentWorldColor(int x, int y, double[] m)
 	{
-		if (c.getWorld().isBarrier(x, y))
+		if (((World2D) World.getInstance()).isBarrier(x, y))
 			return new Color(cParams.getBarrierColor());
 
 		Color col = null;
-		if (cParams.getDisplayLayer() == c.getWorld().getNumMedia()) // if it's numMedia, then display cell concs.
+		if (cParams.getDisplayLayer() == World.getNumMedia()) // if it's numMedia, then display cell concs.
 		{
-			Cell cell = c.getWorld().getCellAt(x, y);
+			Cell cell = ((World2D) World.getInstance()).getCellAt(x, y);
 			if (cell != null)
 			{
 				double[] biomass = cell.getBiomass();
@@ -1475,7 +1477,7 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 		else
 		{
 			//	      double m = util.max(media, displayToggle);
-			double[] media = c.getWorld().getMediaAt(x, y);
+			double[] media = ((World2D) World.getInstance()).getMediaAt(x, y);
 			col = new Color((int)Math.min(255, media[cParams.getDisplayLayer()]*(255/m[0])), 0, 0);
 		}
 		return col;
@@ -1511,19 +1513,19 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 		setBackground(new Color(cParams.getBackgroundColor()));
 		g.setColor(getBackground());
 		g.fillRect(0, 0, getWidth(), getHeight());
-		if (c.getWorld() != null)
+		if (World.getInstance() != null && !World.getInstance().is3D())
 		{
 			double[] m = new double[3];
 			if (cParams.getColorRelative())
 			{
 //				displayToggle = c.getWorld().getNumMedia();
-				if (cParams.getDisplayLayer() == c.getWorld().getNumMedia())
+				if (cParams.getDisplayLayer() == World.getNumMedia())
 				{
 					for (int i=0; i<cParams.getNumCols(); i++)
 					{
 						for (int j=0; j<cParams.getNumRows(); j++)
 						{
-							Cell cell = c.getWorld().getCellAt(i, j);
+							Cell cell = ((World2D) World.getInstance()).getCellAt(i, j);
 							if (cell != null)
 							{
 								double[] biomass = cell.getBiomass();
@@ -1542,7 +1544,7 @@ class GraphicSetupPanel extends JPanel implements CometsConstants,
 					}
 				}
 				else
-					m[0] = Utility.max(c.getWorld().getAllMedia(), cParams.getDisplayLayer());
+					m[0] = Utility.max(((World2D) World.getInstance()).getAllMedia(), cParams.getDisplayLayer());
 			}
 			else
 				m = colorScale;
@@ -1881,13 +1883,13 @@ class GraphicSetupPanel3D extends GLJPanel implements
 	        	gl.glRotated( dX, vertAxis[0], vertAxis[1], vertAxis[2]);
 	        }
 	        
-			if (c.getWorld3D() != null)
+			if (World.getInstance() != null && World.getInstance().is3D())
 			{
 				//double[] m = new double[3];
 				double[] m={0.0,0.0,0.0};
 				if (cParams.getColorRelative())
 				{
-					if (cParams.getDisplayLayer() == c.getWorld3D().getNumMedia())
+					if (cParams.getDisplayLayer() == World.getNumMedia())
 					{
 						for (int i=0; i<cParams.getNumCols(); i++)
 						{
@@ -1895,7 +1897,7 @@ class GraphicSetupPanel3D extends GLJPanel implements
 							{
 								for (int l=0; l<cParams.getNumLayers(); l++)
 								{
-									Cell cell = c.getWorld3D().getCellAt(i, j, l);
+									Cell cell = ((World3D) World.getInstance()).getCellAt(i, j, l);
 									if (cell != null)
 									{
 										double[] biomass = cell.getBiomass();
@@ -1916,7 +1918,7 @@ class GraphicSetupPanel3D extends GLJPanel implements
 						}
 					}
 					else
-						m[0] = Utility.max(c.getWorld3D().getAllMedia(), cParams.getDisplayLayer());
+						m[0] = Utility.max(((World3D) World.getInstance()).getAllMedia(), cParams.getDisplayLayer());
 				}
 				else
 					m = colorScale;
@@ -2029,13 +2031,13 @@ class GraphicSetupPanel3D extends GLJPanel implements
 		 */
 		public Color currentWorld3DColor(int x, int y, int z, double[] m)
 		{
-			if (c.getWorld3D().isBarrier(x, y, z))
+			if (((World3D) World.getInstance()).isBarrier(x, y, z))
 				return new Color(cParams.getBarrierColor());
 
 			Color col = null;
-			if (cParams.getDisplayLayer() == c.getWorld3D().getNumMedia()) // if it's numMedia, then display cell concs.
+			if (cParams.getDisplayLayer() == ((World3D) World.getInstance()).getNumMedia()) // if it's numMedia, then display cell concs.
 			{
-				Cell cell = c.getWorld3D().getCellAt(x, y, z);
+				Cell cell = ((World3D) World.getInstance()).getCellAt(x, y, z);
 				if (cell != null)
 				{
 					double[] biomass = cell.getBiomass();
@@ -2072,7 +2074,7 @@ class GraphicSetupPanel3D extends GLJPanel implements
 			else
 			{
 				//	      double m = util.max(media, displayToggle);
-				double[] media = c.getWorld3D().getMediaAt(x, y, z);
+				double[] media = ((World3D) World.getInstance()).getMediaAt(x, y, z);
 				col = new Color((int)Math.min(255, media[cParams.getDisplayLayer()]*(255/m[0])), 0, 0);
 			}
 			return col;

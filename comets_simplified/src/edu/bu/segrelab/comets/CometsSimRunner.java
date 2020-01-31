@@ -62,10 +62,7 @@ public class CometsSimRunner extends Thread
 	{
 		finished = false;
 		c.fireSimulationStateChangeEvent(new SimulationStateChangeEvent(SimulationStateChangeEvent.State.START));
-		if (c.getParameters().getNumLayers()==1)
-			c.getWorld().initSimulation();
-		else if (c.getParameters().getNumLayers()>1)
-			c.getWorld3D().initSimulation();
+		World.getInstance().initSimulation();
 		while (!finished)
 		{
 			if (!c.getParameters().isPaused())
@@ -88,11 +85,7 @@ public class CometsSimRunner extends Thread
 				// Test quit conditions, end simulation if required.
 				if (checkCompletion())
 				{
-					if (c.getParameters().getNumLayers()==1)
-						c.getWorld().endSimulation();
-					else if (c.getParameters().getNumLayers()>1)
-						c.getWorld3D().endSimulation();
-					//c.getWorld().endSimulation();
+					World.getInstance().endSimulation();
 					finish();
 					System.out.println("End of simulation");
 					System.out.println("Total time = " + (totalTime/1000.0) + "s");
@@ -108,17 +101,17 @@ public class CometsSimRunner extends Thread
 					{
 						if ((curCycle*c.getParameters().getTimeStep()) % c.getParameters().getDilutionTime() == 0) 
 						{
-							((FBAWorld) c.getWorld()).batchDilute(c.getParameters().getDilutionFactor(), c.getParameters().getCellSize());
+							((FBAWorld) World.getInstance()).batchDilute(c.getParameters().getDilutionFactor(), c.getParameters().getCellSize());
 							System.out.println("Transfer performed: dilute " + 
 												c.getParameters().getDilutionFactor() + 
 												" each " + c.getParameters().getDilutionTime() + 'h');
 						}
 					}
 
-					c.getWorld().run();
+					World.getInstance().run();
 				}
 				else if (c.getParameters().getNumLayers()>1)
-					c.getWorld3D().run();
+					World.getInstance().run();
 				//c.getWorld().run();
 	
 				// Clean up after a single step.
@@ -154,7 +147,7 @@ public class CometsSimRunner extends Thread
 	public boolean checkCompletion(){
 		boolean complete = false;
 		
-		if (c.getCells().size() == 0 && !IWorld.reactionModel.isSetUp()) {
+		if (c.getCells().size() == 0 && World.reactionModel.isSetUp()) {
 			complete = true; //there's nothing left to run
 		}
 		

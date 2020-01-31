@@ -14,6 +14,7 @@ import java.awt.geom.Rectangle2D;
 
 
 import edu.bu.segrelab.comets.Comets;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.event.CometsChangeEvent;
 import edu.bu.segrelab.comets.event.CometsChangeListener;
 import edu.bu.segrelab.comets.ui.tools.AbstractTool;
@@ -287,7 +288,7 @@ public class CometsToolbarPanel extends JPanel
 		
 		final JTabbedPane mediaTabPane = new JTabbedPane();
 		
-		if (c.getWorld().getNumMedia() > 8)
+		if (World.getNumMedia() > 8)
 		{
 			JScrollPane mediaScroll = new JScrollPane(mediaPanel);
 			mediaScroll.setPreferredSize(new Dimension(300, 300));

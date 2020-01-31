@@ -4,13 +4,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import edu.bu.segrelab.comets.fba.FBAParameters;
-
-// import javax.swing.JComponent;
-
 import edu.bu.segrelab.comets.util.Utility;
 
-public abstract class World3D implements CometsConstants, IWorld
+public abstract class World3D extends World implements CometsConstants
 {
 	public static final int EMPTY_SPACE = 1,
 							FILLED_SPACE = 2,
@@ -41,29 +37,9 @@ public abstract class World3D implements CometsConstants, IWorld
 								  // that is to remain static, at a value given
 								  // by staticMedia[i]
 
-	public World3D(Comets c, int numMedia)
+	protected World3D(Comets c, int numMedia)
 	{
-		this.c = c;
-		cParams = c.getParameters();
-		pParams = c.getPackageParameters();
-		numCols = cParams.getNumCols();
-		numRows = cParams.getNumRows();
-		numLayers = cParams.getNumLayers();
-		
-		this.numMedia = numMedia;
-		cellGrid = new Cell[numCols][numRows][numLayers];
-		media = new double[numCols][numRows][numLayers][numMedia];
-		barrier = new boolean[numCols][numRows][numLayers];
-		models = c.getModels();
-		mediaNames = new String[numMedia];
-		reactionModel.setWorld(this);
-
-		mediaRefresh = new double[numMedia];
-		staticMedia = new double[numMedia];
-		isStatic = new boolean[numMedia];
-		
-		refreshPoints = new RefreshPoint[numCols][numRows][numLayers];
-		staticPoints = new StaticPoint[numCols][numRows][numLayers];
+		super(c,numMedia);
 	}
 
 	public abstract World3D backup();
@@ -238,25 +214,6 @@ public abstract class World3D implements CometsConstants, IWorld
 			return media[x][y][z];
 		else
 			return null;
-	}
-	
-	/**
-	 * @return A <code>String</code> array of names for each nutrient in the media. This
-	 * will be in the same order at the other various media access methods.
-	 * @see #getAllMedia()
-	 * @see #getMediaAt(int, int)
-	 */
-	public String[] getMediaNames()
-	{
-		return mediaNames;
-	}
-	
-	/**
-	 * @return the number of nutrient components in the currently loaded media
-	 */
-	public int getNumMedia()
-	{
-		return numMedia;
 	}
 	
 	/**

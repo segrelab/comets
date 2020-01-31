@@ -1,7 +1,5 @@
 package edu.bu.segrelab.comets.test.etc;
 
-import static org.junit.Assert.*;
-
 import java.util.Arrays;
 
 import org.junit.After;
@@ -10,7 +8,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.test.classes.TComets;
 /**A class for miscellaneous testing and experimentation
  * 

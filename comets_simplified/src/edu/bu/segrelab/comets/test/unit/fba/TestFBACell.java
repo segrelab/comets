@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.fba.FBACell;
 import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.fba.FBAParameters.ExchangeStyle;
@@ -45,17 +46,17 @@ public class TestFBACell {
 		//test at timestep = 0.75h
 		comets = resetTCometsForTestExchangeStyleConsistency(0.75);
 		((FBAParameters) comets.getPackageParameters()).setExchangeStyle(ExchangeStyle.MONOD);
-		double initBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
+		double initBiomass = World.getInstance().getBiomassAt(0,0,0)[0];
 		comets.doCommandLineRunWithoutLoading();
-		double monod = comets.getWorld().getBiomassAt(0, 0)[0] - initBiomass;
+		double monod = World.getInstance().getBiomassAt(0,0,0)[0] - initBiomass;
 		comets = resetTCometsForTestExchangeStyleConsistency(0.75);
 		((FBAParameters) comets.getPackageParameters()).setExchangeStyle(ExchangeStyle.PSEUDO_MONOD);
 		comets.doCommandLineRunWithoutLoading();
-		double pseudo = comets.getWorld().getBiomassAt(0, 0)[0] - initBiomass;
+		double pseudo = World.getInstance().getBiomassAt(0,0,0)[0] - initBiomass;
 		comets = resetTCometsForTestExchangeStyleConsistency(0.75);
 		((FBAParameters) comets.getPackageParameters()).setExchangeStyle(ExchangeStyle.STANDARD);
 		comets.doCommandLineRunWithoutLoading();
-		double standard = comets.getWorld().getBiomassAt(0, 0)[0] - initBiomass;
+		double standard = World.getInstance().getBiomassAt(0,0,0)[0] - initBiomass;
 		assertEquals(monod, standard, standard/100); //1% difference allowed
 		assertEquals(pseudo, standard, standard/100);
 		double standard1 = standard;
@@ -64,15 +65,15 @@ public class TestFBACell {
 		comets = resetTCometsForTestExchangeStyleConsistency(1.5);
 		((FBAParameters) comets.getPackageParameters()).setExchangeStyle(ExchangeStyle.MONOD);
 		comets.doCommandLineRunWithoutLoading();
-		monod = comets.getWorld().getBiomassAt(0, 0)[0] - initBiomass;
+		monod = World.getInstance().getBiomassAt(0,0,0)[0] - initBiomass;
 		comets = resetTCometsForTestExchangeStyleConsistency(1.5);
 		((FBAParameters) comets.getPackageParameters()).setExchangeStyle(ExchangeStyle.PSEUDO_MONOD);
 		comets.doCommandLineRunWithoutLoading();
-		pseudo = comets.getWorld().getBiomassAt(0, 0)[0] - initBiomass;
+		pseudo = World.getInstance().getBiomassAt(0,0,0)[0] - initBiomass;
 		comets = resetTCometsForTestExchangeStyleConsistency(1.5);
 		((FBAParameters) comets.getPackageParameters()).setExchangeStyle(ExchangeStyle.STANDARD);
 		comets.doCommandLineRunWithoutLoading();
-		standard = comets.getWorld().getBiomassAt(0, 0)[0] - initBiomass;
+		standard = World.getInstance().getBiomassAt(0,0,0)[0] - initBiomass;
 		assertEquals(monod, standard, standard/100); //1% difference allowed
 		assertEquals(pseudo, standard, standard/100);
 		double standard2 = standard;
@@ -97,7 +98,7 @@ public class TestFBACell {
 		}
 		comets.getParameters().setTimeStep(timestep);
 		comets.getParameters().setMaxCycles(20);
-		comets.getWorld().updateWorld();
+		World.getInstance().updateWorld();
 		((FBACell) comets.getCells().get(0)).refreshParameters();
 
 		return comets;

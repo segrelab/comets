@@ -16,6 +16,7 @@ import javax.swing.border.TitledBorder;
 
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsParameters;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.World2D;
 
 @SuppressWarnings("serial")
@@ -252,9 +253,9 @@ public class SlideshowParametersPanel extends JPanel
 		 * the medium components and such, followed with biomass. Finally, set it to be
 		 * on the selected layer.
 		 */
-		World2D world = c.getWorld();
-		if (world != null)
+		if (World.getInstance() != null && !World.getInstance().is3D())
 		{
+			World2D world = (World2D) World.getInstance();
 			String[] mediaNames = world.getMediaNames();
 			slideshowLayerList.removeAllItems();
 			for (int i=0; i<mediaNames.length; i++)

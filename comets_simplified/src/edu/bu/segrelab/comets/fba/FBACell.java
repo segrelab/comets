@@ -6,14 +6,10 @@ import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.Model;
-import edu.bu.segrelab.comets.PackageParameters;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.World3D;
-import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Utility;
-import java.util.Arrays; //DJORDJE
-
-import org.apache.commons.math3.distribution.*;
 import jdistlib.*;
 
 /**
@@ -34,8 +30,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					 implements edu.bu.segrelab.comets.CometsConstants
 {
 	private FBAModel[] fbaModels;
-	private FBAWorld world;
-	private FBAWorld3D world3D;
 	
 	private final int id;
 	private int cellColor;
@@ -113,7 +107,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 		FBAstatus = new int[biomass.length];
 		this.fbaModels = fbaModels;
-		this.world = world;
 		this.cParams = cParams;
 		this.pParams = pParams;
 		this.biomass = new double[fbaModels.length];
@@ -167,7 +160,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		deltaBiomass = new double[biomass.length];
 		FBAstatus = new int[biomass.length];
 		this.fbaModels = fbaModels;
-		this.world3D = world3D;
 		this.cParams = cParams;
 		this.pParams = pParams;
 		this.biomass = new double[fbaModels.length];
@@ -402,18 +394,18 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		// otherwise, everything's welcome in.
 		for (int i=0; i<biomass.length; i++)
 		{
-			world.setDiffuseBiomassIn(x, y, i, true);
+			((FBAWorld) World.getInstance()).setDiffuseBiomassIn(x, y, i, true);
 			if (biomass[i] == 0 && !cParams.allowCellOverlap())
 			{
-				world.setDiffuseBiomassIn(x, y, i, false);
-				world.setDiffuseBiomassOut(x, y, i, false);
+				((FBAWorld) World.getInstance()).setDiffuseBiomassIn(x, y, i, false);
+				((FBAWorld) World.getInstance()).setDiffuseBiomassOut(x, y, i, false);
 			}
 		}
 
 		// next, set diffusability based on how much biomass is present.
 		if (Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
 			for (int i=0; i<biomass.length; i++)
-				world.setDiffuseBiomassIn(x, y, i, false);
+				((FBAWorld) World.getInstance()).setDiffuseBiomassIn(x, y, i, false);
 	}
 	/**
 	 * Updates the diffusability of the biomass in this <code>FBACell</code>. This should
@@ -436,18 +428,18 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		// otherwise, everything's welcome in.
 		for (int i=0; i<biomass.length; i++)
 		{
-			world3D.setDiffuseBiomassIn(x, y, z, i, true);
+			((FBAWorld3D) World.getInstance()).setDiffuseBiomassIn(x, y, z, i, true);
 			if (biomass[i] == 0 && !cParams.allowCellOverlap())
 			{
-				world3D.setDiffuseBiomassIn(x, y, z, i, false);
-				world3D.setDiffuseBiomassOut(x, y, z, i, false);
+				((FBAWorld3D) World.getInstance()).setDiffuseBiomassIn(x, y, z, i, false);
+				((FBAWorld3D) World.getInstance()).setDiffuseBiomassOut(x, y, z, i, false);
 			}
 		}
 
 		// next, set diffusability based on how much biomass is present.
 		if (Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
 			for (int i=0; i<biomass.length; i++)
-				world3D.setDiffuseBiomassIn(x, y, z, i, false);
+				((FBAWorld3D) World.getInstance()).setDiffuseBiomassIn(x, y, z, i, false);
 	}
 
 	/* (non-Javadoc)
@@ -710,9 +702,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			/************************* CALCULATE MAX EXCHANGE FLUXES ******************************/
 			double[] media=null;//=world3D.getModelMediaAt(x, y, z, i);
 			if(cParams.getNumLayers() == 1)
-				media = world.getModelMediaAt(x, y, i);
+				media = ((FBAWorld) World.getInstance()).getModelMediaAt(x, y, i);
 			else if (cParams.getNumLayers() > 1)
-				media = world3D.getModelMediaAt(x, y, z, i);
+				media = ((FBAWorld3D) World.getInstance()).getModelMediaAt(x, y, z, i);
 		
 			//split media
 			for (int j=0; j<media.length; j++)
@@ -930,9 +922,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				continue;
 
 			if(cParams.getNumLayers() == 1)
-				world.changeModelMedia(x, y, a, deltaMedia[a]);
+				((FBAWorld) World.getInstance()).changeModelMedia(x, y, a, deltaMedia[a]);
 			else if (cParams.getNumLayers() > 1)
-				world3D.changeModelMedia(x, y, z, a, deltaMedia[a]);
+				((FBAWorld3D) World.getInstance()).changeModelMedia(x, y, z, a, deltaMedia[a]);
 
 		}
 		//Jean Section for batch dilute Checks if models are growing and if they all stopped growing sets stationary phase in cell.
@@ -1232,17 +1224,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	 */
 	public double[] getMedia(){
 		if(cParams.getNumLayers() == 1) //2d World
-			return world.getMediaAt(x,y);
+			return ((FBAWorld) World.getInstance()).getMediaAt(x,y);
 		else if (cParams.getNumLayers() > 1) //3D world
-			return world3D.getMediaAt(x, y, z);
-		return null;
-	}
-	
-	public Comets getComets(){
-		if(cParams.getNumLayers() == 1) //2d World
-			return world.getComets();
-		else if (cParams.getNumLayers() > 1) //3D world
-			return world3D.getComets();
+			return ((FBAWorld3D) World.getInstance()).getMediaAt(x, y, z);
 		return null;
 	}
 	
@@ -1250,11 +1234,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	 * 
 	 */
 	public void refreshParameters() {
-		Comets c = null;
-		if (this.world != null) {
-			c = world.getComets();
-		}
-		else c = world3D.getComets();
+		Comets c = World.getInstance().getComets();
 		pParams = (FBAParameters) c.getPackageParameters();
 		cParams = c.getParameters();
 	}

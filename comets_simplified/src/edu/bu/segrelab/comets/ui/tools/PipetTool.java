@@ -6,6 +6,8 @@ import java.awt.event.MouseEvent;
 import javax.swing.JPanel;
 
 import edu.bu.segrelab.comets.Comets;
+import edu.bu.segrelab.comets.World;
+import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.ui.CometsSetupPanel;
 import edu.bu.segrelab.comets.ui.CometsToolbarPanel;
 
@@ -68,9 +70,9 @@ public class PipetTool extends AbstractTool
 		int y = (int)(Math.floor(e.getPoint().getY()/c.getParameters().getPixelScale()));
 //		Point p = new Point((int)Math.floor(e.getPoint().getX()/c.getParameters().getPixelScale()),
 //						    (int)Math.floor(e.getPoint().getY()/c.getParameters().getPixelScale()));
-		if (c.getWorld().isOccupied(x, y))
+		if (((World2D) World.getInstance()).isOccupied(x, y))
 		{
-			double[] biomass = c.getWorld().getCellAt(x, y).getBiomass();
+			double[] biomass = ((World2D) World.getInstance()).getCellAt(x, y).getBiomass();
 			ctp.getBiomassPanel().setValues(biomass);
 		}
 		else
@@ -78,20 +80,20 @@ public class PipetTool extends AbstractTool
 			ctp.getBiomassPanel().setValues(new double[c.getModels().length]);
 		}
 		
-		ctp.getMediaPanel().setValues(c.getWorld().getMediaAt(x, y));
+		ctp.getMediaPanel().setValues(((World2D) World.getInstance()).getMediaAt(x, y));
 		
-		if (c.getWorld().isStaticMediaSpace(x, y))
-			ctp.getMediaPanel().setStatic(c.getWorld().getStaticMediaSet(x, y));
+		if (((World2D) World.getInstance()).isStaticMediaSpace(x, y))
+			ctp.getMediaPanel().setStatic(((World2D) World.getInstance()).getStaticMediaSet(x, y));
 		else
 			ctp.getMediaPanel().setStatic(null);
 		
-		if (c.getWorld().isMediaRefreshSpace(x, y))
-			ctp.getMediaRefreshPanel().setValues(c.getWorld().getMediaRefreshAmount(x, y));
+		if (((World2D) World.getInstance()).isMediaRefreshSpace(x, y))
+			ctp.getMediaRefreshPanel().setValues(((World2D) World.getInstance()).getMediaRefreshAmount(x, y));
 		else
-			ctp.getMediaRefreshPanel().setValues(new double[c.getWorld().getNumMedia()]);
+			ctp.getMediaRefreshPanel().setValues(new double[((World2D) World.getInstance()).getNumMedia()]);
 
-		ctp.setMediaRefresh(c.getWorld().isMediaRefreshSpace(x, y));
-		ctp.setBarrier(c.getWorld().isBarrier(x, y));
+		ctp.setMediaRefresh(((World2D) World.getInstance()).isMediaRefreshSpace(x, y));
+		ctp.setBarrier(((World2D) World.getInstance()).isBarrier(x, y));
 	}
 
 	@Override

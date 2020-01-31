@@ -5,8 +5,6 @@ package edu.bu.segrelab.comets.test.integration;
 
 import static org.junit.Assert.*;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 
@@ -18,12 +16,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import edu.bu.segrelab.comets.Comets;
-import edu.bu.segrelab.comets.exception.ModelFileException;
-import edu.bu.segrelab.comets.fba.FBACometsLoader;
 import edu.bu.segrelab.comets.fba.FBAModel;
 import edu.bu.segrelab.comets.test.classes.TComets;
-import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
 
 /**An incomplete test case for the FBAModel class.
  * 

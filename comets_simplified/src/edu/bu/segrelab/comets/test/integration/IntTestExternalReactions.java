@@ -3,8 +3,6 @@
  */
 package edu.bu.segrelab.comets.test.integration;
 
-import static org.junit.Assert.*;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.net.URL;

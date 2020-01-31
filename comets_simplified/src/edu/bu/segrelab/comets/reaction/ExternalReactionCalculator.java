@@ -1,14 +1,9 @@
 package edu.bu.segrelab.comets.reaction;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
-import edu.bu.segrelab.comets.IWorld;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.fba.FBACell;
 import edu.bu.segrelab.comets.fba.FBAParameters;
-import edu.bu.segrelab.comets.fba.FBAWorld;
-import edu.bu.segrelab.comets.fba.FBAWorld3D;
 import edu.bu.segrelab.comets.util.Utility;
 
 public class ExternalReactionCalculator{
@@ -48,21 +43,11 @@ public class ExternalReactionCalculator{
 		double[] exRxnRateConstants = null;
 		double[][] stoich = null;
 		double[][] params = null;
-		
-		if(cell.getCometsParameters().getNumLayers() == 1){ //2d World
-			FBAWorld world = (FBAWorld) cell.getComets().getWorld();
-			exRxnEnzymes = IWorld.reactionModel.getExRxnEnzymes();
-			exRxnRateConstants = IWorld.reactionModel.getExRxnRateConstants();
-			stoich = IWorld.reactionModel.getExRxnStoich();
-			params = IWorld.reactionModel.getExRxnParams();
-		}
-		else if (cell.getCometsParameters().getNumLayers() > 1){ //3D world
-			FBAWorld3D world = (FBAWorld3D) cell.getComets().getWorld3D();
-			exRxnEnzymes = world.getExRxnEnzymes();
-			exRxnRateConstants = world.getExRxnRateConstants();
-			stoich = world.getExRxnStoich();
-			params = world.getExRxnParams();
-		}
+		exRxnEnzymes = World.getReactionModel().getExRxnEnzymes();
+		exRxnRateConstants = World.getReactionModel().getExRxnRateConstants();
+		stoich = World.getReactionModel().getExRxnStoich();
+		params = World.getReactionModel().getExRxnParams();
+
 		return new ExternalReactionCalculator(concentrations, exRxnEnzymes, exRxnRateConstants, stoich, params, timestep_seconds);
 	}
 	

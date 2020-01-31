@@ -13,6 +13,7 @@ import javax.swing.JMenuItem;
 
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
+import edu.bu.segrelab.comets.World;
 
 /**
  * A <code>JMenuBar</code> extension to handle the main menus in COMETS.
@@ -503,9 +504,9 @@ public class CometsMenuBar extends JMenuBar implements CometsConstants
 		{
 			case SETUP_MODE :
 				// turn on setup menu stuff
-				if(c.getWorld3D()!=null)
+				if(World.getInstance() !=null && World.getInstance().getNumLayers() > 1)
 					layoutMenu.setEnabled(false);
-				else if(c.getWorld()!=null)
+				else if(World.getInstance()!=null && World.getInstance().getNumLayers() == 1)
 					layoutMenu.setEnabled(true);
 				startSimItem.setEnabled(true);
 				endSimItem.setEnabled(false);

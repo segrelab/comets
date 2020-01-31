@@ -10,7 +10,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.fba.FBACell;
 import edu.bu.segrelab.comets.fba.FBACometsLoader;
 import edu.bu.segrelab.comets.reaction.ExternalReactionCalculator;

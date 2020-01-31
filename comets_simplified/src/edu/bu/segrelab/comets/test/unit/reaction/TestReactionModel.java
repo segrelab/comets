@@ -6,14 +6,12 @@ import java.io.File;
 import java.io.FileWriter;
 import java.net.URL;
 
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import edu.bu.segrelab.comets.Comets;
-import edu.bu.segrelab.comets.IWorld;
+import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.fba.FBACometsLoader;
 import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.reaction.ReactionModel;
@@ -52,20 +50,20 @@ public class TestReactionModel {
 				"-script", scriptURL.getPath()});
 		comets.loadScript();
 		defaultNSteps = ((FBAParameters) comets.getPackageParameters()).getNumExRxnSubsteps();
-		ReactionModel rm = (ReactionModel) IWorld.getReactionModel();
+		ReactionModel rm = (ReactionModel) World.getReactionModel();
 		defaultExRxnEnzymes = rm.getExRxnEnzymes();
 		defaultExRxnParams = rm.getExRxnParams();
 		defaultExRxnRateConstants = rm.getExRxnRateConstants();
 		defaultExRxnStoich = rm.getExRxnStoich();
 		defaultMediaNames = rm.getMediaNames();
-		defaultWorldMedia = rm.getWorld().getMediaAt(0,0,0);
+		defaultWorldMedia = World.getInstance().getMediaAt(0,0,0);
 	}
 	
 	@Before
 	public void setUp() throws Exception {
-		reactionModel = IWorld.getReactionModel();
+		reactionModel = World.getInstance().getReactionModel();
 		((FBAParameters) comets.getPackageParameters()).setNumExRxnSubsteps(defaultNSteps);
-		reactionModel.getWorld().setMedia(0,0,0,defaultWorldMedia);
+		World.getInstance().setMedia(0,0,0,defaultWorldMedia);
 		reactionModel.setExRxnEnzymes(defaultExRxnEnzymes);
 		reactionModel.setExRxnParams(defaultExRxnParams);
 		reactionModel.setExRxnRateConstants(defaultExRxnRateConstants);
@@ -186,7 +184,7 @@ public class TestReactionModel {
 		int[] worldIdxs = reactionModel.getMediaIdxs();
 		double timestep_seconds = comets.getParameters().getTimeStep() * 60 * 60;
 		int maxIterations = ((FBAParameters) comets.getPackageParameters()).getNumExRxnSubsteps();
-		double[] worldMedia = comets.getWorld().getMediaAt(0,0,0);
+		double[] worldMedia = World.getInstance().getMediaAt(0,0,0);
 		double[] rxnMedia = new double[worldIdxs.length];
 		for (int i = 0; i < worldIdxs.length; i++){
 			rxnMedia[i] = worldMedia[worldIdxs[i]];
