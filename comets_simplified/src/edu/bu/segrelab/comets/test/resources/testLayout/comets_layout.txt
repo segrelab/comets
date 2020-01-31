@@ -36,8 +36,8 @@
 	writeFluxLog = false
 	fluxLogName = ./flux.m
 	fluxLogRate = 1
-	writeMediaLog = true
-	mediaLogName = C:\sync\biomes\enz\kdfba\descretemath\addition\log_media.m
+	writeMediaLog = false
+	mediaLogName = log_media.m
 	mediaLogRate = 1
 	writeBiomassLog = false
 	biomassLogName = ./biomass.m

@@ -8,9 +8,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.util.Arrays;
 
 import javax.swing.JFileChooser;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,7 +48,7 @@ public class IntTestRunningLayouts {
 	public void tearDown() throws Exception {
 	}
 	
-	/*//testing Eclipse file IO
+	/*//testing Eclipse file IO with FileWriter
 	@Test
 	public void testFileWriter() throws IOException{
 		URL scriptFolderURL = TestKineticParameters.class.getResource("../resources/");
@@ -67,7 +69,7 @@ public class IntTestRunningLayouts {
 		fr.close();
 	} */
 	
-	/*//testing Eclipse file IO
+	/*//testing Eclipse file IO with PrintWriter
 	@Test
 	public void testPrintWriter() throws IOException{
 		URL scriptFolderURL = TestKineticParameters.class.getResource("../resources/");
@@ -124,6 +126,30 @@ public class IntTestRunningLayouts {
 		comets.run();
 		double finalBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
 		assert(finalBiomass > initBiomass);
+	}
+	
+	/*Test that extracellular reactions still run when there is no flux through any metabolic models
+	 * 
+	 */
+	@Test
+	public void testRxnsRunWithoutMetabolicActivity() throws IOException {
+		String layoutFilePath = "comets_layout_rxns_nogrowth.txt";
+		String scriptFilePath = comets.createScriptForLayout(layoutFilePath);
+		comets.loadScript(scriptFilePath);
+		//double initBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
+		
+		/*int glcIdx = 0;
+		String[] medianames = comets.getWorld().getMediaNames();
+		for (int i = 0; i < medianames.length; i++) {
+			if ("glc-D[e]".equals(medianames[i])) glcIdx = i;
+		}*/
+		
+		int glcIdx = ArrayUtils.indexOf(comets.getWorld().getMediaNames(), "glc-D[e]");
+		double initGlc = comets.getWorld().getMediaAt(0, 0)[glcIdx];
+		comets.run();
+		double finalGlc = comets.getWorld().getMediaAt(0, 0)[glcIdx];
+		assert(finalGlc > initGlc);
+		
 	}
 
 }
