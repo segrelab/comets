@@ -36,20 +36,20 @@
 	defaultW = 10
 	numExRxnSubsteps = 10
 	writeFluxLog = false
-	fluxLogName = C:\sync\biomes\cellulose\optima\temp\log_flux.m
+	fluxLogName = log_flux.m
 	fluxLogRate = 1
 	writeMediaLog = false
-	mediaLogName = C:\sync\biomes\cellulose\optima\temp\log_media.m
+	mediaLogName = log_media.m
 	mediaLogRate = 1
 	writeBiomassLog = false
-	biomassLogName = C:\sync\biomes\cellulose\optima\temp\log_biomass.m
+	biomassLogName = log_biomass.m
 	biomassLogRate = 1
 	writeTotalBiomassLog = false
 	totalBiomassLogRate = 1
-	totalBiomassLogName = ./total_biomass.m
+	totalBiomassLogName = total_biomass.m
 	useLogNameTimeStamp = false
 	writeMatFile = false
-	MatFileName = ./comets_log.mat
+	MatFileName = comets_log.mat
 //
 model_file yeastGEMxml.txt
 	model_world

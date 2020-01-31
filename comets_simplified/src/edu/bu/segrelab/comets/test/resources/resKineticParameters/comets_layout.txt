@@ -34,10 +34,10 @@ parameters
 	defaultVmax = 10
 	defaultW = 10
 	writeFluxLog = false
-	fluxLogName = C:\sync\biomes\enz\analysis\rates_and_params\log_flux.m
+	fluxLogName = log_flux.m
 	fluxLogRate = 1
 	writeMediaLog = false
-	mediaLogName = C:\sync\biomes\enz\analysis\rates_and_params\log_media.m
+	mediaLogName = log_media.m
 	mediaLogRate = 1
 	writeBiomassLog = false
 	biomassLogName = ./biomass.m
