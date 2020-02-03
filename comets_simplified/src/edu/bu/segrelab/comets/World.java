@@ -237,7 +237,10 @@ public abstract class World implements CometsConstants
 	 */
 	public static String[] getMediaNames()
 	{
-		return instance.mediaNames;
+		if (instance != null) {
+			return instance.mediaNames;
+		}
+		else return null;
 	}
 	
 	/**
@@ -245,7 +248,10 @@ public abstract class World implements CometsConstants
 	 */
 	public static int getNumMedia()
 	{
-		return instance.numMedia;
+		if (instance != null) {
+			return instance.numMedia;
+		}
+		else return 0;
 	}
 	
 	/**
@@ -288,7 +294,7 @@ public abstract class World implements CometsConstants
 	 */
 	public void refreshMedia()
 	{
-		refreshMedia(mediaRefresh);
+		refreshMedia(getMediaRefresh());
 	}
 
 	/**
@@ -847,7 +853,7 @@ public abstract class World implements CometsConstants
 	public boolean isMediaRefreshSpace(int x, int y, int z)
 	{
 		if (isOnGrid(x, y, z))
-			return (Utility.sum(mediaRefresh) > 0 || refreshPoints[x][y][z] != null);
+			return (Utility.sum(getMediaRefresh()) > 0 || refreshPoints[x][y][z] != null);
 		else
 			return false;
 	}
@@ -888,7 +894,7 @@ public abstract class World implements CometsConstants
 			if (refreshPoints[x][y][z] != null)
 				rpConc = refreshPoints[x][y][z].getMediaRefresh();
 			for (int i=0; i<numMedia; i++)
-				conc[i] = mediaRefresh[i] + rpConc[i];
+				conc[i] = getMediaRefresh()[i] + rpConc[i];
 			return conc;
 		}
 		else
@@ -936,8 +942,8 @@ public abstract class World implements CometsConstants
 	{
 		if (delta.length != numMedia)
 			return PARAMS_ERROR;
-		for (int i=0; i < mediaRefresh.length; i++)
-			mediaRefresh[i] = delta[i];
+		for (int i=0; i < getMediaRefresh().length; i++)
+			getMediaRefresh()[i] = delta[i];
 		return PARAMS_OK;
 	}
 
@@ -987,7 +993,7 @@ public abstract class World implements CometsConstants
 	 */
 	public double[] getMediaRefreshAmount()
 	{
-		return mediaRefresh;
+		return getMediaRefresh();
 	}	
 	
 	/**
@@ -1134,5 +1140,38 @@ public abstract class World implements CometsConstants
 
 	public static void setInitInstance(World initInstance) {
 		World.initInstance = initInstance;
+	}
+
+	public static double[] getMediaRefresh() {
+		if (instance != null) {
+			return World.getInstance().mediaRefresh;
+		}
+		else return null;
+	}
+	
+	public static double[] getStaticMedia() {
+		if (instance != null) {
+			return World.getInstance().staticMedia;
+		}
+		else return null;
+	}
+	
+	public static boolean[] getIsStatic() {
+		if (instance != null) {
+			return World.getInstance().isStatic;
+		}
+		else return null;
+	}
+	
+	public static CometsParameters getCParams() {
+		if (instance != null) {
+			return World.getInstance().cParams;
+		}
+		else return null;
+	}
+	
+	// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
+	public void changeOwnModels() {
+		changeModelsInWorld(models,models);
 	}
 }

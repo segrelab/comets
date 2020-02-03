@@ -51,7 +51,7 @@ model_file React_enze.txt Reset_enze.txt
 	model_world
 		grid_size 1 1
 		world_media
-		PseudoOrganism_Biomass_Mock 0
+		biomass_pseudo 0
 		enz[e] 5e-07
 		enz_inactive[e] 0
 		product[e] 0

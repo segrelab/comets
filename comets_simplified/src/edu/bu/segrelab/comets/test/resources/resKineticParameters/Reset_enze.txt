@@ -20,7 +20,7 @@ BIOMASS
 METABOLITE_NAMES
     enz[e]
     enz_inactive[e]
-    PseudoOrganism_Biomass_Mock
+    biomass_pseudo
 //
 REACTION_NAMES
     rxn

@@ -129,25 +129,25 @@ public class FBAWorld extends World2D
 	//Factory methods to invoke the private singleton constructors
 	public static FBAWorld createInstance(Comets c, int numMedia) {
 		FBAWorld world = new FBAWorld(c,numMedia);
-		world.changeModelsInWorld(world.models, world.models);// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
 		World.setInstance(world);
-		
-		return world;
+		World.getInstance().changeOwnModels();// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
+		return (FBAWorld) World.getInstance();
 	}
 	
 	public static FBAWorld createInstance(Comets c, String[] mediaNames, double[] startingMedia, Model[] models) {
 		FBAWorld world = new FBAWorld(c,mediaNames, startingMedia, models);
-		world.changeModelsInWorld(world.models, world.models);// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
+		//world.synchronizeWithModels();
 		World.setInstance(world);
-		return world;
+		World.getInstance().changeOwnModels();// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
+		return (FBAWorld) World.getInstance();
 	}
 	
 	public static FBAWorld createInstance(Comets c, String[] mediaNames, double[] startingMedia,
 			Model[] models, double[] refreshMedia, double[] mediaStatic, boolean[] staticGlobal) {
 		FBAWorld world = new FBAWorld(c,mediaNames, startingMedia, models, refreshMedia, mediaStatic, staticGlobal);
-		world.changeModelsInWorld(world.models, world.models);// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
 		World.setInstance(world);
-		return world;
+		World.getInstance().changeOwnModels();// applies all models to the world - puts names, etc, in the right order, and sets media diffusion constants where appropriate
+		return (FBAWorld) World.getInstance();
 	}
 	
 	/**
@@ -229,6 +229,7 @@ public class FBAWorld extends World2D
 		{	
 			freshMedia[k] = media[0][0][k];
 		}
+		
 		threadLock = 0;
 	}
 	
@@ -301,10 +302,6 @@ public class FBAWorld extends World2D
 
 		runCells = new Stack<Cell>();
 		circleSet = null;
-
-		// applies all models to the world - puts names, etc, in the right order,
-		// and sets media diffusion constants where appropriate. 
-		changeModelsInWorld(models, models);
 		
 		threadLock = 0;
 	}
@@ -940,11 +937,12 @@ public class FBAWorld extends World2D
 		reactionModel.reset();
 		reactionModel.setup();
 		String[] exRxnMets = reactionModel.getInitialMetNames();
-		if (exRxnMets != null){
+		if (exRxnMets != null && reactionModel.getMetDiffusionConstants() != null){
 			for (int i = 0; i < exRxnMets.length; i++){
 				if (!mediaNamesMap.keySet().contains(exRxnMets[i])){
-				mediaNamesMap.put(exRxnMets[i], new Integer(1));
-				newDiffConsts.put(exRxnMets[i], nutrientDiffConsts[i]);
+					System.out.println(Integer.toString(i));
+					mediaNamesMap.put(exRxnMets[i], new Integer(1));
+					newDiffConsts.put(exRxnMets[i], reactionModel.getMetDiffusionConstants()[i]);
 				}
 			}
 		}
@@ -1030,13 +1028,12 @@ public class FBAWorld extends World2D
 		int[] newMediaIndices = new int[newMetabNames.length];
 		for (int k=0; k<newMetabNames.length; k++)
 			newMediaIndices[k] = -1;
-		for (int k=0; k<mediaNames.length; k++)
-		{
-			int idx = Arrays.binarySearch(newMetabNames, mediaNames[k]);
+		for (int k=0; k<getMediaNames().length; k++){
+			int idx = Arrays.binarySearch(newMetabNames, getMediaNames()[k]);
 			if (idx >= 0)
 			{
 				if (DEBUG)
-					System.out.println(mediaNames[k] + " from " + k + " -> " + idx);
+					System.out.println(getMediaNames()[k] + " from " + k + " -> " + idx);
 				newMediaIndices[k] = idx;
 			}
 		}
@@ -1100,9 +1097,9 @@ public class FBAWorld extends World2D
 		{
 			if (newMediaIndices[k] != -1)
 			{
-				newMediaRefresh[newMediaIndices[k]] = mediaRefresh[k];
-				newStaticMedia[newMediaIndices[k]] = staticMedia[k];
-				newIsStatic[newMediaIndices[k]] = isStatic[k];
+				newMediaRefresh[newMediaIndices[k]] = getMediaRefresh()[k];
+				newStaticMedia[newMediaIndices[k]] = getStaticMedia()[k];
+				newIsStatic[newMediaIndices[k]] = getIsStatic()[k];
 			}
 		}
 		
@@ -1182,9 +1179,9 @@ public class FBAWorld extends World2D
 		// 1. Make up an "array" of integers, indexed by each exchange
 		// metabolite
 		Map<String, Integer> metabMap = new HashMap<String, Integer>();
-		for (int i = 0; i < mediaNames.length; i++)
+		for (int i = 0; i < getMediaNames().length; i++)
 		{
-			metabMap.put(mediaNames[i], new Integer(i));    
+			metabMap.put(getMediaNames()[i], new Integer(i));    
 			// a way to quickly look up strings.
 		}
 
@@ -1218,6 +1215,23 @@ public class FBAWorld extends World2D
 				allExchMetabMap.put(exchMetabs[j], new Double(diffConsts[j]));
 			}
 			modelExchList.add(worldExchIdx);
+		}
+		
+		//preserve metabolites which are involved in extracellular reactions
+		reactionModel.reset();
+		reactionModel.setup();
+		String[] exRxnMets = reactionModel.getMetNames();
+		if ((exRxnMets != null) && (exRxnMets.length > 0) &&  !metabMap.isEmpty()){
+			if (!(metabMap.keySet().size() == 1) && !metabMap.keySet().contains(null)){ //the media has been populated once before
+				int[] worldExtracellularMetabIdxs = new int[exRxnMets.length];
+				for (int i = 0; i < exRxnMets.length; i++){
+					if (!allExchMetabMap.keySet().contains(exRxnMets[i])){
+						int worldExtracellularMetabIdx = ((Integer) metabMap.get(exRxnMets[i])).intValue();
+						worldExtracellularMetabIdxs[i] = worldExtracellularMetabIdx;
+					}				
+				}
+				modelExchList.add(worldExtracellularMetabIdxs);
+			}
 		}
 		
 //		nutrientDiffConsts = new double[numMedia];
@@ -3621,6 +3635,7 @@ public class FBAWorld extends World2D
 	 */
 	public int run()
 	{
+		c = instance.getComets();
 		int ret = PARAMS_OK;
 		if (pParams.getNumRunThreads() > 1)
 			ret = runThreaded();
@@ -5234,6 +5249,11 @@ public class FBAWorld extends World2D
 	{
 		if(numMedia == diffConsts.length)
 			this.nutrientDiffConsts = diffConsts;
+	}
+	
+	public double[] getDiffusionConstants()
+	{
+		return this.nutrientDiffConsts;
 	}
 	
 	/*

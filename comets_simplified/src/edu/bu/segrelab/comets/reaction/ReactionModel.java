@@ -13,6 +13,8 @@ import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.World;
 import edu.bu.segrelab.comets.fba.FBAParameters;
+import edu.bu.segrelab.comets.fba.FBAWorld;
+import edu.bu.segrelab.comets.fba.FBAWorld3D;
 import edu.bu.segrelab.comets.reaction.ExternalReactionCalculator.CalcStatus;
 /**A class to hold the information necessary to run extracellular reactions
  * 
@@ -24,6 +26,8 @@ public class ReactionModel extends Model implements CometsConstants {
 	protected int nmets;
 	protected int nrxns;
 	protected String[] metNames;
+	protected double[] metDiffusionConstants;
+
 	protected double[][] exRxnStoich; //dimensions are ReactionID by MetID
 	protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
 	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
@@ -39,6 +43,7 @@ public class ReactionModel extends Model implements CometsConstants {
 	protected int[] initialExRxnEnzymes; 
 	protected double[][] initialExRxnParams; 
 	protected String[] initialMetNames;
+	protected double[] initialMetDiffusionConstants;
 
 	//protected boolean worldIs3D = false;
 	//protected int x,y,z;
@@ -210,11 +215,23 @@ public class ReactionModel extends Model implements CometsConstants {
 			}
 		}
 		
+		//lookup the diffusion constants
+		if (((FBAWorld) World.getInstance()).getDiffusionConstants() != null) {
+			double[] newDiffConstants = new double[newNames.length];
+			for (int i = 0; i < newNames.length; i++) {
+				int idx = Arrays.binarySearch(World.getMediaNames(),newNames[i]);
+				if (World.getInstance().is3D()) newDiffConstants[i] = ((FBAWorld3D) World.getInstance()).getDiffusionConstants()[idx];
+				else newDiffConstants[i] = ((FBAWorld) World.getInstance()).getDiffusionConstants()[idx];
+			}
+			metDiffusionConstants = newDiffConstants;
+		}
+		
 		//set the new values
 		exRxnEnzymes = newEnzymes;
 		exRxnStoich = newStoich;
 		exRxnParams = newParams;
 		metNames = newNames;
+
 		
 		//build the new ODE equations
 		reactionODE = new ReactionODE(exRxnStoich, exRxnRateConstants, exRxnEnzymes, exRxnParams);
@@ -235,6 +252,7 @@ public class ReactionModel extends Model implements CometsConstants {
 		initialExRxnRateConstants = exRxnRateConstants;
 		initialExRxnStoich = exRxnStoich;
 		initialMetNames = metNames;
+		initialMetDiffusionConstants = metDiffusionConstants;
 	}
 	
 	/**Restore the saved "initial" values. A process which reorders the media
@@ -246,6 +264,7 @@ public class ReactionModel extends Model implements CometsConstants {
 		isSetUp = false;
 
 		metNames = initialMetNames;
+		metDiffusionConstants = initialMetDiffusionConstants;
 		nmets = 0;
 		if (metNames != null) nmets = metNames.length;
 		nrxns = 0;
@@ -418,4 +437,11 @@ public class ReactionModel extends Model implements CometsConstants {
 	
 	public ReactionODE getReactionODE() {return reactionODE;}
 	
+	public String[] getMetNames() {
+		return metNames;
+	}
+	
+	public double[] getMetDiffusionConstants() {
+		return metDiffusionConstants;
+	}
 }

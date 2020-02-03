@@ -6,7 +6,7 @@ model_file React_enze.txt Reset_enze.txt
 		mediaB 2
 		mediaC 1
 		mediaD 1
-		enzyme .05
+		enz[e] .05
 		product1 0
 		product2 0
 		product3 0
@@ -15,6 +15,9 @@ model_file React_enze.txt Reset_enze.txt
 		cellulase_active[e] 0
 		cellulase_inactive[e] 0
 		cellulose[e] 0
+		enz_inactive[e] 0
+		substrate[e] 0
+		product[e] 0
 	//
 	diffusion_constants 1.000000e-06
 		1 0
@@ -30,12 +33,15 @@ model_file React_enze.txt Reset_enze.txt
 		11 0
 		12 0
 		13 0
+		14 0
+		15 0
+		16 0
 	//
 	media
 	//
-	media_refresh 0 0 0 0 0 0 0 0 0 0 0 0 0
+	media_refresh 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 	//
-	static_media 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+	static_media 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 	//
 	barrier
 	//

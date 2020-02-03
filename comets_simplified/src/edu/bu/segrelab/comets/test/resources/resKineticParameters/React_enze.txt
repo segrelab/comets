@@ -28,7 +28,7 @@ METABOLITE_NAMES
     enz_inactive[e]
     substrate[e]
     product[e]
-    PseudoOrganism_Biomass_Mock
+    biomass_pseudo
 //
 REACTION_NAMES
     rxn

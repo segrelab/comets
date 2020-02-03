@@ -983,7 +983,7 @@ public abstract class World2D extends World implements CometsConstants
 	 */
 	public int putCellAt(int x, int y, Cell cell)
 	{
-		if (cParams.isToroidalGrid())
+		if (getCParams().isToroidalGrid())
 		{
 			x = adjustX(x);
 			y = adjustY(y);

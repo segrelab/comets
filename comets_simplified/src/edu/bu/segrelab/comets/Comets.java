@@ -91,7 +91,7 @@ public class Comets implements CometsConstants,
 							   CometsChangeListener
 {
 
-	private String versionString = "2.7.3, Branch singleton_world r2, 31 January 2020";
+	private String versionString = "2.7.3, Branch singleton_world r3, 03 February 2020";
 
 	
 	/**
@@ -1528,11 +1528,8 @@ public class Comets implements CometsConstants,
 		{
 			// Load the layout file.
 			loader.loadLayoutFile(filename, this, !cParams.isCommandLineOnly());
-			if (World.getInstance() != null)
-			{
-				World.getInstance().destroy();
-				World.getInitInstance().destroy();
-			}
+			if (World.getInstance() != null) World.getInstance().destroy();
+			if (World.getInitInstance() != null) World.getInitInstance().destroy();
 			
 			if(!cParams.isCommandLineOnly())
 			{

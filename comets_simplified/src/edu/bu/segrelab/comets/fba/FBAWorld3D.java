@@ -3367,6 +3367,10 @@ implements CometsConstants
 		if(numMedia == diffConsts.length)
 			this.nutrientDiffConsts = diffConsts;
 	}
+	
+	public double[] getDiffusionConstants() {
+		return nutrientDiffConsts;
+	}
 
 	public Comets getComets(){
 		return c;
