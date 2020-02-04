@@ -923,6 +923,7 @@ public class FBAWorld extends World2D
 		}
 		
 		//preserve metabolites which are involved in extracellular reactions
+		IWorld.reactionModel.setWorld(this);
 		IWorld.reactionModel.reset();
 		IWorld.reactionModel.setup();
 		//String[] exRxnMets = IWorld.reactionModel.getMediaNames();
@@ -3672,8 +3673,16 @@ public class FBAWorld extends World2D
 		// 3. Run any extracellular reactions
 		//if (!reactionModel.isSetUp()) reactionModel.setup();
 		if (reactionModel.isSetUp()){
+			if (reactionModel.getWorld() != this) {
+				//Replace the pointer for cases where old worlds are loaded, 
+				//or the initial world is not the one that is executing
+				reactionModel.reset();
+				reactionModel.setWorld(this);
+				reactionModel.setup();
+			}
 			reactionModel.run();
 		}
+		
 		// 4. diffuse media and biomass
 		//for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
 		//{

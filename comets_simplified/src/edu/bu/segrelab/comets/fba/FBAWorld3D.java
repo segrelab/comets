@@ -466,6 +466,7 @@ implements CometsConstants
 		}
 		
 		//preserve metabolites which are involved in extracellular reactions
+		IWorld.reactionModel.setWorld(this);
 		IWorld.reactionModel.reset();
 		IWorld.reactionModel.setup();
 		//String[] exRxnMets = IWorld.reactionModel.getMediaNames();
@@ -2188,7 +2189,14 @@ implements CometsConstants
 		// 3. Run any extracellular reactions
 		//if (!reactionModel.isSetUp()) reactionModel.setup();
 		if (reactionModel.isSetUp()){
-			if (exRxnStoich != null) executeExternalReactions();
+			if (reactionModel.getWorld() != this) {
+				//Replace the pointer for cases where old worlds are loaded, 
+				//or the initial world is not the one that is executing
+				reactionModel.reset();
+				reactionModel.setWorld(this);
+				reactionModel.setup();
+			}
+			reactionModel.run();
 		}
 		
 		// 4. diffuse media and biomass
@@ -2333,14 +2341,6 @@ implements CometsConstants
 			//return (FBACell) runCells.pop();
 		}
 		return null;
-	}
-
-	protected void executeExternalReactions(){
-		//get new media concentrations in the form double[x][y][z][mediaIdx]
-		//Since this is the 2d version of the world, always use z=0
-		RK4Runner rk4 = new RK4Runner(this.c);
-		rk4.run();
-		media = rk4.result;
 	}
 
 	/**

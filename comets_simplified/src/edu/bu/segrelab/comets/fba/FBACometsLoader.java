@@ -1710,7 +1710,12 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		}
 		
 		//set global External Reactions
-		IWorld.reactionModel.setWorld((IWorld) world);
+		if (world == null) {
+			IWorld.reactionModel.setWorld(world3D);
+		}
+		else {
+			IWorld.reactionModel.setWorld((IWorld) world);
+		}
 		IWorld.reactionModel.setMediaNames(initialMediaNames);
 		IWorld.reactionModel.setExRxnEnzymes(exRxnEnzymes);
 		IWorld.reactionModel.setExRxnParams(exRxnParams);
