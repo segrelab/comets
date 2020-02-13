@@ -19,6 +19,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import edu.bu.segrelab.comets.IWorld;
+import edu.bu.segrelab.comets.fba.FBAModel;
+import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.test.classes.TComets;
 import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
 
@@ -46,6 +49,7 @@ public class IntTestRunningLayouts {
 
 	@After
 	public void tearDown() throws Exception {
+		IWorld.getReactionModel().clear();
 	}
 	
 	/*//testing Eclipse file IO with FileWriter
@@ -150,6 +154,45 @@ public class IntTestRunningLayouts {
 		double finalGlc = comets.getWorld().getMediaAt(0, 0)[glcIdx];
 		assert(finalGlc > initGlc);
 		
+	}
+	
+	/**Test that if there are objectives besides the biomass reaction, and the biomass reaction
+	 * has no flux, the other reactions still run and update the media. 
+	 * @throws IOException 
+	 */
+	@Test
+	public void testFluxWithoutGrowth() throws IOException {
+
+		//Use the model described in IntTestFBAModelOptimization.testMultiObjective except:
+		// -the Biomass reaction is explicitly set to Reaction 4
+		// -the bound for Reaction 4 are set to 0
+		//There should still be flux through Reactions 3 and 5
+		String layoutFilePath = "comets_layout_fluxesWithoutGrowth.txt";
+		String scriptFilePath = comets.createScriptForLayout(layoutFilePath);
+		comets.loadScript(scriptFilePath);
+		double initBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
+				
+		int cIdx = ArrayUtils.indexOf(comets.getWorld().getMediaNames(), "c1");
+		double initC = comets.getWorld().getMediaAt(0, 0)[cIdx];
+		int bIdx = ArrayUtils.indexOf(comets.getWorld().getMediaNames(), "bio");
+		double initB = comets.getWorld().getMediaAt(0, 0)[bIdx];
+		
+		//temp modification: Remove c2 to block growth. This SHOULD be possible by setting the bounds of Reaction 4 to 0, need to check if it is.
+		//double[] newMedia = comets.getWorld().getMediaAt(0, 0);
+		//int c2Idx = ArrayUtils.indexOf(comets.getWorld().getMediaNames(), "c2");
+		//newMedia[c2Idx] = 0;
+		//comets.getWorld().setMedia(0, 0, newMedia);
+		
+		comets.run();
+		//check that C1 was consumed
+		double finalC = comets.getWorld().getMediaAt(0, 0)[cIdx];
+		assert(finalC < initC);
+		//check that Bio was produced
+		double finalB = comets.getWorld().getMediaAt(0, 0)[bIdx];
+		assert(finalB > initB);
+		//check that Biomass did not change
+		double finalBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
+		assert(finalBiomass == initBiomass);
 	}
 
 }

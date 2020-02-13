@@ -247,11 +247,13 @@ public class ReactionModel extends Model implements CometsConstants {
 	}
 	
 	/**Restore the saved "initial" values. A process which reorders the media
-	*(such as world.changeModelsInWorld() should call this class's setup() function
+	*such as world.changeModelsInWorld() should call this class's setup() function
 	*which organizes arrays based on the input file. So this is how we load the state
 	*after the initial loading process.
 	***/
 	public void reset(){
+		//if (!isSetUp) return; //can't reset if you haven't initialized
+		
 		isSetUp = false;
 
 		metNames = initialMetNames;
@@ -283,6 +285,8 @@ public class ReactionModel extends Model implements CometsConstants {
 		}		
 		
 		reactionODE = new ReactionODE(exRxnStoich, exRxnRateConstants, exRxnEnzymes, exRxnParams);
+		
+		//setup();
 	}
 	
 	public boolean isSetUp(){
@@ -426,5 +430,27 @@ public class ReactionModel extends Model implements CometsConstants {
 	}
 	
 	public ReactionODE getReactionODE() {return reactionODE;}
+
+	/**Remove all stored values. Useful for test classes where COMETS reloads multiple times without escaping,
+	 * because IWorld contains a static ReactionModel that would persist between tests
+	 * 
+	 */
+	public void clear() {
+		nmets = 0;
+		nrxns = 0;
+		metNames = null;
+		exRxnStoich = null;
+		exRxnRateConstants = null; 
+		exRxnEnzymes = null;
+		exRxnParams = null;
+		reactionODE = null;
+		initialExRxnStoich = null; 
+		initialExRxnRateConstants = null; 
+		initialExRxnEnzymes = null; 
+		initialExRxnParams = null; 
+		initialMetNames = null;
+		world = null;		
+		isSetUp = false;
+	}
 	
 }

@@ -47,11 +47,12 @@
 	totalBiomassLogName = ./total_biomass.m
 	useLogNameTimeStamp = false
 //
-model_file testmodel_2carbons.txt
+model_file testmodel_fluxesWithoutGrowth.txt
 	model_world
 		grid_size 1 1
 		world_media
-		c1 0
+		bio 0
+		c1 0.005
 		c2 0.005
 		n 0.005
 		o 1
@@ -61,9 +62,9 @@ model_file testmodel_2carbons.txt
 	//
 	media
 	//
-	media_refresh 0 0 0 0 0
+	media_refresh 0 0 0 0 0 0
 	//
-	static_media 0 0 0 0 0 0 0 0 0 0
+	static_media 0 0 0 0 0 0 0 0 0 0 0 0
 	//
 	barrier
 	//

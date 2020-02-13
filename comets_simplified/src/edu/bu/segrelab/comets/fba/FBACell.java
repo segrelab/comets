@@ -889,22 +889,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				allModelsGrowthRates[i]=biomassGrowthRate;
 				
 				deltaBiomass[i] *= (1-(double)(((FBAModel)models[i]).getGenomeCost()));
-				
-				// if no biomass change dont change media //JEAN 
-				// This may be redundant in newer version of COMETS.
-				if(deltaBiomass[i]<0.0){
-					deltaBiomass[i]=0.0;
-					for (int j=0; j<deltaMedia[i].length; j++)
-					{
-						deltaMedia[i][j] = 0.0;
-					}
-				}
-				
 
-//				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
-//				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());
-//				System.out.println("solution: " + ((FBAModel)models[i]).getObjectiveSolution());
-				
 				if (cParams.showGraphics())
 					cellColor = calculateColor();
 				
@@ -926,9 +911,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		//DJORDJE Section.moved to partition media by model and then update media collectively at the end.
 		for (int a=0; a<models.length; a++)
 		{
-			if (biomass[a] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass() || 	deltaBiomass[a]==0.0)
-				continue;
-
 			if(cParams.getNumLayers() == 1)
 				world.changeModelMedia(x, y, a, deltaMedia[a]);
 			else if (cParams.getNumLayers() > 1)
