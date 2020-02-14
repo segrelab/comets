@@ -154,4 +154,7 @@ public abstract class Cell implements CometsConstants
 	//Jean Sets the cell to not be in stationary phase needed if batch dilute is in use.
 	public abstract void setStationaryStatus();
 	
+	public abstract void setParameters(CometsParameters cParams);
+	public abstract void setPackageParameters(PackageParameters pParams);
+	
 }

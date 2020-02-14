@@ -10,11 +10,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.rules.TemporaryFolder;
 
+import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
+import edu.bu.segrelab.comets.Model;
+import edu.bu.segrelab.comets.World2D;
+import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.fba.FBACometsLoader;
 import edu.bu.segrelab.comets.fba.FBAModel;
 import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
@@ -154,4 +159,30 @@ public class TComets extends Comets {
 	public void doCommandLineRunWithoutLoading() {
 		doCommandLineRun();
 		}
+	
+	//Update: Looks like this isn't necessary after all. You can change the parameters in the
+	//Comets Object and execute without this, as long as you remember to be using doCommandLineRunWithoutLoading
+	/*Make sure all objects have matching CometsParameters and PackageParameters.
+	 * Because Worlds and Cells include a copy of the CometsParameters and PackageParameters,
+	 * if you want to change a parameter mid-run you should set it in the Comets's Parameters
+	 * then call this function to push it to the children, then doCommandLineRunWithoutLoading().
+	 * Note: I can't say what would happen if you made setParameters and setPackageParameters
+	 * do this automatically, but I think it would be a good idea (or make Parameters classes 
+	 * Static or Singletons)
+	 */
+	/*public void synchronizeParameters() {
+		getWorld().setParameters(cParams);
+		getWorld().setPackageParameters(pParams);
+		for (int i = 0; i < cellList.size(); i++) {
+			cellList.get(i).setParameters(cParams);
+			cellList.get(i).setPackageParameters(pParams);
+		}
+		if (initWorld != null) initWorld.setParameters(cParams);
+		if (initWorld3D != null) initWorld3D.setPackageParameters(pParams);
+		for (int i = 0; i < initCellList.size(); i++) {
+			initCellList.get(i).setParameters(cParams);
+			initCellList.get(i).setPackageParameters(pParams);
+		}
+	}*/
+
 }

@@ -90,7 +90,7 @@ public class Comets implements CometsConstants,
 							   CometsChangeListener
 {
 
-	private String versionString = "2.7.4 Hotfix 1, 13 February 2020";
+	private String versionString = "2.7.4 Hotfix 1r2, 14 February 2020";
 
 	
 	/**
@@ -110,10 +110,13 @@ public class Comets implements CometsConstants,
 	protected CometsParameters cParams;   // the global parameter set
 	protected PackageParameters pParams;  // parameters specific to the package
 	
-	private Model[] initModels, models;
-	private World2D initWorld, world;
-	private World3D initWorld3D, world3D;
-	private List<Cell> initCellList, cellList;
+	protected Model[] initModels, models;
+	protected World2D initWorld;
+
+
+	protected World2D world;
+	protected World3D initWorld3D, world3D;
+	protected List<Cell> initCellList, cellList;
 
 	private int mode;
 	protected CometsLoader loader = null;
@@ -420,7 +423,7 @@ public class Comets implements CometsConstants,
 	
 	public void setPackageParameters(PackageParameters pParams)
 	{
-		if (getPackageParameters().getClass().equals(this.pParams.getClass()))
+		if (getPackageParameters().getClass().equals(pParams.getClass()))
 			this.pParams = pParams;
 	}
 	

@@ -35,6 +35,7 @@ import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.Model;
+import edu.bu.segrelab.comets.PackageParameters;
 import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
@@ -5516,6 +5517,17 @@ public class FBAWorld extends World2D
 	//TODO:This function is only included because the proper calculateDeltaBiomass seems to be missing. Do not commit this method!
 	public double[] calculateDeltaBiomass() {
 		throw new Error("FBAWorld.calculateDeltaBiomass() has been invoked but is not yet implemented.");
+	}
+
+	@Override
+	public void setParameters(CometsParameters cParams) {
+		this.cParams = cParams;
+	}
+
+	@Override
+	public void setPackageParameters(PackageParameters pParams) {
+		if (pParams.getClass().equals(FBAParameters.class))
+			this.pParams = (FBAParameters) pParams;
 	}
 	
 }

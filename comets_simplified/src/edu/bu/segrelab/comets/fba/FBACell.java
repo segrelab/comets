@@ -889,7 +889,23 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				allModelsGrowthRates[i]=biomassGrowthRate;
 				
 				deltaBiomass[i] *= (1-(double)(((FBAModel)models[i]).getGenomeCost()));
+				
+				// if no biomass change don't change media //JEAN 
+				if (!pParams.getAllowFluxWithoutGrowth()) {
+					if(deltaBiomass[i]<0.0){
+						deltaBiomass[i]=0.0;
+						for (int j=0; j<deltaMedia[i].length; j++)
+						{
+							deltaMedia[i][j] = 0.0;
+						}
+					}
+				}
+				
 
+//				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution()) * cParams.getTimeStep();
+//				deltaBiomass[i] = (double)(((FBAModel)models[i]).getObjectiveFluxSolution());
+//				System.out.println("solution: " + ((FBAModel)models[i]).getObjectiveSolution());
+				
 				if (cParams.showGraphics())
 					cellColor = calculateColor();
 				
@@ -911,6 +927,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		//DJORDJE Section.moved to partition media by model and then update media collectively at the end.
 		for (int a=0; a<models.length; a++)
 		{
+			if (!pParams.getAllowFluxWithoutGrowth() && 
+					(biomass[a] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass() || deltaBiomass[a]==0.0))
+					continue;//block media changes because the model didn't grow
+			
 			if(cParams.getNumLayers() == 1)
 				world.changeModelMedia(x, y, a, deltaMedia[a]);
 			else if (cParams.getNumLayers() > 1)
@@ -1239,5 +1259,16 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		else c = world3D.getComets();
 		pParams = (FBAParameters) c.getPackageParameters();
 		cParams = c.getParameters();
+	}
+	
+	@Override
+	public void setParameters(CometsParameters cParams) {
+		this.cParams = cParams;
+	}
+
+	@Override
+	public void setPackageParameters(PackageParameters pParams) {
+		if (pParams.getClass().equals(FBAParameters.class))
+			this.pParams = (FBAParameters) pParams;
 	}
 }

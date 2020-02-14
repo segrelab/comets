@@ -148,7 +148,8 @@ public class FBAParameters implements PackageParameters
 	randomOrder = true, //shuffle the order each model in a cell is run
 	monodOverride,
 	pseudoOverride, 
-	costlyGenome = false; 
+	costlyGenome = false,
+	allowFluxWithoutGrowth = true; //if false, an FBACell will prevent models from updating media when they don't grow  
 
 	private String fluxLogName,
 	mediaLogName,
@@ -271,6 +272,9 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("uselognametimestamp", new Boolean(useLogNameTimeStamp));
 		paramTypes.put("uselognametimestamp", ParameterType.BOOLEAN);
+		
+		paramValues.put("allowfluxwithoutgrowth", new Boolean(allowFluxWithoutGrowth));
+		paramTypes.put("allowfluxwithoutgrowth", ParameterType.BOOLEAN);
 
 		paramValues.put("fluxlogname", fluxLogName);
 		paramTypes.put("fluxlogname", ParameterType.STRING);
@@ -402,7 +406,8 @@ public class FBAParameters implements PackageParameters
 		setMatFileName((String)paramValues.get("matfilename"));
 		setRandomOrder(((Boolean)paramValues.get("randomorder")).booleanValue());
 		setNumExRxnSubsteps((Integer)paramValues.get("numexrxnsubsteps"));
-		setCostlyGenome(((Boolean)paramValues.get("costlygenome")).booleanValue());		
+		setCostlyGenome(((Boolean)paramValues.get("costlygenome")).booleanValue());
+		setAllowFluxWithoutGrowth(((Boolean)paramValues.get("allowfluxwithoutgrowth")).booleanValue());
 		setGeneFractionalCost(((Double)paramValues.get("genefractionalcost")).doubleValue());
 
 
@@ -1519,5 +1524,18 @@ public class FBAParameters implements PackageParameters
 	public void pseudoOverride(boolean b) { pseudoOverride = b; }
 	
 	public boolean getPseudoOverride() { return pseudoOverride; }
+
+	/**Should a model be able to update media if it is feasible and has fluxes, but
+	 * the biomass flux is 0?
+	 * 
+	 * @return
+	 */
+	public boolean getAllowFluxWithoutGrowth() {
+		return allowFluxWithoutGrowth;
+	}
+
+	public void setAllowFluxWithoutGrowth(boolean allowFluxWithoutGrowth) {
+		this.allowFluxWithoutGrowth = allowFluxWithoutGrowth;
+	}
 
 }

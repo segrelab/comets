@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.fba.FBAModel;
+import edu.bu.segrelab.comets.fba.FBAParameters;
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.test.classes.TComets;
 import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
@@ -158,11 +159,11 @@ public class IntTestRunningLayouts {
 	
 	/**Test that if there are objectives besides the biomass reaction, and the biomass reaction
 	 * has no flux, the other reactions still run and update the media. 
+	 * This behavior is keyed off the FBAParameter allowFluxWithoutGrowth == true
 	 * @throws IOException 
 	 */
 	@Test
 	public void testFluxWithoutGrowth() throws IOException {
-
 		//Use the model described in IntTestFBAModelOptimization.testMultiObjective except:
 		// -the Biomass reaction is explicitly set to Reaction 4
 		// -the bound for Reaction 4 are set to 0
@@ -176,14 +177,8 @@ public class IntTestRunningLayouts {
 		double initC = comets.getWorld().getMediaAt(0, 0)[cIdx];
 		int bIdx = ArrayUtils.indexOf(comets.getWorld().getMediaNames(), "bio");
 		double initB = comets.getWorld().getMediaAt(0, 0)[bIdx];
-		
-		//temp modification: Remove c2 to block growth. This SHOULD be possible by setting the bounds of Reaction 4 to 0, need to check if it is.
-		//double[] newMedia = comets.getWorld().getMediaAt(0, 0);
-		//int c2Idx = ArrayUtils.indexOf(comets.getWorld().getMediaNames(), "c2");
-		//newMedia[c2Idx] = 0;
-		//comets.getWorld().setMedia(0, 0, newMedia);
-		
-		comets.run();
+
+		comets.doCommandLineRunWithoutLoading();
 		//check that C1 was consumed
 		double finalC = comets.getWorld().getMediaAt(0, 0)[cIdx];
 		assert(finalC < initC);
@@ -194,5 +189,38 @@ public class IntTestRunningLayouts {
 		double finalBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
 		assert(finalBiomass == initBiomass);
 	}
+	
+	/**Test that if there are objectives besides the biomass reaction, and the biomass reaction
+	 * has no flux, the other reactions will be prevented from running.
+	 * This behavior is keyed off the FBAParameter allowFluxWithoutGrowth == false 
+	 * @throws IOException 
+	 */
+	@Test
+	public void testDisallowFluxWithoutGrowth() throws IOException {
+		//Use the same input as testFluxWithoutGrowth()
+		String layoutFilePath = "comets_layout_fluxesWithoutGrowth.txt";
+		String scriptFilePath = comets.createScriptForLayout(layoutFilePath);
+		comets.loadScript(scriptFilePath);
+		double initBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
+		double[] initMedia = comets.getWorld().getMediaAt(0, 0);
+		
+		//disable FBAParameters.allowFluxWithoutGrowth
+		((FBAParameters)comets.getPackageParameters()).setAllowFluxWithoutGrowth(false);
+		//comets.synchronizeParameters();
+		
+		comets.doCommandLineRunWithoutLoading();
+		
+		//check that no media changed
+		double[] finalMedia = comets.getWorld().getMediaAt(0, 0);
+		boolean mediaUnchanged = true;
+		for (int i = 0; i < initMedia.length; i++) {
+			if (initMedia[i] != finalMedia[i]) mediaUnchanged = false;
+		}
+		assert(mediaUnchanged);
+		//check that Biomass did not change
+		double finalBiomass = comets.getWorld().getBiomassAt(0, 0)[0];
+		assert(finalBiomass == initBiomass);
+	}
+
 
 }

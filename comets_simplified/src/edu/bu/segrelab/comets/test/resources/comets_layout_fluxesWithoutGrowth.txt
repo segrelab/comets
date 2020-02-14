@@ -46,6 +46,7 @@
 	totalBiomassLogRate = 1
 	totalBiomassLogName = ./total_biomass.m
 	useLogNameTimeStamp = false
+	allowFluxWithoutGrowth = true
 //
 model_file testmodel_fluxesWithoutGrowth.txt
 	model_world

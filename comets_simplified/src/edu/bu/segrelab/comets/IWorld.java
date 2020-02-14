@@ -54,4 +54,8 @@ public interface IWorld {
 		return reactionModel;
 	}
 	
+	abstract void setParameters(CometsParameters cParams);
+	
+	abstract void setPackageParameters(PackageParameters pParams);
+	
 }
