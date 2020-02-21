@@ -41,9 +41,9 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 	private GRBEnv env;     // Gurobi environment
 	private GRBModel model; // Gurobi model
-	private GRBVar[] rxnFluxes; //These are optimization variables, i.e. fluxes
+	private GRBVar[] rxnFluxes; //These are optimization variables, i.e. fluxes. Indexed 0 to N-1
 	private GRBLinExpr[] rxnExpressions; //These are constraints on fluxes, one for each metabolite
-	private double[] fluxesModel;
+	private double[] fluxesModel; //Indexed 0 to N-1
 
 	private double[][] stoichMatrix; //This is used only in the clone() method. TODO eliminate this.
 
@@ -134,6 +134,12 @@ implements edu.bu.segrelab.comets.CometsConstants
 			// add terms to the left-hand-side expressions
 			// note that it will work only if metabolites are in ascending order in sparse S 
 			int met_count = 0; // metabolite count 
+			for (int k = 0; k < numMetabs; k++){
+				rxnExpressions[k] = new GRBLinExpr();
+				// for these expressions, all senses are =, all rhs are 0
+				senses[k] = GRB.EQUAL;
+				rhsValues[k] = 0;
+			}
 			for (int k = 0; k < m.length; k++){
 				
 				// get metabolite and variable (rxn) in current row of sparse m
@@ -146,17 +152,17 @@ implements edu.bu.segrelab.comets.CometsConstants
 				// System.out.println("cMet: " + cMet + ", CVar:" + cVar);			
 
 				// if new metabolite, move cMet and create new GrbLinExpr for next metabolite
-				if (met_count+1 == cMet){
-					met_count++;
-					rxnExpressions[cMet-1] = new GRBLinExpr();
-				}
+				//if (met_count+1 == cMet){
+				//	met_count++;
+				//	rxnExpressions[cMet-1] = new GRBLinExpr();
+				//}
 				
 				// add current term to constraints array 
 				rxnExpressions[cMet-1].addTerm(m[k][2], rxnFluxes[cVar-1]);
 				
 				// for these expressions, all senses are =, all rhs are 0
-				senses[cMet-1] = GRB.EQUAL;
-				rhsValues[cMet-1] = 0;
+				//senses[cMet-1] = GRB.EQUAL;
+				//rhsValues[cMet-1] = 0;
 			}
 
 			model.addConstrs(rxnExpressions, senses, rhsValues, null);
@@ -359,28 +365,34 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 		// add terms to the left-hand-side expressions
 		// note that it will work only if metabolites are in ascending order in sparse S 
-		int met_count = 0; // metabolite count 
+		for (int k = 0; k < nMetabolites; k++){
+			origConstraints[k] = new GRBLinExpr();
+			// for these expressions, all senses are =, all rhs are 0
+			senses[k] = GRB.EQUAL;
+			rhs[k] = 0;
+		}
+		// int met_count = 0; // metabolite count 
+		
 		for (int k = 0; k < m.length; k++){
 			
 			// get metabolite and variable (rxn) in current row of sparse m
 			Double cr = m[k][0];
 			int cMet = cr.intValue();
-
+			
 			Double cc = m[k][1];
 			int cVar = cc.intValue();
-
-			// if new metabolite, move cMet and create new GrbLinExpr for next metabolite
-			if (met_count+1 == cMet){
-				met_count++;
-				origConstraints[cMet-1] = new GRBLinExpr();
-			}
 			
+			// if new metabolite, move cMet and create new GrbLinExpr for next metabolite
+			// if (met_count+1 == cMet){
+			//	met_count++;
+			// origConstraints[cMet-1] = new GRBLinExpr();
+			//}
+
 			// add current term to constraints array 
 			origConstraints[cMet-1].addTerm(m[k][2], modelMinVars[cVar-1]);
-			
 			// for these expressions, all senses are =, all rhs are 0
-			senses[cMet-1] = GRB.EQUAL;
-			rhs[cMet-1] = 0;
+			// senses[cMet-1] = GRB.EQUAL;
+			// rhs[cMet-1] = 0;
 		}
 		
 		/* DEBUG for (int i = 0; i < senses.length; i++){		 
@@ -990,7 +1002,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 	 */
 	private void setObjectiveFluxToSpecificValue(int objIdx, double objectiveFlux){
 		GRBConstr[] objFluxVar = new GRBConstr[1]; 
-		int rxnIdx = objReactions[objIdx];//the index in Gurobi
+		int rxnIdx = objReactions[objIdx];//the index in Gurobi (1 to N)
 		// grab the constraint by name (this is the row constraint associated with the objective reaction -- row 3 in the example) 
 		try{
 			objFluxVar[0] = modelMin.getConstrByName(objConstraintNames[objIdx]);

@@ -3,18 +3,25 @@
  */
 package edu.bu.segrelab.comets.test.classes;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.junit.rules.TemporaryFolder;
 
+import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.Model;
+import edu.bu.segrelab.comets.World2D;
+import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.fba.FBACometsLoader;
 import edu.bu.segrelab.comets.fba.FBAModel;
-import edu.bu.segrelab.comets.fba.FBAWorld;
 import edu.bu.segrelab.comets.test.etc.TestKineticParameters;
 
 /**A class to allow modifications to the Comets class in order to facilitate 
@@ -58,8 +65,8 @@ public class TComets extends Comets {
 	public String createScriptForLayout(String layoutFileName) throws IOException {
 		URL scriptFolderURL = TestKineticParameters.class.getResource("../resources/");
 		String folderPath = scriptFolderURL.getPath();
-		String scriptPath = folderPath + File.separator + "comets_script_temp.txt";
-		String layoutPath = folderPath + File.separator + layoutFileName;
+		String scriptPath = folderPath + "comets_script_temp.txt";
+		String layoutPath = folderPath + layoutFileName;
 		FileWriter fw = new FileWriter(new File(scriptPath), false);
 		fw.write("load_layout " + layoutPath);
 		fw.close();
@@ -106,4 +113,76 @@ public class TComets extends Comets {
 	public void setScriptFileName(String s) {
 		this.scriptFileName = s;
 	}
+	
+	/**Load the script, building the world and its constituent models**/
+	public void loadScript() throws IOException {loadScript(this.scriptFileName);}
+	public void loadScript(String filename) throws IOException {
+		System.out.println("running script file: " + filename);
+		BufferedReader reader = new BufferedReader(new FileReader(new File(filename)));
+		String line;
+		cParams.setCommandLineOnly(true);
+		cParams.showGraphics(false);
+		
+		Set<String[]> parameterSet = new HashSet<String[]>();
+		String batchListFile = "";
+		while((line = reader.readLine()) != null)
+		{
+			line = line.trim();
+			String[] parsed = line.split("\\s+");
+			//edit MQ 5/17/2017: replace using parsed[1] with targetFile to allow
+			//cases where target file path includes spaces
+			String command = parsed[0];
+			String targetFile = line.substring(line.indexOf(parsed[1]));
+		if (command.equalsIgnoreCase("load_comets_parameters") || line.startsWith("load_package_parameters"))
+		{
+			loadParametersFile(targetFile);
+			cParams.setCommandLineOnly(true);
+			cParams.showGraphics(false);
+		}
+		else if (command.equalsIgnoreCase("load_layout"))
+		{
+			// load a layout file
+			loadLayoutFile(targetFile);
+		}
+		else if (command.equalsIgnoreCase("batch_list_file"))
+			batchListFile = targetFile;
+		else
+		        parameterSet.add(parsed);
+	}
+	reader.close();
+	}
+	
+	/**Because run() will load from a script, and some tests want to modify the program 
+	 * state between loading and execution
+	 * 
+	 */
+	public void doCommandLineRunWithoutLoading() {
+		doCommandLineRun();
+		}
+	
+	//Update: Looks like this isn't necessary after all. You can change the parameters in the
+	//Comets Object and execute without this, as long as you remember to be using doCommandLineRunWithoutLoading
+	/*Make sure all objects have matching CometsParameters and PackageParameters.
+	 * Because Worlds and Cells include a copy of the CometsParameters and PackageParameters,
+	 * if you want to change a parameter mid-run you should set it in the Comets's Parameters
+	 * then call this function to push it to the children, then doCommandLineRunWithoutLoading().
+	 * Note: I can't say what would happen if you made setParameters and setPackageParameters
+	 * do this automatically, but I think it would be a good idea (or make Parameters classes 
+	 * Static or Singletons)
+	 */
+	/*public void synchronizeParameters() {
+		getWorld().setParameters(cParams);
+		getWorld().setPackageParameters(pParams);
+		for (int i = 0; i < cellList.size(); i++) {
+			cellList.get(i).setParameters(cParams);
+			cellList.get(i).setPackageParameters(pParams);
+		}
+		if (initWorld != null) initWorld.setParameters(cParams);
+		if (initWorld3D != null) initWorld3D.setPackageParameters(pParams);
+		for (int i = 0; i < initCellList.size(); i++) {
+			initCellList.get(i).setParameters(cParams);
+			initCellList.get(i).setPackageParameters(pParams);
+		}
+	}*/
+
 }

@@ -147,6 +147,7 @@ public class IntTestFBAModelOptimization {
 			double err = 1e-9; //allowable error due to rounding etc
 			//remember the models start counting at 1 so [4]==5
 			assertEquals(1.0,fluxes1[4],err); //rxn5 is the objective, maximized
+			assertEquals(0.0,fluxes1[2],err); //rxn3 is not used
 			
 			//run the model with two objectives: [5 -4]
 			//First maximize biomass. Then minimize use of the efficient pathway
@@ -167,6 +168,7 @@ public class IntTestFBAModelOptimization {
 			e.printStackTrace();
 		}
 	}
+	
 
 	/* -------------Testing File Contents ---------------------- */
 

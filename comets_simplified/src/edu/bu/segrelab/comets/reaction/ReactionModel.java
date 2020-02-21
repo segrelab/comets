@@ -5,6 +5,10 @@ import java.util.List;
 
 import javax.swing.JComponent;
 
+import org.apache.commons.math3.ode.FirstOrderDifferentialEquations;
+import org.apache.commons.math3.ode.FirstOrderIntegrator;
+import org.apache.commons.math3.ode.nonstiff.ClassicalRungeKuttaIntegrator;
+
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
@@ -26,6 +30,7 @@ public class ReactionModel extends Model implements CometsConstants {
 	protected double[][] exRxnParams; //same dims as exRxnStoich. Stores either the Michaelis constant or reaction order
 	//depending on if the reaction is enzymatic
 	protected boolean isSetUp;
+	protected ReactionODE reactionODE;
 
 	//These store the initial values. Since the model addition/removal process may be called multiple times,
 	//we would otherwise get in trouble if setup() is invoked more than once 
@@ -35,7 +40,6 @@ public class ReactionModel extends Model implements CometsConstants {
 	protected double[][] initialExRxnParams; 
 	protected String[] initialMetNames;
 
-	
 	protected IWorld world;
 	//protected boolean worldIs3D = false;
 	//protected int x,y,z;
@@ -43,7 +47,6 @@ public class ReactionModel extends Model implements CometsConstants {
 	//A ReactionModel is created via this constructor during instantiation of a class
 	//implementing the IWorld interface
 	public ReactionModel() {
-		// TODO Auto-generated constructor stub
 	}
 	
 	public void setWorld(IWorld world){
@@ -55,7 +58,7 @@ public class ReactionModel extends Model implements CometsConstants {
 	 * 
 	 * @return
 	 */
-	protected int[] getMediaIdxs(){
+	public int[] getMediaIdxs(){
 		int[] worldIdxs = new int[metNames.length];
 		List<String> worldNames = Arrays.asList(world.getMediaNames());
 		for (int i = 0; i < metNames.length; i++){
@@ -117,6 +120,7 @@ public class ReactionModel extends Model implements CometsConstants {
 
 	public void setExRxnRateConstants(double[] exRxnRateConstants) {
 		this.exRxnRateConstants = exRxnRateConstants;
+		isSetUp = false;
 	}
 
 	public int[] getExRxnEnzymes() {
@@ -125,6 +129,7 @@ public class ReactionModel extends Model implements CometsConstants {
 
 	public void setExRxnEnzymes(int[] exRxnEnzymes) {
 		this.exRxnEnzymes = exRxnEnzymes;
+		isSetUp = false;
 	}
 
 	public double[][] getExRxnParams() {
@@ -133,6 +138,7 @@ public class ReactionModel extends Model implements CometsConstants {
 
 	public void setExRxnParams(double[][] exRxnParams) {
 		this.exRxnParams = exRxnParams;
+		isSetUp = false;
 	}
 
 	public IWorld getWorld() {
@@ -219,6 +225,9 @@ public class ReactionModel extends Model implements CometsConstants {
 		exRxnParams = newParams;
 		metNames = newNames;
 		
+		//build the new ODE equations
+		reactionODE = new ReactionODE(exRxnStoich, exRxnRateConstants, exRxnEnzymes, exRxnParams);
+		
 		isSetUp = true;
 	}
 
@@ -238,11 +247,13 @@ public class ReactionModel extends Model implements CometsConstants {
 	}
 	
 	/**Restore the saved "initial" values. A process which reorders the media
-	*(such as world.changeModelsInWorld() should call this class's setup() function
+	*such as world.changeModelsInWorld() should call this class's setup() function
 	*which organizes arrays based on the input file. So this is how we load the state
 	*after the initial loading process.
 	***/
 	public void reset(){
+		//if (!isSetUp) return; //can't reset if you haven't initialized
+		
 		isSetUp = false;
 
 		metNames = initialMetNames;
@@ -272,6 +283,10 @@ public class ReactionModel extends Model implements CometsConstants {
 				}
 			}
 		}		
+		
+		reactionODE = new ReactionODE(exRxnStoich, exRxnRateConstants, exRxnEnzymes, exRxnParams);
+		
+		//setup();
 	}
 	
 	public boolean isSetUp(){
@@ -306,25 +321,38 @@ public class ReactionModel extends Model implements CometsConstants {
 					}
 					
 					//do the math
-					double[] result = runAsSingleStep(rxnMedia, exRxnEnzymes, exRxnRateConstants, exRxnStoich, exRxnParams, timestep_seconds, 0, maxIterations);
-
+					//deprecated version: //double[] result = runAsSingleStep(rxnMedia, exRxnEnzymes, exRxnRateConstants, exRxnStoich, exRxnParams, timestep_seconds, 0, maxIterations);
+					double[] result = executeODE(rxnMedia, timestep_seconds, maxIterations); 
+					
 					if (DEBUG){
 								String resStr = "";
 						for (double d : result) resStr = resStr + " " + String.valueOf(d);
 						System.out.println("Extracellular reaction results: " + resStr);
 					}
 					
-					
 					//apply the changed media to the appropriate position in the full media list
 					for (int i = 0; i < worldIdxs.length; i++){
 						worldMedia[worldIdxs[i]] = result[i];
-					}
-					
+					}					
 					world.setMedia(x, y, z, worldMedia); //update the World.media
 				}
 			}
 		}
 		return 1;
+	}
+	
+	/**Create an instance of {@link FirstOrderDifferentialEquations} to be solved with your preferred {@link FirstOrderIntegrator#integrate} method
+	 * 
+	 * @return array of concentrations for the reaction media after execution
+	 */
+	public double[] executeODE(double[] rxnMedia, double timestep_seconds, int maxIterations){
+		double stepsize = timestep_seconds / (double) maxIterations;
+		double[] media = new double[rxnMedia.length];
+		
+		ClassicalRungeKuttaIntegrator crk = new ClassicalRungeKuttaIntegrator(stepsize);
+		crk.integrate(reactionODE, 0.0, rxnMedia, timestep_seconds, media);
+		
+		return media;		
 	}
 	
 	
@@ -399,6 +427,30 @@ public class ReactionModel extends Model implements CometsConstants {
 		double[] res2 = runAsSingleStep(res1, exRxnEnzymes, exRxnRateConstants, exRxnStoich, exRxnParams,
 				substep_seconds, iteration +1, maxIterations);
 		return res2;
+	}
+	
+	public ReactionODE getReactionODE() {return reactionODE;}
+
+	/**Remove all stored values. Useful for test classes where COMETS reloads multiple times without escaping,
+	 * because IWorld contains a static ReactionModel that would persist between tests
+	 * 
+	 */
+	public void clear() {
+		nmets = 0;
+		nrxns = 0;
+		metNames = null;
+		exRxnStoich = null;
+		exRxnRateConstants = null; 
+		exRxnEnzymes = null;
+		exRxnParams = null;
+		reactionODE = null;
+		initialExRxnStoich = null; 
+		initialExRxnRateConstants = null; 
+		initialExRxnEnzymes = null; 
+		initialExRxnParams = null; 
+		initialMetNames = null;
+		world = null;		
+		isSetUp = false;
 	}
 	
 }

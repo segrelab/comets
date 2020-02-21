@@ -15,7 +15,7 @@ import edu.bu.segrelab.comets.reaction.ReactionModel;
  */
 public interface IWorld {	
 	
-	ReactionModel reactionModel = new ReactionModel(); //static. We only need one.
+	static ReactionModel reactionModel = new ReactionModel(); //static. We only need one.
 	//List<String> initialMediaNames = new ArrayList<String>();
 	
 	abstract double[] getMediaAt(int x, int y, int z);
@@ -50,4 +50,12 @@ public interface IWorld {
 	
 	abstract String[] getInitialMediaNames();
 
+	public static ReactionModel getReactionModel() {
+		return reactionModel;
+	}
+	
+	abstract void setParameters(CometsParameters cParams);
+	
+	abstract void setPackageParameters(PackageParameters pParams);
+	
 }

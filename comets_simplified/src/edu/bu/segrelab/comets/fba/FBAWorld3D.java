@@ -32,8 +32,10 @@ import javax.swing.JScrollPane;
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.CometsConstants;
+import edu.bu.segrelab.comets.CometsParameters;
 import edu.bu.segrelab.comets.IWorld;
 import edu.bu.segrelab.comets.Model;
+import edu.bu.segrelab.comets.PackageParameters;
 import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.util.Circle;
@@ -466,6 +468,7 @@ implements CometsConstants
 		}
 		
 		//preserve metabolites which are involved in extracellular reactions
+		IWorld.reactionModel.setWorld(this);
 		IWorld.reactionModel.reset();
 		IWorld.reactionModel.setup();
 		//String[] exRxnMets = IWorld.reactionModel.getMediaNames();
@@ -2188,7 +2191,14 @@ implements CometsConstants
 		// 3. Run any extracellular reactions
 		//if (!reactionModel.isSetUp()) reactionModel.setup();
 		if (reactionModel.isSetUp()){
-			if (exRxnStoich != null) executeExternalReactions();
+			if (reactionModel.getWorld() != this) {
+				//Replace the pointer for cases where old worlds are loaded, 
+				//or the initial world is not the one that is executing
+				reactionModel.reset();
+				reactionModel.setWorld(this);
+				reactionModel.setup();
+			}
+			reactionModel.run();
 		}
 		
 		// 4. diffuse media and biomass
@@ -2333,14 +2343,6 @@ implements CometsConstants
 			//return (FBACell) runCells.pop();
 		}
 		return null;
-	}
-
-	protected void executeExternalReactions(){
-		//get new media concentrations in the form double[x][y][z][mediaIdx]
-		//Since this is the 2d version of the world, always use z=0
-		RK4Runner rk4 = new RK4Runner(this.c);
-		rk4.run();
-		media = rk4.result;
 	}
 
 	/**
@@ -3401,5 +3403,16 @@ implements CometsConstants
 
 	public void setExRxnEnzymes(int[] exRxnEnzymes) {
 		this.exRxnEnzymes = exRxnEnzymes;
+	}
+	
+	@Override
+	public void setParameters(CometsParameters cParams) {
+		this.cParams = cParams;
+	}
+
+	@Override
+	public void setPackageParameters(PackageParameters pParams) {
+		if (pParams.getClass().equals(FBAParameters.class))
+			this.pParams = (FBAParameters) pParams;
 	}
 }

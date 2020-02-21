@@ -2,14 +2,14 @@
 	activateRate = 0.001
 	allowCellOverlap = true
 	deathRate = 0
-	maxCycles = 5
+	maxCycles = 200
 	maxSpaceBiomass = 0.00022
 	minSpaceBiomass = 2.5e-11
 	pauseOnStep = false
 	randomOrder = true
-	spaceWidth = 0.02
+	spaceWidth = 0.01
 	simulateActivation = false
-	timeStep = 0.00027778
+	timeStep = 0.01
 	toroidalWorld = false
 	colorRelative = true
 	displayLayer = 0
@@ -37,7 +37,7 @@
 	fluxLogName = ./flux.m
 	fluxLogRate = 1
 	writeMediaLog = false
-	mediaLogName = log_media.m
+	mediaLogName = ./media.m
 	mediaLogRate = 1
 	writeBiomassLog = false
 	biomassLogName = ./biomass.m
@@ -46,44 +46,30 @@
 	totalBiomassLogRate = 1
 	totalBiomassLogName = ./total_biomass.m
 	useLogNameTimeStamp = false
+	allowFluxWithoutGrowth = true
 //
-model_file model_FFFE000000000000.txt
+model_file testmodel_fluxesWithoutGrowth.txt
 	model_world
 		grid_size 1 1
 		world_media
-		a 1
-		a* 0
-		b 0.75
-		b* 0
-		pseudomet 10000
-		standin_met 0
-		x 0
+		bio 0
+		c1 0.005
+		c2 0.005
+		n 0.005
+		o 1
+		p 0.005
 	//
 	diffusion_constants 1.000000e-06
 	//
 	media
 	//
-	media_refresh 0 0 0 0 0 0 0
+	media_refresh 0 0 0 0 0 0
 	//
-	static_media 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+	static_media 0 0 0 0 0 0 0 0 0 0 0 0
 	//
 	barrier
 	//
 //
-initial_pop filled 1E-7
-//
-reactions
-	reactants
-		1 5 1 1000
-		2 5 1 1
-		3 2 1 1
-		4 4 1 1
-	enzymes
-		1 1 1.000000e-10
-		2 3 0
-	products
-		1 2 1
-		2 4 1
-		3 7 1
-		4 7 1
+initial_pop
+	0 0 1.000000e-09
 //

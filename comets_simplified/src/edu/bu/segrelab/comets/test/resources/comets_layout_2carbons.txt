@@ -51,7 +51,7 @@ model_file testmodel_2carbons.txt
 	model_world
 		grid_size 1 1
 		world_media
-		c1 0.005
+		c1 0
 		c2 0.005
 		n 0.005
 		o 1

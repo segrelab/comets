@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.swing.JComponent;
+import edu.bu.segrelab.comets.fba.FBAParameters;
+
+// import javax.swing.JComponent;
 
 import edu.bu.segrelab.comets.util.Utility;
 
@@ -54,6 +56,7 @@ public abstract class World3D implements CometsConstants, IWorld
 		barrier = new boolean[numCols][numRows][numLayers];
 		models = c.getModels();
 		mediaNames = new String[numMedia];
+		reactionModel.setWorld(this);
 
 		mediaRefresh = new double[numMedia];
 		staticMedia = new double[numMedia];
@@ -1114,10 +1117,7 @@ public abstract class World3D implements CometsConstants, IWorld
 	 * @see #getAllMedia()
 	 * @see #getMediaAt(int, int)
 	 */
-	public String[] getMediaNames(){
-		return mediaNames;
-	}
-	
+
 	public Comets getComets(){
 		return c;
 	}
@@ -1133,4 +1133,5 @@ public abstract class World3D implements CometsConstants, IWorld
 	public String[] getInitialMediaNames(){return initialMediaNames;}
 
 	public boolean is3D(){return true;}
+
 }
