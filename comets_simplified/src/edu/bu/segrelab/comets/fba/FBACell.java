@@ -852,6 +852,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				// System.out.println("FBA failure status: " + stat);
 				//error check for JEAN (again may be redundant in later versions).
 				deltaBiomass[i]=0.0;
+				deltaMedia[i]= new double[((FBAModel)models[i]).getMediaNames().length];
 
 			}
 			if (stat == 5 || stat == 180)
