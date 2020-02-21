@@ -118,9 +118,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double[] exchW; 		  // defined as min(alpha[i] * media[i], W[i] * volume) / biomass
 									  // not as "exact" as the kinetic constraints, but still time-independent
 	private double[] lightAbsorption; // Absorption coefficients (default 0), also used to know which metabolites / 
-									  // exchange reactions that take up light, because they have to be treated differently from normal metabolites 
+									  // exchange reactions that take up light, because they have to be treated differently from normal metabolites [m^2/g DW]
 	
-	private double lightAbsSurfaceToWeight;
 	private double flowDiffConst; // = 1e-5;
 	private double growthDiffConst; // = 5e-5;
 	private double elasticModulusConst;
@@ -722,23 +721,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			this.lightAbsorption = lightAbsorption;
 	}
 	
-	/**
-	 * 
-	 * @param lightAbsSurfaceToWeight The ratio between the light-absorbing surface and the dry weight of a cell 
-	 */
-	public void setLightAbsSurfaceToWeight(double lightAbsSurfaceToWeight)
-	{
-		this.lightAbsSurfaceToWeight = lightAbsSurfaceToWeight;
-	}
-	
-	/**
-	 * @return the light Light-absorbing surface-to-dry-weight ratio
-	 */
-	public double getLightAbsSurfaceToWeight()
-	{
-		return lightAbsSurfaceToWeight;
-	}
-	
+
 ////
 	
 
@@ -1310,8 +1293,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   convNonlinDiffHillK=0.9,
 				   packDensity=1,
 				   noiseVariance=0.0,
-				   neutralDriftSigma=0.0,
-				   lightAbsSurfaceToWeight=1.0; // m^2/gDW
+				   neutralDriftSigma=0.0;
 			
 			boolean blockOpen = false;
 
@@ -2456,13 +2438,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						reader.close();
 						throw new ModelFileException("The list of exchange reactions should be loaded before the Light coefficients at line " + lineNum);
 					}
-					if (tokens.length != 2)
-					{
-						reader.close();
-						throw new ModelFileException("The LIGHT parameter at line " + lineNum + " should be followed by its surface to weight ratio in m^2 per gDW");
-					}
 					
-					lightAbsSurfaceToWeight = Double.parseDouble(tokens[1]);
 					lightAbsorption = new double[numExch];
 					for (int i=0; i<numExch; i++)
 						lightAbsorption[i] = 0;
@@ -2555,7 +2531,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				lightAbsorption = new double[numExch];
 				for (int i=0; i<numExch; i++)
 					lightAbsorption[i] = 0;
-				lightAbsSurfaceToWeight = 0;
 			}
 			
 		
@@ -2582,7 +2557,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setConvNonlinDiffExponent(convNonlinDiffExponent);
 			model.setPackedDensity(packDensity);
 			model.setNoiseVariance(noiseVariance);
-			model.setLightAbsSurfaceToWeight(lightAbsSurfaceToWeight);
 			
 			model.setNeutralDrift(neutralDrift);
 			model.setNeutralDriftSigma(neutralDriftSigma);
@@ -3005,7 +2979,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		modelCopy.setPackedDensity(getPackedDensity());
 		modelCopy.setNoiseVariance(getNoiseVariance());
 		modelCopy.setLightAbsorption(getLightAbsorption());
-		modelCopy.setLightAbsSurfaceToWeight(getLightAbsSurfaceToWeight());
 		
 		//modelCopy.setParameters();
 		
