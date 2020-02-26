@@ -1065,8 +1065,81 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		return biomassShare;		
 	}
 	
+	private Object[] calcDeathRateAndMetConsumption(FBAModel model, double[] media, double biomass){
+		/** checks a model's signals to see which cause death.
+		 * calculate the death rate (per unit time) caused by these different
+		 * chemicals, and returns the sum of these rates.
+		 * 
+		 *  Note that this method of calculation assumes pure additivity of death-rate
+		 *  affecting forces
+		 *  
+		 *  Note also that this could result in a death rate > 1.  There is nothing biologically
+		 *  wrong with this, but it might cause numerical issues if the timestep is too high. 
+		 */
+		double death_rate = 0;
+		Map<Integer, Double> consumed_mets = new HashMap<Integer, Double>();
+		double space_volume = cParams.getSpaceVolume();
+		for (Signal signal : model.getSignals()) {
+			if (signal.affectsDeathRate()){
+				int signal_met = signal.getExchMet();
+				double death_caused_by_toxin = signal.calculateDeathRate(media[signal_met] / space_volume);
+				death_caused_by_toxin = death_caused_by_toxin * biomass * cParams.getTimeStep();
+				
+				death_rate += death_caused_by_toxin;
+				if (signal.isMetConsumed()){
+					consumed_mets.put(signal_met, death_caused_by_toxin);
+				}
+				
+			}
+		}
+		return new Object[]{death_rate, consumed_mets};
+	}
 	
+	private boolean applySignals(FBAModel model, double[] media) {
+		// Signal encoding.  Adjust bounds if a media component
+		// affects a reaction boundary
+		// this code block looks at each signal, and adjusts
+		// the relevant bound of a reaction based upon that signal
+		// concentration.  Note:  this should not be applied
+		// directly to exchange reactions, as they are dealt with later
+		
+		if (model.getSignals().size() > 0){  // only bother if there are signals
+			double[] all_lb = model.getLowerBounds();
+			double[] all_ub = model.getUpperBounds();
+			double space_volume = cParams.getSpaceVolume();
+			for (Signal signal : model.getSignals()) {
+				
+				if (signal.getReaction() == -1){
+					// affects death rate, pass here
+					continue;
+				}
+				
+				if (signal.affectsLb()) {
+					int signal_met = signal.getExchMet();
+					int signal_rxn = signal.getReaction();
+					// useful to double check.  its because the stupid -1 for exchs but not for rxns!?
+					//String[] exchNames = model.getExchangeReactionNames();
+					//String[] rxnNames = model.getReactionNames();
+					//System.out.println(exchNames[signal_met]);
+					//System.out.println(rxnNames[signal_rxn]);
+					
+					double new_lb = signal.calculateBound(media[signal_met] / space_volume);
+					all_lb[signal_rxn] = new_lb;
+				}
+				if (signal.affectsUb()) {
+					int signal_met = signal.getExchMet();
+					int signal_rxn = signal.getReaction();
+					double new_ub = signal.calculateBound(media[signal_met] / space_volume);
+					all_ub[signal_rxn] = new_ub;	
+				}
+			}
+			model.setLowerBounds(all_lb);
+			model.setUpperBounds(all_ub);			
+		}
 
+
+		return true;
+	}
 	
 
 	/**
