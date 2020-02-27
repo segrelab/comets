@@ -12,7 +12,9 @@ import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Utility;
 import java.util.Arrays; //DJORDJE
-
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import org.apache.commons.math3.distribution.*;
 import jdistlib.*;
 
@@ -44,7 +46,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private double[] convectionRHS2;
 	private double jointRHS1;
 	private double jointRHS2;
-	private double[] deltaBiomass;
+	private double[] deltaBiomass; // this would more accurately be "bornBiomass" but keeping it as it was
+	private double[] dyingBiomass; 
 
 	private double[] allModelsGrowthRates;
 
@@ -109,6 +112,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.y = y;
 		id = getNewCellID();
 		deltaBiomass = new double[biomass.length];
+		dyingBiomass = new double[biomass.length];
 		deltaMedia = new double[biomass.length][]; // DJORDJE
 
 		FBAstatus = new int[biomass.length];
@@ -165,6 +169,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.z = z;
 		id = getNewCellID();
 		deltaBiomass = new double[biomass.length];
+		dyingBiomass = new double[biomass.length];
 		FBAstatus = new int[biomass.length];
 		this.fbaModels = fbaModels;
 		this.world3D = world3D;
@@ -657,6 +662,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //		if (Comets.DIFFUSION_TEST_MODE)
 //			return CELL_OK;
 		deltaBiomass = new double[models.length];
+		dyingBiomass = new double[biomass.length];
 
 		allModelsGrowthRates = new double[models.length];
     
@@ -691,9 +697,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			// i = the current model index to run.
 			int i = a;
 
+
 			// if no biomass, or the total biomass has overflowed, skip to the next.
 			if (biomass[i] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
 			{
+				deltaBiomass[i] = 0;
+				dyingBiomass[i] = 0;
 				continue;
 			}
 			//try to activate, if not active skip to next.
@@ -707,6 +716,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		    	continue;
 
 		    }
+		    
+
+		    
 			/************************* CALCULATE MAX EXCHANGE FLUXES ******************************/
 			double[] media=null;//=world3D.getModelMediaAt(x, y, z, i);
 			if(cParams.getNumLayers() == 1)
@@ -718,12 +730,26 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			for (int j=0; j<media.length; j++)
 				media[j] = media[j]*modelShare[i];
 			
+			// initialize change in media
+			double[] mediaDelta = new double[media.length];
+			for (int j=0; j<mediaDelta.length; j++)
+			{	
+				mediaDelta[j] = 0;
+			}
+			deltaMedia[i] = mediaDelta;
+		
+			
 			double[] lb = ((FBAModel)models[i]).getBaseExchLowerBounds();
 			double[] ub = ((FBAModel)models[i]).getBaseExchUpperBounds();
 //			String[] exchNames = ((FBAModel)models[i]).getExchangeReactionNames();
 			if (DEBUG)
 				System.out.println("Exchange reaction bounds:");
-
+			
+			// if a model has metabolite signal : reaction bound relationships,
+			// apply them
+			applySignals((FBAModel)models[i], media);
+			
+			
 			double[] rates = new double[lb.length];
 			
 			switch (pParams.getExchangeStyle())
@@ -846,13 +872,15 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			int stat = models[i].run();
 			fluxes[i] = ((FBAModel)models[i]).getFluxes();
 
+
+
 			if (stat != 5 && stat != 180)
 			{
 				// failure! don't do anything right now.
 				// System.out.println("FBA failure status: " + stat);
 				//error check for JEAN (again may be redundant in later versions).
 				deltaBiomass[i]=0.0;
-				deltaMedia[i]= new double[((FBAModel)models[i]).getMediaNames().length];
+
 
 			}
 			if (stat == 5 || stat == 180)
@@ -861,7 +889,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 				/***************** GET MEDIA CONCENTRATION CHANGE ********************/
 				double[] exchFlux = ((FBAModel)models[i]).getExchangeFluxes();
-				double[] mediaDelta = new double[exchFlux.length];
+
 
 				// modify the media (in mmol) by changing the fluxes back
 				// into concentrations
@@ -923,14 +951,29 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 //				}
 //				System.out.println();
 			}
+			
+			// calculate toxin-mediated death and consumption of toxins during death:
+			Object[] temp = calcDeathRateAndMetConsumption((FBAModel)models[i], media, biomass[i]);
+			double death_rate = (double)temp[0];
+			Map<Integer, Double> consumed_mets = (Map<Integer, Double>)temp[1];
+
+			// death
+			dyingBiomass[i] = death_rate;
+			// toxin consumption
+			Set<Integer> consumed_met_keys = consumed_mets.keySet();
+			for (int key : consumed_met_keys){
+				// deltaMedia[i] is null when a model is not feasible
+				deltaMedia[i][key] -= consumed_mets.get(key);
+			}
+
 		}
 
 		//DJORDJE Section.moved to partition media by model and then update media collectively at the end.
 		for (int a=0; a<models.length; a++)
-		{
-			if (!pParams.getAllowFluxWithoutGrowth() && 
-					(biomass[a] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass() || deltaBiomass[a]==0.0))
-					continue;//block media changes because the model didn't grow
+		{	
+			// JMC: removed '|| deltaBiomass[a]==0.0' part of if statement so toxins can degrade. 
+			if (biomass[a] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
+				continue;
 			
 			if(cParams.getNumLayers() == 1)
 				world.changeModelMedia(x, y, a, deltaMedia[a]);
@@ -1021,7 +1064,83 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			biomassShare[i] = biomass[i]/Utility.sum(biomass); 
 		return biomassShare;		
 	}
+	
+	private Object[] calcDeathRateAndMetConsumption(FBAModel model, double[] media, double biomass){
+		/** checks a model's signals to see which cause death.
+		 * calculate the death rate (per unit time) caused by these different
+		 * chemicals, and returns the sum of these rates.
+		 * 
+		 *  Note that this method of calculation assumes pure additivity of death-rate
+		 *  affecting forces
+		 *  
+		 *  Note also that this could result in a death rate > 1.  There is nothing biologically
+		 *  wrong with this, but it might cause numerical issues if the timestep is too high. 
+		 */
+		double death_rate = 0;
+		Map<Integer, Double> consumed_mets = new HashMap<Integer, Double>();
+		double space_volume = cParams.getSpaceVolume();
+		for (Signal signal : model.getSignals()) {
+			if (signal.affectsDeathRate()){
+				int signal_met = signal.getExchMet();
+				double death_caused_by_toxin = signal.calculateDeathRate(media[signal_met] / space_volume);
+				death_caused_by_toxin = death_caused_by_toxin * biomass * cParams.getTimeStep();
+				
+				death_rate += death_caused_by_toxin;
+				if (signal.isMetConsumed()){
+					consumed_mets.put(signal_met, death_caused_by_toxin);
+				}
+				
+			}
+		}
+		return new Object[]{death_rate, consumed_mets};
+	}
+	
+	private boolean applySignals(FBAModel model, double[] media) {
+		// Signal encoding.  Adjust bounds if a media component
+		// affects a reaction boundary
+		// this code block looks at each signal, and adjusts
+		// the relevant bound of a reaction based upon that signal
+		// concentration.  Note:  this should not be applied
+		// directly to exchange reactions, as they are dealt with later
+		
+		if (model.getSignals().size() > 0){  // only bother if there are signals
+			double[] all_lb = model.getLowerBounds();
+			double[] all_ub = model.getUpperBounds();
+			double space_volume = cParams.getSpaceVolume();
+			for (Signal signal : model.getSignals()) {
+				
+				if (signal.getReaction() == -1){
+					// affects death rate, pass here
+					continue;
+				}
+				
+				if (signal.affectsLb()) {
+					int signal_met = signal.getExchMet();
+					int signal_rxn = signal.getReaction();
+					// useful to double check.  its because the stupid -1 for exchs but not for rxns!?
+					//String[] exchNames = model.getExchangeReactionNames();
+					//String[] rxnNames = model.getReactionNames();
+					//System.out.println(exchNames[signal_met]);
+					//System.out.println(rxnNames[signal_rxn]);
+					
+					double new_lb = signal.calculateBound(media[signal_met] / space_volume);
+					all_lb[signal_rxn] = new_lb;
+				}
+				if (signal.affectsUb()) {
+					int signal_met = signal.getExchMet();
+					int signal_rxn = signal.getReaction();
+					double new_ub = signal.calculateBound(media[signal_met] / space_volume);
+					all_ub[signal_rxn] = new_ub;	
+				}
+			}
+			model.setLowerBounds(all_lb);
+			model.setUpperBounds(all_ub);			
+		}
 
+
+		return true;
+	}
+	
 
 	/**
 	 * Calculates the maximum light uptake.
@@ -1055,15 +1174,18 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	 */
 	public int updateCellData(double[] deltaBiomass, double[][] fluxes, double[] biomassGrowthRates)
 	{
+
+
 		this.deltaBiomass = deltaBiomass;
 		this.fluxes = fluxes;
 		
-		// apply biomass death rate, regardless of whether growth is feasible.
+		// apply BASELINE biomass death rate, regardless of whether growth is feasible.
 		int numDead = 0;
 		for (int i=0; i<biomass.length; i++)
 		{
-			deltaBiomass[i] -= cParams.getDeathRate() * biomass[i] * cParams.getTimeStep();
+			dyingBiomass[i] += cParams.getDeathRate() * biomass[i] * cParams.getTimeStep();
 			biomass[i] += deltaBiomass[i];
+			biomass[i] -= dyingBiomass[i];
 			
 
 			//Neutral drift block. Only if the death rate is zero. Get the sigmas from the model and 
