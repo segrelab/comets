@@ -921,7 +921,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				
 				// if no biomass change don't change media //JEAN 
 				if (!pParams.getAllowFluxWithoutGrowth()) {
-					if(deltaBiomass[i]<0.0){
+					if(deltaBiomass[i]<=0.0){
 						deltaBiomass[i]=0.0;
 						for (int j=0; j<deltaMedia[i].length; j++)
 						{
