@@ -1538,6 +1538,26 @@ public class FBAWorld extends World2D
 	}
 
 	/**
+	 * Returns the indexes of model media in the vector of extracellular metabolites 
+	 * in position (x, y) 
+	 */
+	public synchronized int[] getModelMediaIndexes(int x, int y, int i)
+	{
+		if (cParams.isToroidalGrid())
+		{
+			x = adjustX(x);
+			y = adjustY(y);
+		} 
+		if (isOnGrid(x, y))
+		{
+			int[] mediaList = (int[])modelExchList.get(i);
+			return mediaList;			
+		}
+		else
+			return null;
+	}
+
+	/**
 	 * Changes the level of media in space (x, y) as modified by the given model. The
 	 * mediaDelta array should hava only the media change calculated by that FBAModel,
 	 * and not necessarily all medium components.
@@ -1547,14 +1567,13 @@ public class FBAWorld extends World2D
 	 * @param mediaDelta
 	 * @return
 	 */
-	public synchronized int changeModelMedia(int x, int y, int model,
-			double[] mediaDelta)
+	public synchronized int changeModelMedia(int x, int y, int model, double[] mediaDelta)
 	{
 		if (model < 0 || model > numModels - 1)
 			return PARAMS_ERROR;
 		int[] mediaList = (int[]) modelExchList.get(model);
-		if (mediaList.length != mediaDelta.length)
-			return PARAMS_ERROR;
+//		if (mediaList.length != mediaDelta.length)
+//			return PARAMS_ERROR;
 		if (cParams.isToroidalGrid())
 		{
 			x = adjustX(x);
@@ -1562,9 +1581,11 @@ public class FBAWorld extends World2D
 		} 
 		if (isOnGrid(x, y))
 		{
+			//System.out.println(mediaList.length);
 			for (int i = 0; i < mediaList.length; i++)
-			{
-				//System.out.println("model "+model+" "+i+"  "+mediaNames[mediaList[i]]+"  "+mediaDelta[i]);
+			{	
+
+				//System.out.println("model "+model+" "+i+"  "+ mediaNames[mediaList[i]]+"  "+mediaDelta[i]);
 				media[x][y][mediaList[i]] += mediaDelta[i];
 				//System.out.println("model "+model+" "+i+" medList "+mediaList[i]+"  "+mediaNames[mediaList[i]]+"  "+media[x][y][mediaList[i]]);
 				if (media[x][y][mediaList[i]] < 0)
@@ -1574,6 +1595,31 @@ public class FBAWorld extends World2D
 		}
 		else
 			return BOUNDS_ERROR;
+	}
+	
+	/**
+	 * Simulates the media using all models. Used for equitative media partitioning 
+	 * (see FBACell)
+	 * @param x
+	 * @param y
+	 * @param model
+	 * @param mediaDelta
+	 * @return
+	 */
+	public synchronized double[][] simulateCellUpdateMedia(int x, int y, FBAModel[] cmodels, double[][] mediaDelta)
+	{
+		double[][] cmedia = new double [cmodels.length][media[x][y].length];
+		
+		for (int a=0; a<cmodels.length; a++)
+		{			
+			int[] mediaList = (int[]) modelExchList.get(a);	
+			for (int i = 0; i < mediaList.length; i++)
+			{
+				//System.out.println("cmedia[a]: " + Arrays.toString(cmedia[a]));			
+				cmedia[a][mediaList[i]] += mediaDelta[a][i];
+			}
+		}
+		return cmedia;
 	}
 
 	@Override
