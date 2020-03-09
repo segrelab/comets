@@ -11,8 +11,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.Random;
+import java.lang.Double;
 
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -26,6 +28,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.ui.DoubleField;
+import edu.bu.segrelab.comets.fba.Signal;
 
 // import org.apache.commons.math3.distribution.*;
 
@@ -121,6 +124,8 @@ implements edu.bu.segrelab.comets.CometsConstants
 	// exchange reactions that take up light, because they have to be treated differently from normal metabolites 
 
 	private double lightAbsSurfaceToWeight;
+	private List<Signal> signals; // array of Signals that models' bounds respond to
+	
 	private double flowDiffConst; // = 1e-5;
 	private double growthDiffConst; // = 5e-5;
 	private double elasticModulusConst;
@@ -242,6 +247,8 @@ implements edu.bu.segrelab.comets.CometsConstants
 		setObjectiveReactions(objs);
 		setObjectiveMaximize(objsMax);
 		setBiomassReaction(b);
+		
+		this.signals = new ArrayList<Signal>();
 	}
 
 
@@ -956,6 +963,16 @@ implements edu.bu.segrelab.comets.CometsConstants
 
 		return PARAMS_OK;
 	}
+	
+	public int setLowerBounds(double[] lb)
+	{
+		if (numMetabs == 0 || numRxns == 0)
+		{
+			return MODEL_NOT_INITIALIZED;
+		}
+		fbaOptimizer.setLowerBounds(numRxns, lb);
+		return PARAMS_OK;
+	}
 
 	/**
 	 * @return the current upper bounds for all fluxes
@@ -1065,7 +1082,15 @@ implements edu.bu.segrelab.comets.CometsConstants
 		objMaximize = objMax;
 		return fbaOptimizer.setObjectiveMaximize(objMax);
 	}
-
+	
+	public List<Signal> getSignals(){
+		return this.signals;
+	}
+	
+	public void setSignals(List<Signal> signals) {
+		this.signals = signals;
+	}
+	
 	/**
 	 * Performs an FBA run with the loaded model, constraints, and bounds. Fluxes
 	 * and solutions are stored in the FBAModel class and can be used through their
@@ -1294,6 +1319,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			double[] exchHillCoeff = null;
 			double[] lightAbsorption = null;
 
+			List<Signal> signals = new ArrayList<Signal>();		
 			double defaultAlpha = -1,
 					defaultW = -1,
 					defaultKm = -1,
@@ -2502,6 +2528,73 @@ implements edu.bu.segrelab.comets.CometsConstants
 							lineNum++;
 							blockOpen = false;
 						}
+						/**************************************************************
+						 ********************** LOAD SIGNALS *******************
+						 **************************************************************/
+						else if (tokens[0].equalsIgnoreCase("MET_REACTION_SIGNAL"))
+						{
+							while (!(line = reader.readLine().trim()).equalsIgnoreCase("//")) {
+								String parsed[] = line.split("\\s+");
+
+								if (parsed.length < 5) {
+									reader.close();
+									throw new ModelFileException("There must be at least five values given for each MET_REACTION_SIGNAL:\nrxn exch bound A K B,\nline num: " + lineNum);
+								}
+								int rxn_num = -1;
+								if (parsed[0].toLowerCase().equals("death")){
+									// this met changes death rate
+									// we will use rxn_num = -1 to indicate that
+									
+								}else{
+									// this met alters a reaction bound
+									rxn_num = Integer.parseInt(parsed[0]);
+									if (rxn_num > numRxns) {
+										reader.close();
+										throw new ModelFileException("first argument in MET_REACTION_SIGNAL must be the number of a reaction, < # reactions in S matrix. line num: " + lineNum);
+									}
+								}
+								int exch_met_num = Integer.parseInt(parsed[1]);
+								if (exch_met_num > numExch) {
+									reader.close();
+									throw new ModelFileException("second argument in MET_REACTION_SIGNAL must be the number of an exchange metabolite, < # exchange mets in model list. line num: " + lineNum);
+								}
+								String bound = parsed[2];
+								if (!(bound.equalsIgnoreCase("lb") ||
+										bound.equalsIgnoreCase("ub") ||
+										bound.equalsIgnoreCase("consume_met")||
+										bound.equalsIgnoreCase("met_unchanged"))) {
+									reader.close();
+									throw new ModelFileException("third argument in MET_REACTION_SIGNAL must be the string ub, lb or consume_met,met_unchanged designating the affected bound (or whether the metabolite is consumed for death-causing toxins). line num" + lineNum);
+								}
+								
+								String function = parsed[3].toLowerCase(); // the name of the function connecting the met to the signal. see Signal for options
+								
+								double[] parameters = new double[parsed.length - 4];
+								for (int p = 4; p < parsed.length; p++){
+									parameters[p-4] = Double.parseDouble(parsed[p]);
+								}
+								if (rxn_num != -1){ // signal
+									if (bound.equalsIgnoreCase("lb")){
+										signals.add(new Signal(true, false, false, rxn_num,
+												exch_met_num, function, parameters));
+									}else {
+										signals.add(new Signal(false, true, false, rxn_num,
+												exch_met_num, function, parameters));							
+									}							
+								}else{
+									if (bound.equalsIgnoreCase("consume_met")){
+										signals.add(new Signal(false, false, true, rxn_num,
+												exch_met_num, function, parameters));
+									}else {
+										signals.add(new Signal(false, false, false, rxn_num,
+												exch_met_num, function, parameters));							
+									}							
+								}
+
+								
+							}
+
+						}	
 					}
 					reader.close();
 					if (blockOpen)
@@ -2585,7 +2678,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 					model.setPackedDensity(packDensity);
 					model.setNoiseVariance(noiseVariance);
 					model.setLightAbsSurfaceToWeight(lightAbsSurfaceToWeight);
-
+					model.setSignals(signals);
 					model.setNeutralDrift(neutralDrift);
 					model.setNeutralDriftSigma(neutralDriftSigma);
 

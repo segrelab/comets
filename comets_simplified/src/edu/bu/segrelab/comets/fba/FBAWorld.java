@@ -334,18 +334,18 @@ public class FBAWorld extends World2D
 			try
 			{
 				fluxLogWriter = new PrintWriter(new FileWriter(new File(name)));
-//				writeFluxLog();
+				writeFluxLog();
 				//Write the file name in the manifest file.
-//				try
-//				{
-//					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
-//					manifestWriter.write("FluxFileName: "+name+System.getProperty("line.separator"));
-//					manifestWriter.close();
-//				}
-//				catch (IOException e)
-//				{
-//					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
-//				}		
+				try
+				{
+					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+					manifestWriter.write("FluxFileName: "+name+System.getProperty("line.separator"));
+					manifestWriter.close();
+				}
+				catch (IOException e)
+				{
+					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+				}		
 			}
 			catch (IOException e)
 			{
@@ -361,7 +361,26 @@ public class FBAWorld extends World2D
 			try
 			{
 				mediaLogWriter = new PrintWriter(new FileWriter(new File(name)));
+				
+				// init the media log writer.
+				mediaLogWriter.print("media_names = { '" + mediaNames[0] + "'");
+				for (int i=1; i<mediaNames.length; i++)
+				{
+					mediaLogWriter.print(", '" + mediaNames[i] + "'");
+				}
+				mediaLogWriter.println("};");
 				writeMediaLog();
+				//Write the file name in the manifest file.
+				try
+				{
+					FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+					manifestWriter.write("MediaFileName: "+name+System.getProperty("line.separator"));
+					manifestWriter.close();
+				}
+				catch (IOException e)
+				{
+					System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+				}
 			}
 			catch (IOException e)
 			{
@@ -1567,13 +1586,14 @@ public class FBAWorld extends World2D
 	 * @param mediaDelta
 	 * @return
 	 */
-	public synchronized int changeModelMedia(int x, int y, int model, double[] mediaDelta)
+	public synchronized int changeModelMedia(int x, int y, int model,
+			double[] mediaDelta)
 	{
 		if (model < 0 || model > numModels - 1)
 			return PARAMS_ERROR;
 		int[] mediaList = (int[]) modelExchList.get(model);
-//		if (mediaList.length != mediaDelta.length)
-//			return PARAMS_ERROR;
+		if (mediaList.length != mediaDelta.length)
+			return PARAMS_ERROR;
 		if (cParams.isToroidalGrid())
 		{
 			x = adjustX(x);
@@ -1581,11 +1601,9 @@ public class FBAWorld extends World2D
 		} 
 		if (isOnGrid(x, y))
 		{
-			//System.out.println(mediaList.length);
 			for (int i = 0; i < mediaList.length; i++)
-			{	
-
-				//System.out.println("model "+model+" "+i+"  "+ mediaNames[mediaList[i]]+"  "+mediaDelta[i]);
+			{
+				//System.out.println("model "+model+" "+i+"  "+mediaNames[mediaList[i]]+"  "+mediaDelta[i]);
 				media[x][y][mediaList[i]] += mediaDelta[i];
 				//System.out.println("model "+model+" "+i+" medList "+mediaList[i]+"  "+mediaNames[mediaList[i]]+"  "+media[x][y][mediaList[i]]);
 				if (media[x][y][mediaList[i]] < 0)
@@ -3803,30 +3821,29 @@ public class FBAWorld extends World2D
 
 		// 7. Remove models that have lower biomass than the minimal required
 		//double[] totalBiomass = calculateTotalBiomass();		
-		//JEAN i think this is only necessary if new models are being generated via Evolution
-		// Otherwise it messes up the indexing the biomass output file so i'm adding a conditional
-		if (cParams.getEvolution()){
-			
-			List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
-			for (int i = 0; i < totalBiomass.length; i++)
-			{
-				if (totalBiomass[i] > cParams.getCellSize())
-				{
-					newModelsList.add(models[i]);					
-				}
-			}
-			FBAModel[] newModels = new FBAModel[newModelsList.size()];
-			newModels = newModelsList.toArray(newModels);
-			
-			// now change models in cells as well as in world
-			for (Cell cell : c.getCells())
-			{
-				cell.changeModelsInCell(models, newModels);
-			}
-		
-			changeModelsInWorld(models, newModels);
-			setNumModels(newModels.length);		
+		List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
+		for (int i = 0; i < totalBiomass.length; i++)
+		{
+			// JEREMY : I commented this out because otherwise the totalBiomass log is oddly skewed
+			// and I think we'd rather always see zeros.
+			//if (totalBiomass[i] > cParams.getCellSize())
+			//{
+				newModelsList.add(models[i]);					
+			//}
 		}
+		FBAModel[] newModels = new FBAModel[newModelsList.size()];
+		newModels = newModelsList.toArray(newModels);
+
+		// now change models in cells as well as in world
+		for (Cell cell : c.getCells())
+		{
+			cell.changeModelsInCell(models, newModels);
+		}
+		
+		changeModelsInWorld(models, newModels);
+		setNumModels(newModels.length);
+		
+		
 		
 		currentTimePoint++;
 		if (pParams.writeFluxLog() && currentTimePoint % pParams.getFluxLogRate() == 0)
@@ -3972,28 +3989,69 @@ public class FBAWorld extends World2D
 			//nf.setMaximumFractionDigits(4);
 			NumberFormat nf = new DecimalFormat("0.##########E0");
 
-			Iterator<Cell> it = c.getCells().iterator();
-			while (it.hasNext()) 
-			{	
-				FBACell cell = (FBACell)it.next();
-				double fluxes[][] = cell.getFluxes();
-				if (fluxes == null)
-					continue; // fluxes uninitialized.
-				else
-				{
-					for (int i=0; i<fluxes.length; i++)
+			switch(pParams.getFluxLogFormat())
+			{
+				case MATLAB:
+					/*
+					 * Matlab .m file format:
+					 * fluxes{time}{x}{y}{species} = [array];
+					 * so it'll be one bigass structure.
+					 */
+					Iterator<Cell> it = c.getCells().iterator();
+					while (it.hasNext())
 					{
-						if (fluxes[i] != null)
+						FBACell cell = (FBACell)it.next();
+						double fluxes[][] = cell.getFluxes();
+						if (fluxes == null)
+							continue; // fluxes uninitialized.
+						else
 						{
-							fluxLogWriter.write((currentTimePoint) + " " + (cell.getX()+1) + " " + (cell.getY()+1) + " " + (i+1) + " ");
-							for (int j=0; j<fluxes[i].length; j++)
+							for (int i=0; i<fluxes.length; i++)
 							{
-								fluxLogWriter.write(nf.format(fluxes[i][j]) + " ");
+								if (fluxes[i] != null)
+								{
+									fluxLogWriter.write("fluxes{" + (currentTimePoint) + "}{" + (cell.getX()+1) + "}{" + (cell.getY()+1) + "}{" + (i+1) + "} = [");
+									for (int j=0; j<fluxes[i].length; j++)
+									{
+										fluxLogWriter.write(nf.format(fluxes[i][j]) + " ");
+									}
+									fluxLogWriter.write("];\n");
+								}
 							}
-							fluxLogWriter.write("];\n");
 						}
 					}
-				}
+					break;
+					
+				default:
+					/* print all fluxes from each cell
+					 * format:
+					 * timepoint\n
+					 * x y speciesNum1 flux1 flux2 ... fluxn\n
+					 * x y speciesNum2 flux1 flux2 ... fluxn\n
+					 */
+					fluxLogWriter.println(currentTimePoint);
+					it = c.getCells().iterator();
+					while (it.hasNext())
+					{
+						// blah print
+						FBACell cell = (FBACell)it.next();
+						double[][] fluxes = cell.getFluxes();
+						if (fluxes[0] == null) // e.g., FBA hasn't been run yet.
+							continue;
+						else
+						{
+							for (int i=0; i<fluxes.length; i++) //fluxes[i][j] denotes flux j in species i
+							{
+								fluxLogWriter.print((cell.getX() +1) + " " + (cell.getY() + 1) + " " + (i + 1));
+								for (int j=0; j<fluxes[i].length; j++)
+								{
+									fluxLogWriter.print(" " + nf.format(fluxes[i][j]));
+								}
+								fluxLogWriter.print("\n");
+							}
+						}
+					}
+					break;
 			}
 			fluxLogWriter.flush();
 		}
@@ -4014,12 +4072,13 @@ public class FBAWorld extends World2D
 			
 			for (int k=0; k<numMedia; k++)
 			{
+				mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + "));");
 				for (int i=0; i<numCols; i++)
 				{
 					for (int j=0; j<numRows; j++)
 					{
 						if (media[i][j][k] != 0)
-							mediaLogWriter.println(mediaNames[k] + " " + (currentTimePoint+1) + " " + (i+1) + " " + (j+1) + " " + nf.format(media[i][j][k]));
+							mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "}(" + (i+1) + ", " + (j+1) + ") = " + nf.format(media[i][j][k]) + ";");
 					}
 				}
 			}
