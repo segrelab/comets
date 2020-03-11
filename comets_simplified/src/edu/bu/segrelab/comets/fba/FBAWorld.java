@@ -363,12 +363,15 @@ public class FBAWorld extends World2D
 				mediaLogWriter = new PrintWriter(new FileWriter(new File(name)));
 				
 				// init the media log writer.
-				mediaLogWriter.print("media_names = { '" + mediaNames[0] + "'");
-				for (int i=1; i<mediaNames.length; i++)
-				{
-					mediaLogWriter.print(", '" + mediaNames[i] + "'");
-				}
-				mediaLogWriter.println("};");
+				if (pParams.getMediaLogFormat().toString()=="Matlab")
+					{
+						mediaLogWriter.print("media_names = { '" + mediaNames[0] + "'");
+						for (int i=1; i<mediaNames.length; i++)
+						{
+							mediaLogWriter.print(", '" + mediaNames[i] + "'");
+						}
+						mediaLogWriter.println("};");
+					}
 				writeMediaLog();
 				//Write the file name in the manifest file.
 				try
@@ -4022,14 +4025,12 @@ public class FBAWorld extends World2D
 					}
 					break;
 					
-				default:
+				case COMETS:
 					/* print all fluxes from each cell
 					 * format:
-					 * timepoint\n
-					 * x y speciesNum1 flux1 flux2 ... fluxn\n
-					 * x y speciesNum2 flux1 flux2 ... fluxn\n
+					 * timepoint x y speciesNum1 flux1 flux2 ... fluxn\n
+					 * timepoint x y speciesNum2 flux1 flux2 ... fluxn\n
 					 */
-					fluxLogWriter.println(currentTimePoint);
 					it = c.getCells().iterator();
 					while (it.hasNext())
 					{
@@ -4042,7 +4043,7 @@ public class FBAWorld extends World2D
 						{
 							for (int i=0; i<fluxes.length; i++) //fluxes[i][j] denotes flux j in species i
 							{
-								fluxLogWriter.print((cell.getX() +1) + " " + (cell.getY() + 1) + " " + (i + 1));
+								fluxLogWriter.print(currentTimePoint + " " + (cell.getX() +1) + " " + (cell.getY() + 1) + " " + (i + 1));
 								for (int j=0; j<fluxes[i].length; j++)
 								{
 									fluxLogWriter.print(" " + nf.format(fluxes[i][j]));
@@ -4062,30 +4063,48 @@ public class FBAWorld extends World2D
 	 */
 	private void writeMediaLog()
 	{
-		System.out.println("WRITING MEDIA LOG");
 		if (mediaLogWriter != null && (currentTimePoint == 1 || currentTimePoint % pParams.getMediaLogRate() == 0))
 		{
-			//NumberFormat nf = NumberFormat.getInstance();
-			//nf.setGroupingUsed(false);
-			//nf.setMaximumFractionDigits(9);
 			NumberFormat nf = new DecimalFormat("0.##########E0");
-			
-			for (int k=0; k<numMedia; k++)
+
+			switch(pParams.getMediaLogFormat())
 			{
-				mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + "));");
-				for (int i=0; i<numCols; i++)
-				{
-					for (int j=0; j<numRows; j++)
+				case MATLAB:
+					System.out.println("KAKA");
+				
+					for (int k=0; k<numMedia; k++)
 					{
-						if (media[i][j][k] != 0)
-							mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "}(" + (i+1) + ", " + (j+1) + ") = " + nf.format(media[i][j][k]) + ";");
+						mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + "));");
+						for (int i=0; i<numCols; i++)
+						{
+							for (int j=0; j<numRows; j++)
+							{
+								if (media[i][j][k] != 0)
+									mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "}(" + (i+1) + ", " + (j+1) + ") = " + nf.format(media[i][j][k]) + ";");
+							}
+						}
 					}
-				}
+					break;
+					
+				case COMETS:
+					
+					for (int k=0; k<numMedia; k++)
+					{
+						for (int i=0; i<numCols; i++)
+						{
+							for (int j=0; j<numRows; j++)
+							{
+								if (media[i][j][k] != 0)
+									mediaLogWriter.println(mediaNames[k] + " " + (currentTimePoint+1) + " " + (i+1) + " " + (j+1) + " " + nf.format(media[i][j][k]));
+							}
+						}
+					}
+					break;					
 			}
 			mediaLogWriter.flush();
 		}
-	}
-	
+	}	
+			
 	/**
 	 * writes the specific media log
 	 */
@@ -4114,92 +4133,92 @@ public class FBAWorld extends World2D
 	 * Writes the current status to the biomass log if it is at the right time point.
 	 * See documentation for formats.
 	 */
-//	private void writeBiomassLog()
-//	{
-//		if (biomassLogWriter != null)// && (currentTimePoint == 1 || currentTimePoint % pParams.getBiomassLogRate() == 0))
-//		{
-//			//NumberFormat nf = NumberFormat.getInstance();
-//			//nf.setGroupingUsed(false);
-//			//nf.setMaximumFractionDigits(100);
-//			NumberFormat nf = new DecimalFormat("0.##########E0");
-//			
-//			switch(pParams.getBiomassLogFormat())
-//			{
-//				/* Matlab .m file format:
-//				 * biomass_<time>_<species> = sparse(<num_rows>, <num_cols>);
-//				 * biomass_<time>_<species>(<row>, <col>) = <biomass>
-//				 * ...
-//				 * and so on.
-//				 */
-//				case MATLAB:
-//					for (int i=0; i<models.length; i++)
-//					{
-//						String varName = "biomass_" + currentTimePoint + "_" + i;
-//						biomassLogWriter.println(varName + " = sparse(" + numRows + ", " + numCols + ");");
-//						Iterator<Cell> it = c.getCells().iterator();
-//						while (it.hasNext())
-//						{
-//							FBACell cell = (FBACell)it.next();
-//							double[] biomass = cell.getBiomass();
-//							biomassLogWriter.println(varName + "(" + (cell.getY()+1) + ", " + (cell.getX()+1) + ") = " + nf.format(biomass[i]) + ";");
-//						}
-//					}
-//					break;
-//					
-//				default:
-//					/*
-//					 * Comets file format:
-//					 * currentTimePoint on a line
-//					 * x y biomass1 biomass2 ... biomassN
-//					 * x y ...
-//					 * etc.
-//					 */
-//					biomassLogWriter.println(currentTimePoint);
-//					Iterator<Cell> it = c.getCells().iterator();
-//					while (it.hasNext())
-//					{
-//						FBACell cell = (FBACell)it.next();
-//						double[] biomass = cell.getBiomass();
-//						biomassLogWriter.print(cell.getX() + " " + cell.getY());
-//						for (int i=0; i<biomass.length; i++)
-//						{
-//							biomassLogWriter.print(" " + nf.format(biomass[i]));
-//						}
-//						biomassLogWriter.print("\n");
-//					}
-//					break;
-//			}
-//			biomassLogWriter.flush();
-//		}
-//	}
-
 	private void writeBiomassLog()
 	{
-		/*
-		* New biomass log format, supporting also evolution:
-		* timepoint x y modelID biomass
-		* 
-		* - One line written for each timepoint, cell and model
-		*/
-		if (biomassLogWriter != null)			
+		if (biomassLogWriter != null)// && (currentTimePoint == 1 || currentTimePoint % pParams.getBiomassLogRate() == 0))
 		{
-			NumberFormat nf = new DecimalFormat("0.##########E0");			
-			Iterator<Cell> it = c.getCells().iterator();
-			while (it.hasNext())
+			//NumberFormat nf = NumberFormat.getInstance();
+			//nf.setGroupingUsed(false);
+			//nf.setMaximumFractionDigits(100);
+			NumberFormat nf = new DecimalFormat("0.##########E0");
+			
+			switch(pParams.getBiomassLogFormat())
 			{
-				FBACell cell = (FBACell)it.next();
-				double[] biomass = cell.getBiomass();
-				String[] modelIDs = cell.getCellModelIDs();
-				for (int i=0; i<biomass.length; i++)
-				{
-					biomassLogWriter.print(currentTimePoint + " " 
-							+ cell.getX() + " " + cell.getY() + " " 
-							+ modelIDs[i] + " " + nf.format(biomass[i]) + "\n");
-				}
+				/* Matlab .m file format:
+				 * biomass_<time>_<species> = sparse(<num_rows>, <num_cols>);
+				 * biomass_<time>_<species>(<row>, <col>) = <biomass>
+				 * ...
+				 * and so on.
+				 */
+				case MATLAB:
+					for (int i=0; i<models.length; i++)
+					{
+						String varName = "biomass_" + currentTimePoint + "_" + i;
+						biomassLogWriter.println(varName + " = sparse(" + numRows + ", " + numCols + ");");
+						Iterator<Cell> it = c.getCells().iterator();
+						while (it.hasNext())
+						{
+							FBACell cell = (FBACell)it.next();
+							double[] biomass = cell.getBiomass();
+							biomassLogWriter.println(varName + "(" + (cell.getY()+1) + ", " + (cell.getX()+1) + ") = " + nf.format(biomass[i]) + ";");
+						}
+					}
+					break;
+					
+				default:
+					/*
+					 * Comets file format:
+					 * currentTimePoint on a line
+					 * x y biomass1 biomass2 ... biomassN
+					 * x y ...
+					 * etc.
+					 */
+					biomassLogWriter.println(currentTimePoint);
+					Iterator<Cell> it = c.getCells().iterator();
+					while (it.hasNext())
+					{
+						FBACell cell = (FBACell)it.next();
+						double[] biomass = cell.getBiomass();
+						biomassLogWriter.print(cell.getX() + " " + cell.getY());
+						for (int i=0; i<biomass.length; i++)
+						{
+							biomassLogWriter.print(" " + nf.format(biomass[i]));
+						}
+						biomassLogWriter.print("\n");
+					}
+					break;
 			}
+			biomassLogWriter.flush();
 		}
-		biomassLogWriter.flush();
 	}
+
+//	private void writeBiomassLog()
+//	{
+//		/*
+//		* New biomass log format, supporting also evolution:
+//		* timepoint x y modelID biomass
+//		* 
+//		* - One line written for each timepoint, cell and model
+//		*/
+//		if (biomassLogWriter != null)
+//		{
+//			NumberFormat nf = new DecimalFormat("0.##########E0");			
+//			Iterator<Cell> it = c.getCells().iterator();
+//			while (it.hasNext())
+//			{
+//				FBACell cell = (FBACell)it.next();
+//				double[] biomass = cell.getBiomass();
+//				String[] modelIDs = cell.getCellModelIDs();
+//				for (int i=0; i<biomass.length; i++)
+//				{
+//					biomassLogWriter.print(currentTimePoint + " " 
+//							+ cell.getX() + " " + cell.getY() + " " 
+//							+ modelIDs[i] + " " + nf.format(biomass[i]) + "\n");
+//				}
+//			}
+//		}
+//		biomassLogWriter.flush();
+//	}
 	
 	
 	

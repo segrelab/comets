@@ -194,7 +194,7 @@ public class FBAParameters implements PackageParameters
 			defaultAlpha = 1,
 			defaultW = 10,
 			defaultDiffConst = 1e-5,
-			geneFractionalCost = 0,	
+			geneFractionalCost = 0,
 			minConcentration = 1e-26; //Here's hoping 1 atom per liter is enough precision
 
 	private double[] defaultVelocityVector={0.0,0.0,0.0};
