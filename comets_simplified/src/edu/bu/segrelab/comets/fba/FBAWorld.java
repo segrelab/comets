@@ -4165,7 +4165,7 @@ public class FBAWorld extends World2D
 					}
 					break;
 					
-				default:
+				case COMETS:
 					/*
 					 * Comets file format:
 					 * currentTimePoint on a line
@@ -4173,13 +4173,12 @@ public class FBAWorld extends World2D
 					 * x y ...
 					 * etc.
 					 */
-					biomassLogWriter.println(currentTimePoint);
 					Iterator<Cell> it = c.getCells().iterator();
 					while (it.hasNext())
 					{
 						FBACell cell = (FBACell)it.next();
 						double[] biomass = cell.getBiomass();
-						biomassLogWriter.print(cell.getX() + " " + cell.getY());
+						biomassLogWriter.print(currentTimePoint + " " + cell.getX() + " " + cell.getY());
 						for (int i=0; i<biomass.length; i++)
 						{
 							biomassLogWriter.print(" " + nf.format(biomass[i]));
