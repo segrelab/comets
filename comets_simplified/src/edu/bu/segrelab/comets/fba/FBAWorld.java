@@ -5296,8 +5296,9 @@ public class FBAWorld extends World2D
 		
 		for (int i = 0; i < models.length; i++)
 			if (totalBiomass[i] > 0.0)
-				//dilutedBiomass[i] = samplePopulation((int)Math.floor(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
-				dilutedBiomass[i] = totalBiomass[i]*dilution; // jean
+				// biomass diluted by sampling from number of cells stochastically
+				dilutedBiomass[i] = samplePopulation((int)Math.floor(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
+				//dilutedBiomass[i] = totalBiomass[i]*dilution; // simple dilution of biomass 
 			else
 				dilutedBiomass[i] = 0.0;
 		// cell where new biomass will be located
@@ -5325,6 +5326,7 @@ public class FBAWorld extends World2D
 			// and update media 
 			setMedia(cell.getX(), cell.getY(), media);
 			cell.setStationaryStatus();
+			
 		}
 	}		
 	
