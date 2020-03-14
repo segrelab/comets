@@ -5504,6 +5504,10 @@ public class FBAWorld extends World2D
 		// Loop over all species 
 		for (int a=0; a<totalDeltaBiomass.length; a++)
 		{	
+			// if there are no reactions to add, skip
+			if (((FBAModel)models[a]).getInactiveRxns()==0)
+				continue;
+
 			// subdivide change in biomass into individual cells
 			nCells[a] = (int)Math.floor(totalDeltaBiomass[a]/cell_biomass);
 			if (nCells[a]>0)

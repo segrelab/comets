@@ -3438,7 +3438,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 	}
 
 	/**
-	 * Mutation method (this is for deletions only) 
+	 * Get total number of active reactions (i.e. bounds different than [0,0]
 	 */
 	public int getTotalRxns()
 	{		
@@ -3452,7 +3452,24 @@ implements edu.bu.segrelab.comets.CometsConstants
 				totalRxns += 1;
 		}
 		return totalRxns;
-	}	
+	}
+	
+	/**
+	 * Get total number of inactive reactions, i.e. potential deletions (bounds = [0,0])
+	 */
+	public int getInactiveRxns()
+	{		
+		double[] lBounds = getBaseLowerBounds();
+		double[] uBounds = getBaseUpperBounds();
+		int totalInactiveRxns = 0;
+		
+		// figure out which reactions have nonzero bounds
+		for (int j = 0; j < lBounds.length; j++) {
+			if ((lBounds[j] == 0 || uBounds[j] == 0) && !(ArrayUtils.contains(exch, j)))
+				totalInactiveRxns += 1;
+		}
+		return totalInactiveRxns;
+	}
 	
 	/**
 	 * Mutation method (this is for deletions only) 
