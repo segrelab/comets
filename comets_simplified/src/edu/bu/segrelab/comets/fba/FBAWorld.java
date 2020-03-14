@@ -5563,11 +5563,6 @@ public class FBAWorld extends World2D
 		// System.out.println("MUTS: " + Arrays.toString(nMut));
 	}
 
-	//TODO:This function is only included because the proper calculateDeltaBiomass seems to be missing. Do not commit this method!
-	public double[] calculateDeltaBiomass() {
-		throw new Error("FBAWorld.calculateDeltaBiomass() has been invoked but is not yet implemented.");
-	}
-
 	@Override
 	public void setParameters(CometsParameters cParams) {
 		this.cParams = cParams;

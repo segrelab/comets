@@ -740,7 +740,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 					for (int j=0; j<lb[i].length; j++)
 					{
-
 						double km = FBAParameters.getDefaultKm();
 						if (kmArr != null && kmArr.length > j && kmArr[j] > 0)
 							km = kmArr[j];
@@ -1223,13 +1222,13 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	}
 	
 	private boolean applySignals(FBAModel model, double[] media) {
-		// Signal encoding.  Adjust bounds if a media component
-		// affects a reaction boundary
-		// this code block looks at each signal, and adjusts
-		// the relevant bound of a reaction based upon that signal
-		// concentration.  Note:  this should not be applied
-		// directly to exchange reactions, as they are dealt with later
-		
+		/* Signal encoding.  Adjust bounds if a media component
+		 * affects a reaction boundary this code block looks at 
+		 * each signal, and adjusts the relevant bound of a reaction 
+		 * based upon that signal concentration.  
+		 * Note:  this should not be applieddirectly to exchange 
+		 * reactions, as they are dealt with later
+		 */		
 		if (model.getSignals().size() > 0){  // only bother if there are signals
 			double[] all_lb = model.getLowerBounds();
 			double[] all_ub = model.getUpperBounds();

@@ -3101,7 +3101,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		modelCopy.setNoiseVariance(getNoiseVariance());
 		modelCopy.setLightAbsorption(getLightAbsorption());
 		modelCopy.setLightAbsSurfaceToWeight(getLightAbsSurfaceToWeight());
-
+		modelCopy.setSignals(getSignals());
 		//modelCopy.setParameters();
 
 		return modelCopy;
