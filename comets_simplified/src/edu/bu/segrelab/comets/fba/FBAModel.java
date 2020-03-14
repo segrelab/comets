@@ -3440,6 +3440,23 @@ implements edu.bu.segrelab.comets.CometsConstants
 	/**
 	 * Mutation method (this is for deletions only) 
 	 */
+	public int getTotalRxns()
+	{		
+		double[] lBounds = getBaseLowerBounds();
+		double[] uBounds = getBaseUpperBounds();
+		int totalRxns = 0;
+		
+		// figure out which reactions have nonzero bounds
+		for (int j = 0; j < lBounds.length; j++) {
+			if ((lBounds[j] != 0 || uBounds[j] != 0) && !(ArrayUtils.contains(exch, j)))
+				totalRxns += 1;
+		}
+		return totalRxns;
+	}	
+	
+	/**
+	 * Mutation method (this is for deletions only) 
+	 */
 	public void mutateModel()
 	{		
 		double[] lBounds = getBaseLowerBounds();
@@ -3457,12 +3474,13 @@ implements edu.bu.segrelab.comets.CometsConstants
 		setMutation("del_" + Integer.toString(mutReaction));
 		//System.out.println("mutated reaction: " + mutReaction);
 
-		// and update the mutModel model bounds
+		// update the mutModel model bounds
 		lBounds[mutReaction] = 0;
 		uBounds[mutReaction] = 0;
 		setBaseLowerBounds(lBounds);
-		setBaseUpperBounds(uBounds);	
-		//JEAN make sure newbounds apply to the optimizer
+		setBaseUpperBounds(uBounds);
+		
+		// make sure newbounds apply to the optimizer
 		fbaOptimizer.setLowerBounds(lBounds.length, lBounds);
 		fbaOptimizer.setUpperBounds(uBounds.length, uBounds);
 

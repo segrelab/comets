@@ -5426,13 +5426,18 @@ public class FBAWorld extends World2D
 			nCells[a] = (int)Math.floor(totalDeltaBiomass[a]/cell_biomass);
 			if (nCells[a]>0)
 			{
-				// 2. compute number of new cells and number of mutations in each species 
-				nMut[a] = samplePopulation(nCells[a], mutation_rate);
+				// 2. compute number of new cells and mutations in each species 
+				double currentDelRate = ((FBAModel)models[a]).getTotalRxns()*mutation_rate;
+				System.out.println("TOT RXNS: " + ((FBAModel)models[a]).getTotalRxns());
+				System.out.println("MUT_RATE: " + mutation_rate);
+				System.out.println("DEL_RATE: " + currentDelRate);
+
+				nMut[a] = samplePopulation(nCells[a], currentDelRate);
 				
 				// 3. if any mutation in model a, clone models and perform mutations,
 				if (nMut[a]>0)
 				{
-					// determine where will mutations happen by building a map to sample cells
+					// determine where (in space) will mutations happen using a map to sample cells
 					WeightedSample <Cell> toMutate = new WeightedSample <Cell> ();					
 					for (Cell cell : c.getCells())
 					{
