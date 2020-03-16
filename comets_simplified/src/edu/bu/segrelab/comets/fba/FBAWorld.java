@@ -5428,9 +5428,6 @@ public class FBAWorld extends World2D
 			{
 				// 2. compute number of new cells and mutations in each species 
 				double currentDelRate = ((FBAModel)models[a]).getTotalRxns()*mutation_rate;
-				System.out.println("TOT RXNS: " + ((FBAModel)models[a]).getTotalRxns());
-				System.out.println("MUT_RATE: " + mutation_rate);
-				System.out.println("DEL_RATE: " + currentDelRate);
 
 				nMut[a] = samplePopulation(nCells[a], currentDelRate);
 				
