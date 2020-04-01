@@ -54,7 +54,7 @@ import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 import edu.bu.segrelab.comets.util.Point3d;
-import edu.bu.segrelab.comets.fba.FBAPeriodicMedia;
+//import edu.bu.segrelab.comets.fba.FBAPeriodicMedia;
 
 public class FBACometsLoader implements CometsLoader, CometsConstants
 {
