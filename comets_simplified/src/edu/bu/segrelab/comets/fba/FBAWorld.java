@@ -3844,9 +3844,7 @@ public class FBAWorld extends World2D
 		}
 		
 		changeModelsInWorld(models, newModels);
-		setNumModels(newModels.length);
-		
-		
+		setNumModels(newModels.length);		
 		
 		currentTimePoint++;
 		if (pParams.writeFluxLog() && currentTimePoint % pParams.getFluxLogRate() == 0)
@@ -4070,7 +4068,6 @@ public class FBAWorld extends World2D
 			switch(pParams.getMediaLogFormat())
 			{
 				case MATLAB:
-					System.out.println("KAKA");
 				
 					for (int k=0; k<numMedia; k++)
 					{
@@ -4087,7 +4084,6 @@ public class FBAWorld extends World2D
 					break;
 					
 				case COMETS:
-					
 					for (int k=0; k<numMedia; k++)
 					{
 						for (int i=0; i<numCols; i++)
