@@ -691,13 +691,22 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		{
 			// i = the current model index to run.
 			int i = a;
+
 			// if no biomass, or the total biomass has overflowed, skip to the next.
 			if (biomass[i] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
 			{
 				deltaBiomass[i] = 0;
 				dyingBiomass[i] = 0;
+				
+				// change in media is also 0 for all media components 
+				double[] exchFlux = ((FBAModel)models[i]).getExchangeFluxes();
+				double[] mediaDelta = new double[exchFlux.length];
+				Arrays.fill(mediaDelta, 0);
+				deltaMedia[i] = mediaDelta;
+
 				continue;
 			}
+			
 			//try to activate, if not active skip to next.
 		    if(cParams.getSimulateActivation() && !((FBAModel)models[i]).activate(cParams.getActivateRate()))
 		    {
@@ -839,11 +848,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				deltaBiomass[i] = 0.0;
 				
 				// create empty mediaDelta, because model is not growing
-
-				for (int j=0; j<mediaDelta.length; j++)
-				{
-					mediaDelta[j] = 0;
-				}
+				Arrays.fill(mediaDelta, 0);
 				deltaMedia[i] = mediaDelta;
 			} else {
 				
@@ -879,10 +884,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				if (!pParams.getAllowFluxWithoutGrowth()) {
 					if(deltaBiomass[i]<0.0){
 						deltaBiomass[i]=0.0;
-						for (int j=0; j<deltaMedia[i].length; j++)
-						{
-							deltaMedia[i][j] = 0.0;
-						}
+						Arrays.fill(deltaMedia[i], 0);
 					}
 				}
 				
