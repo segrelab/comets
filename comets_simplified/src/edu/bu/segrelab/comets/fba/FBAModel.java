@@ -3521,15 +3521,18 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 
 		// select one of these reactions at random
-		int mutReaction = nonzeroRxns.get(new Random().nextInt(nonzeroRxns.size()));
-		setMutation("add_" + Integer.toString(mutReaction));
-
-		// and update the mutModel model bounds
-		uBounds[mutReaction] = 1000;
-		setBaseUpperBounds(uBounds);
-		//JEAN make sure new bounds apply to the optimizer
-		fbaOptimizer.setLowerBounds(lBounds.length, lBounds);
-		fbaOptimizer.setUpperBounds(uBounds.length, uBounds);		
+		if (nonzeroRxns.size()>0)
+		{	
+			int mutReaction = nonzeroRxns.get(new Random().nextInt(nonzeroRxns.size()));
+			setMutation("add_" + Integer.toString(mutReaction));
+			
+			// and update the mutModel model bounds
+			uBounds[mutReaction] = 1000;
+			setBaseUpperBounds(uBounds);
+			//JEAN make sure new bounds apply to the optimizer
+			fbaOptimizer.setLowerBounds(lBounds.length, lBounds);
+			fbaOptimizer.setUpperBounds(uBounds.length, uBounds);
+		}
 	}
 
 	public double getGenomeCost()

@@ -4162,59 +4162,53 @@ public class FBAWorld extends World2D
 					break;
 					
 				case COMETS:
-					/*
-					 * Comets file format:
-					 * currentTimePoint on a line
-					 * x y biomass1 biomass2 ... biomassN
-					 * x y ...
-					 * etc.
-					 */
-					Iterator<Cell> it = c.getCells().iterator();
-					while (it.hasNext())
+
+					Iterator<Cell> it = c.getCells().iterator();					
+					if (cParams.getEvolution())
 					{
-						FBACell cell = (FBACell)it.next();
-						double[] biomass = cell.getBiomass();
-						biomassLogWriter.print(currentTimePoint + " " + cell.getX() + " " + cell.getY());
-						for (int i=0; i<biomass.length; i++)
+						/*
+						* Biomass log format for simulations with evolution:
+						* timepoint x y modelID biomass
+						* [One line written for each timepoint, cell and model]
+						*/
+						while (it.hasNext())
 						{
-							biomassLogWriter.print(" " + nf.format(biomass[i]));
+							FBACell cell = (FBACell)it.next();
+							double[] biomass = cell.getBiomass();
+							String[] modelIDs = cell.getCellModelIDs();
+							for (int i=0; i<biomass.length; i++)
+							{
+								biomassLogWriter.print(currentTimePoint + " " 
+										+ cell.getX() + " " + cell.getY() + " " 
+										+ modelIDs[i] + " " + nf.format(biomass[i]) + "\n");
+							}
 						}
-						biomassLogWriter.print("\n");
-					}
+						
+					} else {
+						/*
+						 * Comets file format:
+						 * currentTimePoint on a line
+						 * x y biomass1 biomass2 ... biomassN
+						 * x y ...
+						 * etc.
+						 */						
+						while (it.hasNext())
+						{
+							FBACell cell = (FBACell)it.next();
+							double[] biomass = cell.getBiomass();
+							biomassLogWriter.print(currentTimePoint + " " + cell.getX() + " " + cell.getY());
+							for (int i=0; i<biomass.length; i++)
+							{
+								biomassLogWriter.print(" " + nf.format(biomass[i]));
+							}
+							biomassLogWriter.print("\n");
+						}							
+					}					
 					break;
 			}
 			biomassLogWriter.flush();
 		}
 	}
-
-//	private void writeBiomassLog()
-//	{
-//		/*
-//		* New biomass log format, supporting also evolution:
-//		* timepoint x y modelID biomass
-//		* 
-//		* - One line written for each timepoint, cell and model
-//		*/
-//		if (biomassLogWriter != null)
-//		{
-//			NumberFormat nf = new DecimalFormat("0.##########E0");			
-//			Iterator<Cell> it = c.getCells().iterator();
-//			while (it.hasNext())
-//			{
-//				FBACell cell = (FBACell)it.next();
-//				double[] biomass = cell.getBiomass();
-//				String[] modelIDs = cell.getCellModelIDs();
-//				for (int i=0; i<biomass.length; i++)
-//				{
-//					biomassLogWriter.print(currentTimePoint + " " 
-//							+ cell.getX() + " " + cell.getY() + " " 
-//							+ modelIDs[i] + " " + nf.format(biomass[i]) + "\n");
-//				}
-//			}
-//		}
-//		biomassLogWriter.flush();
-//	}
-	
 	
 	
 	/**
@@ -4452,9 +4446,7 @@ public class FBAWorld extends World2D
 			catch (IOException e)
 			{
 				System.out.println("Unable to write to .mat file '" + pParams.getMatFileName() + "'\nContinuing without saving log.");
-			}
-			
-			
+			}	
 			
 			//Do the media
 			int[] dimsMedia=new int[]{cParams.getNumCols(), cParams.getNumRows(),media[0][0].length};
