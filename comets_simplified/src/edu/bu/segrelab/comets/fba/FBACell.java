@@ -802,10 +802,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			for (int j=0; j<lb.length; j++)
 			{
 				if (lightAbsorption[j][0]+lightAbsorption[j][1] > 0) {
-					// TODO: Divide by modelShare to undo the multiplication performed on line 656
+					// The media (i.e. light flux) is here divided by modelShare to undo the multiplication performed on line 718-719
 					// Note: This function needs to be changed in order to account for multiple light-absorbing species
 					rates[j] = Math.min(Math.abs(lb[j]), calcMaxLightUptake(media[j]/modelShare[i], biomass[i], cParams.getSpaceWidth(), lightAbsorption[j], cParams.getSpaceVolume()));
-					// System.out.println(rates[j]+ "\t"+ media[j]+ "\t"+ lightAbsorption[j]+"\t"+ biomass[i]+"\t"+  cParams.getSpaceWidth());
 				}
 			}
 			
