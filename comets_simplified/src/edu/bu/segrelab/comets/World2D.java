@@ -151,7 +151,24 @@ public abstract class World2D implements CometsConstants, IWorld
 		}
 		return totalBiomass;
 	}
-	
+
+	public double[] calculateDeltaBiomass()
+	{		
+		double[] deltaBiomass = new double[numModels];
+		Iterator<Cell> it = c.getCells().iterator();
+		while (it.hasNext())
+		{
+			Cell cell = (Cell) it.next();
+			double[] curdeltaBiomass = cell.getDeltaBiomass();
+			
+			for (int i = 0; i < curdeltaBiomass.length; i++)
+			{
+				deltaBiomass[i] += curdeltaBiomass[i];
+			}
+		}
+		return deltaBiomass;
+	}
+
 	/**
 	 * Changes biomass levels at space (x, y) by some delta value. 
 	 * @param x - the x-coordinate

@@ -2431,33 +2431,53 @@ implements CometsConstants
 	 */
 	private void writeMediaLog()
 	{
-		System.out.println("WRITING MEDIA LOG");
 		if (mediaLogWriter != null && (currentTimePoint == 1 || currentTimePoint % pParams.getMediaLogRate() == 0))
 		{
-			//NumberFormat nf = NumberFormat.getInstance();
-			//nf.setGroupingUsed(false);
-			//nf.setMaximumFractionDigits(9);
 			NumberFormat nf = new DecimalFormat("0.##########E0");
 
-			for (int k=0; k<numMedia; k++)
+			switch(pParams.getMediaLogFormat())
 			{
-				mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + ", " + numLayers + "));");
-				for (int i=0; i<numCols; i++)
-				{
-					for (int j=0; j<numRows; j++)
+				case MATLAB:
+				
+					for (int k=0; k<numMedia; k++)
 					{
-						for (int l = 0; l < numLayers; l++)
+						mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + "));");
+						for (int i=0; i<numCols; i++)
 						{
-							if (media[i][j][l][k] != 0)
-								mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "}(" + (i+1) + ", " + (j+1) + ", " + (l+1)+") = " + nf.format(media[i][j][l][k]) + ";");
+							for (int j=0; j<numRows; j++)
+							{
+								for (int l = 0; l < numLayers; l++)
+								{
+									if (media[i][j][l][k] != 0)
+										mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "}(" + (i+1) + ", " + (j+1) + ") = " + nf.format(media[i][j][k]) + ";");
+								}
+							}
 						}
 					}
-				}
+					break;
+					
+				case COMETS:
+					for (int k=0; k<numMedia; k++)
+					{
+						for (int i=0; i<numCols; i++)
+						{
+							for (int j=0; j<numRows; j++)
+							{
+								for (int l = 0; l < numLayers; l++)
+								{
+									if (media[i][j][l][k] != 0)
+										mediaLogWriter.println(mediaNames[k] + " " + (currentTimePoint+1) + " " + (i+1) + " " + (j+1) + " " + nf.format(media[i][j][k]));
+								}
+								
+							}
+						}
+					}
+					break;					
 			}
 			mediaLogWriter.flush();
 		}
-	}
-
+	}		
+		
 	/**
 	 * Writes the current status to the biomass log if it is at the right time point.
 	 * See documentation for formats.

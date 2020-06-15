@@ -11,8 +11,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.Random;
+import java.lang.Double;
 
 import javax.swing.Box;
 import javax.swing.ButtonGroup;
@@ -26,6 +28,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.ui.DoubleField;
+import edu.bu.segrelab.comets.fba.Signal;
 
 // import org.apache.commons.math3.distribution.*;
 
@@ -241,6 +244,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		setObjectiveReactions(objs);
 		setObjectiveMaximize(objsMax);
 		setBiomassReaction(b);
+		
+		this.signals = new ArrayList<Signal>();
 	}
 
 
@@ -937,6 +942,16 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 		return PARAMS_OK;
 	}
+	
+	public int setLowerBounds(double[] lb)
+	{
+		if (numMetabs == 0 || numRxns == 0)
+		{
+			return MODEL_NOT_INITIALIZED;
+		}
+		fbaOptimizer.setLowerBounds(numRxns, lb);
+		return PARAMS_OK;
+	}
 
 	/**
 	 * @return the current upper bounds for all fluxes
@@ -1045,6 +1060,14 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	public int setObjectiveMaximize(boolean[] objMax) {
 		objMaximize = objMax;
 		return fbaOptimizer.setObjectiveMaximize(objMax);
+	}
+	
+	public List<Signal> getSignals(){
+		return this.signals;
+	}
+	
+	public void setSignals(List<Signal> signals) {
+		this.signals = signals;
 	}
 	
 	/**
@@ -1274,7 +1297,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			double[] exchVmax = null;
 			double[] exchHillCoeff = null;
 			double[][] lightAbsorption = null;
-			
+
+			List<Signal> signals = new ArrayList<Signal>();		
 			double defaultAlpha = -1,
 				   defaultW = -1,
 				   defaultKm = -1,
@@ -1998,7 +2022,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 							// 3. Sort the array. And done!
 							Arrays.sort(exchRxns);
 						}
-					}
+						
 					lineNum++;
 					blockOpen = false;
 					numExch = exchRxns.length;
@@ -2479,6 +2503,73 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					lineNum++;
 					blockOpen = false;
 				}
+				/**************************************************************
+				 ********************** LOAD SIGNALS *******************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("MET_REACTION_SIGNAL"))
+				{
+					while (!(line = reader.readLine().trim()).equalsIgnoreCase("//")) {
+						String parsed[] = line.split("\\s+");
+
+						if (parsed.length < 5) {
+							reader.close();
+							throw new ModelFileException("There must be at least five values given for each MET_REACTION_SIGNAL:\nrxn exch bound A K B,\nline num: " + lineNum);
+						}
+						int rxn_num = -1;
+						if (parsed[0].toLowerCase().equals("death")){
+							// this met changes death rate
+							// we will use rxn_num = -1 to indicate that
+							
+						}else{
+							// this met alters a reaction bound
+							rxn_num = Integer.parseInt(parsed[0]);
+							if (rxn_num > numRxns) {
+								reader.close();
+								throw new ModelFileException("first argument in MET_REACTION_SIGNAL must be the number of a reaction, < # reactions in S matrix. line num: " + lineNum);
+							}
+						}
+						int exch_met_num = Integer.parseInt(parsed[1]);
+						if (exch_met_num > numExch) {
+							reader.close();
+							throw new ModelFileException("second argument in MET_REACTION_SIGNAL must be the number of an exchange metabolite, < # exchange mets in model list. line num: " + lineNum);
+						}
+						String bound = parsed[2];
+						if (!(bound.equalsIgnoreCase("lb") ||
+								bound.equalsIgnoreCase("ub") ||
+								bound.equalsIgnoreCase("consume_met")||
+								bound.equalsIgnoreCase("met_unchanged"))) {
+							reader.close();
+							throw new ModelFileException("third argument in MET_REACTION_SIGNAL must be the string ub, lb or consume_met,met_unchanged designating the affected bound (or whether the metabolite is consumed for death-causing toxins). line num" + lineNum);
+						}
+						
+						String function = parsed[3].toLowerCase(); // the name of the function connecting the met to the signal. see Signal for options
+						
+						double[] parameters = new double[parsed.length - 4];
+						for (int p = 4; p < parsed.length; p++){
+							parameters[p-4] = Double.parseDouble(parsed[p]);
+						}
+						if (rxn_num != -1){ // signal
+							if (bound.equalsIgnoreCase("lb")){
+								signals.add(new Signal(true, false, false, rxn_num,
+										exch_met_num, function, parameters));
+							}else {
+								signals.add(new Signal(false, true, false, rxn_num,
+										exch_met_num, function, parameters));							
+							}							
+						}else{
+							if (bound.equalsIgnoreCase("consume_met")){
+								signals.add(new Signal(false, false, true, rxn_num,
+										exch_met_num, function, parameters));
+							}else {
+								signals.add(new Signal(false, false, false, rxn_num,
+										exch_met_num, function, parameters));							
+							}							
+						}
+
+						
+					}
+
+				}	
 			}
 			reader.close();
 			if (blockOpen)
@@ -2562,7 +2653,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setConvNonlinDiffExponent(convNonlinDiffExponent);
 			model.setPackedDensity(packDensity);
 			model.setNoiseVariance(noiseVariance);
-			
+			model.setSignals(signals);
 			model.setNeutralDrift(neutralDrift);
 			model.setNeutralDriftSigma(neutralDriftSigma);
 			
@@ -2984,7 +3075,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		modelCopy.setPackedDensity(getPackedDensity());
 		modelCopy.setNoiseVariance(getNoiseVariance());
 		modelCopy.setLightAbsorption(getLightAbsorption());
-		
+		modelCopy.setSignals(getSignals());
 		//modelCopy.setParameters();
 		
 		return modelCopy;
@@ -3321,6 +3412,40 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	}
 
 	/**
+	 * Get total number of active reactions (i.e. bounds different than [0,0]
+	 */
+	public int getTotalRxns()
+	{		
+		double[] lBounds = getBaseLowerBounds();
+		double[] uBounds = getBaseUpperBounds();
+		int totalRxns = 0;
+		
+		// figure out which reactions have nonzero bounds
+		for (int j = 0; j < lBounds.length; j++) {
+			if ((lBounds[j] != 0 || uBounds[j] != 0) && !(ArrayUtils.contains(exch, j)))
+				totalRxns += 1;
+		}
+		return totalRxns;
+	}
+	
+	/**
+	 * Get total number of inactive reactions, i.e. potential deletions (bounds = [0,0])
+	 */
+	public int getInactiveRxns()
+	{		
+		double[] lBounds = getBaseLowerBounds();
+		double[] uBounds = getBaseUpperBounds();
+		int totalInactiveRxns = 0;
+		
+		// figure out which reactions have nonzero bounds
+		for (int j = 0; j < lBounds.length; j++) {
+			if ((lBounds[j] == 0 || uBounds[j] == 0) && !(ArrayUtils.contains(exch, j)))
+				totalInactiveRxns += 1;
+		}
+		return totalInactiveRxns;
+	}
+	
+	/**
 	 * Mutation method (this is for deletions only) 
 	 */
 	public void mutateModel()
@@ -3339,13 +3464,14 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		int mutReaction = nonzeroRxns.get(new Random().nextInt(nonzeroRxns.size()));
 		setMutation("del_" + Integer.toString(mutReaction));
 		//System.out.println("mutated reaction: " + mutReaction);
-		
-		// and update the mutModel model bounds
+
+		// update the mutModel model bounds
 		lBounds[mutReaction] = 0;
 		uBounds[mutReaction] = 0;
 		setBaseLowerBounds(lBounds);
-		setBaseUpperBounds(uBounds);	
-		//JEAN make sure newbounds apply to the optimizer
+		setBaseUpperBounds(uBounds);
+		
+		// make sure newbounds apply to the optimizer
 		fbaOptimizer.setLowerBounds(lBounds.length, lBounds);
 		fbaOptimizer.setUpperBounds(uBounds.length, uBounds);
 
@@ -3369,15 +3495,18 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		}
 		
 		// select one of these reactions at random
-		int mutReaction = nonzeroRxns.get(new Random().nextInt(nonzeroRxns.size()));
-		setMutation("add_" + Integer.toString(mutReaction));
-		
-		// and update the mutModel model bounds
-		uBounds[mutReaction] = 1000;
-		setBaseUpperBounds(uBounds);
-		//JEAN make sure new bounds apply to the optimizer
-		fbaOptimizer.setLowerBounds(lBounds.length, lBounds);
-		fbaOptimizer.setUpperBounds(uBounds.length, uBounds);		
+		if (nonzeroRxns.size()>0)
+		{	
+			int mutReaction = nonzeroRxns.get(new Random().nextInt(nonzeroRxns.size()));
+			setMutation("add_" + Integer.toString(mutReaction));
+			
+			// and update the mutModel model bounds
+			uBounds[mutReaction] = 1000;
+			setBaseUpperBounds(uBounds);
+			//JEAN make sure new bounds apply to the optimizer
+			fbaOptimizer.setLowerBounds(lBounds.length, lBounds);
+			fbaOptimizer.setUpperBounds(uBounds.length, uBounds);
+		}
 	}
 	
 	public double getGenomeCost()
