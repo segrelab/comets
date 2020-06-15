@@ -363,12 +363,15 @@ public class FBAWorld extends World2D
 				mediaLogWriter = new PrintWriter(new FileWriter(new File(name)));
 				
 				// init the media log writer.
-				mediaLogWriter.print("media_names = { '" + mediaNames[0] + "'");
-				for (int i=1; i<mediaNames.length; i++)
-				{
-					mediaLogWriter.print(", '" + mediaNames[i] + "'");
-				}
-				mediaLogWriter.println("};");
+				if (pParams.getMediaLogFormat().toString()=="Matlab")
+					{
+						mediaLogWriter.print("media_names = { '" + mediaNames[0] + "'");
+						for (int i=1; i<mediaNames.length; i++)
+						{
+							mediaLogWriter.print(", '" + mediaNames[i] + "'");
+						}
+						mediaLogWriter.println("};");
+					}
 				writeMediaLog();
 				//Write the file name in the manifest file.
 				try
@@ -1557,6 +1560,26 @@ public class FBAWorld extends World2D
 	}
 
 	/**
+	 * Returns the indexes of model media in the vector of extracellular metabolites 
+	 * in position (x, y) 
+	 */
+	public synchronized int[] getModelMediaIndexes(int x, int y, int i)
+	{
+		if (cParams.isToroidalGrid())
+		{
+			x = adjustX(x);
+			y = adjustY(y);
+		} 
+		if (isOnGrid(x, y))
+		{
+			int[] mediaList = (int[])modelExchList.get(i);
+			return mediaList;			
+		}
+		else
+			return null;
+	}
+
+	/**
 	 * Changes the level of media in space (x, y) as modified by the given model. The
 	 * mediaDelta array should hava only the media change calculated by that FBAModel,
 	 * and not necessarily all medium components.
@@ -1593,6 +1616,31 @@ public class FBAWorld extends World2D
 		}
 		else
 			return BOUNDS_ERROR;
+	}
+	
+	/**
+	 * Simulates the media using all models. Used for equitative media partitioning 
+	 * (see FBACell)
+	 * @param x
+	 * @param y
+	 * @param model
+	 * @param mediaDelta
+	 * @return
+	 */
+	public synchronized double[][] simulateCellUpdateMedia(int x, int y, FBAModel[] cmodels, double[][] mediaDelta)
+	{
+		double[][] cmedia = new double [cmodels.length][media[x][y].length];
+		
+		for (int a=0; a<cmodels.length; a++)
+		{			
+			int[] mediaList = (int[]) modelExchList.get(a);	
+			for (int i = 0; i < mediaList.length; i++)
+			{
+				//System.out.println("cmedia[a]: " + Arrays.toString(cmedia[a]));			
+				cmedia[a][mediaList[i]] += mediaDelta[a][i];
+			}
+		}
+		return cmedia;
 	}
 
 	@Override
@@ -3779,10 +3827,12 @@ public class FBAWorld extends World2D
 		List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
 		for (int i = 0; i < totalBiomass.length; i++)
 		{
-			if (totalBiomass[i] > cParams.getCellSize())
-			{
+			// JEREMY : I commented this out because otherwise the totalBiomass log is oddly skewed
+			// and I think we'd rather always see zeros.
+			//if (totalBiomass[i] > cParams.getCellSize())
+			//{
 				newModelsList.add(models[i]);					
-			}
+			//}
 		}
 		FBAModel[] newModels = new FBAModel[newModelsList.size()];
 		newModels = newModelsList.toArray(newModels);
@@ -3794,9 +3844,7 @@ public class FBAWorld extends World2D
 		}
 		
 		changeModelsInWorld(models, newModels);
-		setNumModels(newModels.length);
-		
-		
+		setNumModels(newModels.length);		
 		
 		currentTimePoint++;
 		if (pParams.writeFluxLog() && currentTimePoint % pParams.getFluxLogRate() == 0)
@@ -3975,14 +4023,12 @@ public class FBAWorld extends World2D
 					}
 					break;
 					
-				default:
+				case COMETS:
 					/* print all fluxes from each cell
 					 * format:
-					 * timepoint\n
-					 * x y speciesNum1 flux1 flux2 ... fluxn\n
-					 * x y speciesNum2 flux1 flux2 ... fluxn\n
+					 * timepoint x y speciesNum1 flux1 flux2 ... fluxn\n
+					 * timepoint x y speciesNum2 flux1 flux2 ... fluxn\n
 					 */
-					fluxLogWriter.println(currentTimePoint);
 					it = c.getCells().iterator();
 					while (it.hasNext())
 					{
@@ -3995,7 +4041,7 @@ public class FBAWorld extends World2D
 						{
 							for (int i=0; i<fluxes.length; i++) //fluxes[i][j] denotes flux j in species i
 							{
-								fluxLogWriter.print((cell.getX() +1) + " " + (cell.getY() + 1) + " " + (i + 1));
+								fluxLogWriter.print(currentTimePoint + " " + (cell.getX() +1) + " " + (cell.getY() + 1) + " " + (i + 1));
 								for (int j=0; j<fluxes[i].length; j++)
 								{
 									fluxLogWriter.print(" " + nf.format(fluxes[i][j]));
@@ -4015,30 +4061,46 @@ public class FBAWorld extends World2D
 	 */
 	private void writeMediaLog()
 	{
-		System.out.println("WRITING MEDIA LOG");
 		if (mediaLogWriter != null && (currentTimePoint == 1 || currentTimePoint % pParams.getMediaLogRate() == 0))
 		{
-			//NumberFormat nf = NumberFormat.getInstance();
-			//nf.setGroupingUsed(false);
-			//nf.setMaximumFractionDigits(9);
 			NumberFormat nf = new DecimalFormat("0.##########E0");
-			
-			for (int k=0; k<numMedia; k++)
+
+			switch(pParams.getMediaLogFormat())
 			{
-				mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + "));");
-				for (int i=0; i<numCols; i++)
-				{
-					for (int j=0; j<numRows; j++)
+				case MATLAB:
+				
+					for (int k=0; k<numMedia; k++)
 					{
-						if (media[i][j][k] != 0)
-							mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "}(" + (i+1) + ", " + (j+1) + ") = " + nf.format(media[i][j][k]) + ";");
+						mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "} = sparse(zeros(" + numCols + ", " + numRows + "));");
+						for (int i=0; i<numCols; i++)
+						{
+							for (int j=0; j<numRows; j++)
+							{
+								if (media[i][j][k] != 0)
+									mediaLogWriter.println("media_" + currentTimePoint + "{" + (k+1) + "}(" + (i+1) + ", " + (j+1) + ") = " + nf.format(media[i][j][k]) + ";");
+							}
+						}
 					}
-				}
+					break;
+					
+				case COMETS:
+					for (int k=0; k<numMedia; k++)
+					{
+						for (int i=0; i<numCols; i++)
+						{
+							for (int j=0; j<numRows; j++)
+							{
+								if (media[i][j][k] != 0)
+									mediaLogWriter.println(mediaNames[k] + " " + (currentTimePoint+1) + " " + (i+1) + " " + (j+1) + " " + nf.format(media[i][j][k]));
+							}
+						}
+					}
+					break;					
 			}
 			mediaLogWriter.flush();
 		}
-	}
-	
+	}	
+			
 	/**
 	 * writes the specific media log
 	 */
@@ -4067,93 +4129,86 @@ public class FBAWorld extends World2D
 	 * Writes the current status to the biomass log if it is at the right time point.
 	 * See documentation for formats.
 	 */
-//	private void writeBiomassLog()
-//	{
-//		if (biomassLogWriter != null)// && (currentTimePoint == 1 || currentTimePoint % pParams.getBiomassLogRate() == 0))
-//		{
-//			//NumberFormat nf = NumberFormat.getInstance();
-//			//nf.setGroupingUsed(false);
-//			//nf.setMaximumFractionDigits(100);
-//			NumberFormat nf = new DecimalFormat("0.##########E0");
-//			
-//			switch(pParams.getBiomassLogFormat())
-//			{
-//				/* Matlab .m file format:
-//				 * biomass_<time>_<species> = sparse(<num_rows>, <num_cols>);
-//				 * biomass_<time>_<species>(<row>, <col>) = <biomass>
-//				 * ...
-//				 * and so on.
-//				 */
-//				case MATLAB:
-//					for (int i=0; i<models.length; i++)
-//					{
-//						String varName = "biomass_" + currentTimePoint + "_" + i;
-//						biomassLogWriter.println(varName + " = sparse(" + numRows + ", " + numCols + ");");
-//						Iterator<Cell> it = c.getCells().iterator();
-//						while (it.hasNext())
-//						{
-//							FBACell cell = (FBACell)it.next();
-//							double[] biomass = cell.getBiomass();
-//							biomassLogWriter.println(varName + "(" + (cell.getY()+1) + ", " + (cell.getX()+1) + ") = " + nf.format(biomass[i]) + ";");
-//						}
-//					}
-//					break;
-//					
-//				default:
-//					/*
-//					 * Comets file format:
-//					 * currentTimePoint on a line
-//					 * x y biomass1 biomass2 ... biomassN
-//					 * x y ...
-//					 * etc.
-//					 */
-//					biomassLogWriter.println(currentTimePoint);
-//					Iterator<Cell> it = c.getCells().iterator();
-//					while (it.hasNext())
-//					{
-//						FBACell cell = (FBACell)it.next();
-//						double[] biomass = cell.getBiomass();
-//						biomassLogWriter.print(cell.getX() + " " + cell.getY());
-//						for (int i=0; i<biomass.length; i++)
-//						{
-//							biomassLogWriter.print(" " + nf.format(biomass[i]));
-//						}
-//						biomassLogWriter.print("\n");
-//					}
-//					break;
-//			}
-//			biomassLogWriter.flush();
-//		}
-//	}
-
 	private void writeBiomassLog()
 	{
-		/*
-		* New biomass log format, supporting also evolution:
-		* timepoint x y modelID biomass
-		* 
-		* - One line written for each timepoint, cell and model
-		*/
-		if (biomassLogWriter != null)			
+		if (biomassLogWriter != null)// && (currentTimePoint == 1 || currentTimePoint % pParams.getBiomassLogRate() == 0))
 		{
-			NumberFormat nf = new DecimalFormat("0.##########E0");			
-			Iterator<Cell> it = c.getCells().iterator();
-			while (it.hasNext())
+			//NumberFormat nf = NumberFormat.getInstance();
+			//nf.setGroupingUsed(false);
+			//nf.setMaximumFractionDigits(100);
+			NumberFormat nf = new DecimalFormat("0.##########E0");
+			
+			switch(pParams.getBiomassLogFormat())
 			{
-				FBACell cell = (FBACell)it.next();
-				double[] biomass = cell.getBiomass();
-				String[] modelIDs = cell.getCellModelIDs();
-				for (int i=0; i<biomass.length; i++)
-				{
-					biomassLogWriter.print(currentTimePoint + " " 
-							+ cell.getX() + " " + cell.getY() + " " 
-							+ modelIDs[i] + " " + nf.format(biomass[i]) + "\n");
-				}
+				/* Matlab .m file format:
+				 * biomass_<time>_<species> = sparse(<num_rows>, <num_cols>);
+				 * biomass_<time>_<species>(<row>, <col>) = <biomass>
+				 * ...
+				 * and so on.
+				 */
+				case MATLAB:
+					for (int i=0; i<models.length; i++)
+					{
+						String varName = "biomass_" + currentTimePoint + "_" + i;
+						biomassLogWriter.println(varName + " = sparse(" + numRows + ", " + numCols + ");");
+						Iterator<Cell> it = c.getCells().iterator();
+						while (it.hasNext())
+						{
+							FBACell cell = (FBACell)it.next();
+							double[] biomass = cell.getBiomass();
+							biomassLogWriter.println(varName + "(" + (cell.getY()+1) + ", " + (cell.getX()+1) + ") = " + nf.format(biomass[i]) + ";");
+						}
+					}
+					break;
+					
+				case COMETS:
+
+					Iterator<Cell> it = c.getCells().iterator();					
+					if (cParams.getEvolution())
+					{
+						/*
+						* Biomass log format for simulations with evolution:
+						* timepoint x y modelID biomass
+						* [One line written for each timepoint, cell and model]
+						*/
+						while (it.hasNext())
+						{
+							FBACell cell = (FBACell)it.next();
+							double[] biomass = cell.getBiomass();
+							String[] modelIDs = cell.getCellModelIDs();
+							for (int i=0; i<biomass.length; i++)
+							{
+								biomassLogWriter.print(currentTimePoint + " " 
+										+ cell.getX() + " " + cell.getY() + " " 
+										+ modelIDs[i] + " " + nf.format(biomass[i]) + "\n");
+							}
+						}
+						
+					} else {
+						/*
+						 * Comets file format:
+						 * currentTimePoint on a line
+						 * x y biomass1 biomass2 ... biomassN
+						 * x y ...
+						 * etc.
+						 */						
+						while (it.hasNext())
+						{
+							FBACell cell = (FBACell)it.next();
+							double[] biomass = cell.getBiomass();
+							biomassLogWriter.print(currentTimePoint + " " + cell.getX() + " " + cell.getY());
+							for (int i=0; i<biomass.length; i++)
+							{
+								biomassLogWriter.print(" " + nf.format(biomass[i]));
+							}
+							biomassLogWriter.print("\n");
+						}							
+					}					
+					break;
 			}
+			biomassLogWriter.flush();
 		}
-		biomassLogWriter.flush();
 	}
-	
 	
 	
 	/**
@@ -4391,9 +4446,7 @@ public class FBAWorld extends World2D
 			catch (IOException e)
 			{
 				System.out.println("Unable to write to .mat file '" + pParams.getMatFileName() + "'\nContinuing without saving log.");
-			}
-			
-			
+			}	
 			
 			//Do the media
 			int[] dimsMedia=new int[]{cParams.getNumCols(), cParams.getNumRows(),media[0][0].length};
@@ -5249,8 +5302,9 @@ public class FBAWorld extends World2D
 		
 		for (int i = 0; i < models.length; i++)
 			if (totalBiomass[i] > 0.0)
+				// biomass diluted by sampling from number of cells stochastically
 				dilutedBiomass[i] = samplePopulation((int)Math.floor(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
-				//dilutedBiomass[i] = totalBiomass[i]*dilution; // jean
+				//dilutedBiomass[i] = totalBiomass[i]*dilution; // simple dilution of biomass 
 			else
 				dilutedBiomass[i] = 0.0;
 		// cell where new biomass will be located
@@ -5278,6 +5332,7 @@ public class FBAWorld extends World2D
 			// and update media 
 			setMedia(cell.getX(), cell.getY(), media);
 			cell.setStationaryStatus();
+			
 		}
 	}		
 	
@@ -5377,13 +5432,15 @@ public class FBAWorld extends World2D
 			nCells[a] = (int)Math.floor(totalDeltaBiomass[a]/cell_biomass);
 			if (nCells[a]>0)
 			{
-				// 2. compute number of new cells and number of mutations in each species 
-				nMut[a] = samplePopulation(nCells[a], mutation_rate);
+				// 2. compute number of new cells and mutations in each species 
+				double currentDelRate = ((FBAModel)models[a]).getTotalRxns()*mutation_rate;
+
+				nMut[a] = samplePopulation(nCells[a], currentDelRate);
 				
 				// 3. if any mutation in model a, clone models and perform mutations,
 				if (nMut[a]>0)
 				{
-					// determine where will mutations happen by building a map to sample cells
+					// determine where (in space) will mutations happen using a map to sample cells
 					WeightedSample <Cell> toMutate = new WeightedSample <Cell> ();					
 					for (Cell cell : c.getCells())
 					{
@@ -5450,6 +5507,10 @@ public class FBAWorld extends World2D
 		// Loop over all species 
 		for (int a=0; a<totalDeltaBiomass.length; a++)
 		{	
+			// if there are no reactions to add, skip
+			if (((FBAModel)models[a]).getInactiveRxns()==0)
+				continue;
+
 			// subdivide change in biomass into individual cells
 			nCells[a] = (int)Math.floor(totalDeltaBiomass[a]/cell_biomass);
 			if (nCells[a]>0)
@@ -5512,11 +5573,6 @@ public class FBAWorld extends World2D
 		}			
 		// System.out.println("INDS: " + Arrays.toString(nCells));
 		// System.out.println("MUTS: " + Arrays.toString(nMut));
-	}
-
-	//TODO:This function is only included because the proper calculateDeltaBiomass seems to be missing. Do not commit this method!
-	public double[] calculateDeltaBiomass() {
-		throw new Error("FBAWorld.calculateDeltaBiomass() has been invoked but is not yet implemented.");
 	}
 
 	@Override

@@ -1,5 +1,7 @@
 package edu.bu.segrelab.comets;
 
+import java.text.DecimalFormat;
+
 import edu.bu.segrelab.comets.event.SimulationStateChangeEvent;
 import edu.bu.segrelab.comets.fba.FBAWorld;
 
@@ -105,13 +107,14 @@ public class CometsSimRunner extends Thread
 				// do batch dilution here
 				{
 					if (c.getParameters().getBatchDilution())
-					{
-						if ((curCycle*c.getParameters().getTimeStep()) % c.getParameters().getDilutionTime() == 0) 
+					{						
+						if ((curCycle*c.getParameters().getTimeStep()) % c.getParameters().getDilutionTime() < 1E-7) 
 						{
+							// the if was set to <1E-7 for robustness to floating point errors
 							((FBAWorld) c.getWorld()).batchDilute(c.getParameters().getDilutionFactor(), c.getParameters().getCellSize());
 							System.out.println("Transfer performed: dilute " + 
 												c.getParameters().getDilutionFactor() + 
-												" each " + c.getParameters().getDilutionTime() + 'h');
+												" each " + c.getParameters().getDilutionTime() + "hrs");
 						}
 					}
 

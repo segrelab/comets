@@ -54,7 +54,7 @@ import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
 import edu.bu.segrelab.comets.util.Point3d;
-import edu.bu.segrelab.comets.fba.FBAPeriodicMedia;
+//import edu.bu.segrelab.comets.fba.FBAPeriodicMedia;
 
 public class FBACometsLoader implements CometsLoader, CometsConstants
 {
@@ -2927,7 +2927,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			model.setModelID(p.getFileName().toString());
 			model.setMutation("NO_MUT");
 
-			System.out.println("Ancestor " + model.getAncestor());
+			// System.out.println("Ancestor " + model.getAncestor());
 			
 			// genome size costs are set when new models are created. That is,
 			// either here at loading. or when mutant models appear.
@@ -2944,7 +2944,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			else
 				System.out.println("(might be an error?)");
 			
-			System.out.println("objective solution = " + model.getObjectiveSolutions());
+			System.out.println("objective solution = " + model.getObjectiveSolutions()[0]);
 			System.out.flush();
 		}
 		catch (ModelFileException e)
