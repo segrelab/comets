@@ -117,7 +117,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double[] exchAlpha;	  // another option for creating exchange reactions:
 	private double[] exchW; 		  // defined as min(alpha[i] * media[i], W[i] * volume) / biomass
 									  // not as "exact" as the kinetic constraints, but still time-independent
-	private double[] lightAbsorption; // Absorption coefficients (default 0), also used to know which metabolites / 
+	private double[][] lightAbsorption; // Absorption coefficients (default 0), also used to know which metabolites / 
 									  // exchange reactions that take up light, because they have to be treated differently from normal metabolites [m^2/g DW]
 	
 	private double flowDiffConst; // = 1e-5;
@@ -273,7 +273,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					final double[] exchHillCoeff,
 					final double[] exchAlpha,
 					final double[] exchW,
-					final double[] lightAbsorption,
+					final double[][] lightAbsorption,
 					final String[] metabNames, 
 					final String[] rxnNames,
 					final int objStyle,
@@ -364,7 +364,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					final double[] exchHillCoeff,
 					final double[] exchAlpha,
 					final double[] exchW,
-					final double[] lightAbsorption,
+					final double[][] lightAbsorption,
 					final String[] metabNames, 
 					final String[] rxnNames,
 					final int objStyle,
@@ -701,7 +701,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	/**
 	 * @return the light absorption coefficient for each exchange reaction
 	 */
-	public double[] getLightAbsorption()
+	public double[][] getLightAbsorption()
 	{
 		return lightAbsorption;
 	}
@@ -711,11 +711,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 * @param i index of the exchange reaction
 	 * @return the light absorption coefficient for the specified reaction
 	 */
-	public double getLightAbsorption(int i) {
+	public double[] getLightAbsorption(int i) {
 		return lightAbsorption[i];
 	}
 	
-	public void setLightAbsorption(final double[] lightAbsorption)
+	public void setLightAbsorption(final double[][] lightAbsorption)
 	{
 		if (this.numExch == lightAbsorption.length)
 			this.lightAbsorption = lightAbsorption;
@@ -1273,7 +1273,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			double[] exchKm = null;
 			double[] exchVmax = null;
 			double[] exchHillCoeff = null;
-			double[] lightAbsorption = null;
+			double[][] lightAbsorption = null;
 			
 			double defaultAlpha = -1,
 				   defaultW = -1,
@@ -2439,10 +2439,12 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						throw new ModelFileException("The list of exchange reactions should be loaded before the Light coefficients at line " + lineNum);
 					}
 					
-					lightAbsorption = new double[numExch];
-					for (int i=0; i<numExch; i++)
-						lightAbsorption[i] = 0;
-						
+					lightAbsorption = new double[numExch][2];
+					for (int i=0; i<numExch; i++) {
+						for (int j=0; j<2; j++) {
+							lightAbsorption[i][j] = 0;
+						}
+					}
 					String lightLine = null;
 					blockOpen = true;
 					while (!(lightLine = reader.readLine().trim()).equalsIgnoreCase("//"))
@@ -2451,10 +2453,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						String[] parsed = lightLine.split("\\s+");
 						if (lightLine.length() == 0)
 							continue;
-						if (parsed.length != 2)
+						if (parsed.length != 3)
 						{
 							reader.close();
-							throw new ModelFileException("There should be 2 elements on each line of the LIGHT block at line " + lineNum + ": the exchange reaction index (from 1 to " + numExch + ") and the absorption coefficient of that reaction.");
+							throw new ModelFileException("There should be 3 elements on each line of the LIGHT block at line " + lineNum + ": the exchange reaction index (from 1 to " + numExch + ") and the absorption coefficient of that reaction.");
 						}
 						
 						int rxn = Integer.parseInt(parsed[0]);
@@ -2464,14 +2466,15 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 							throw new ModelFileException("The reaction index in LIGHT block line " + lineNum + " should be between 1 and " + numExch);
 						}
 						
-						double absorption = Double.parseDouble(parsed[1]);
-						if (absorption < 0 || absorption > 1)
-						{
-							reader.close();
-							throw new ModelFileException("The absorption value on line " + lineNum + " should be between 0 and 1");
+						for (int j=0; j<2; j++) {
+							lightAbsorption[rxn-1][j] = Double.parseDouble(parsed[j+1]);
+							if (lightAbsorption[rxn-1][j] < 0 || lightAbsorption[rxn-1][j] > 1)
+							{
+								reader.close();
+								throw new ModelFileException("The absorption value on line " + lineNum + " should be between 0 and 1");
+							}
 						}
 						
-						lightAbsorption[rxn-1] = absorption;
 					}
 					lineNum++;
 					blockOpen = false;
@@ -2528,9 +2531,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			
 			if (lightAbsorption == null)
 			{
-				lightAbsorption = new double[numExch];
+				lightAbsorption = new double[numExch][2];
 				for (int i=0; i<numExch; i++)
-					lightAbsorption[i] = 0;
+					for (int j=0; j<2; j++) {
+						lightAbsorption[i][j] = 0;
+					}
 			}
 			
 		

@@ -798,10 +798,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				
 			}
 			/***************** Calculate bounds for Light (photon) uptake **********/
-			double [] lightAbsorption = ((FBAModel)models[i]).getLightAbsorption();
+			double [][] lightAbsorption = ((FBAModel)models[i]).getLightAbsorption();
 			for (int j=0; j<lb.length; j++)
 			{
-				if (lightAbsorption[j] > 0) {
+				if (lightAbsorption[j][0]+lightAbsorption[j][1] > 0) {
 					// TODO: Divide by modelShare to undo the multiplication performed on line 656
 					// Note: This function needs to be changed in order to account for multiple light-absorbing species
 					rates[j] = Math.min(Math.abs(lb[j]), calcMaxLightUptake(media[j]/modelShare[i], biomass[i], cParams.getSpaceWidth(), lightAbsorption[j], cParams.getSpaceVolume()));
@@ -873,7 +873,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				{
 					mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
 //					System.out.print("\t" + exchFlux[j]);
-					if (lightAbsorption[j] > 0) {
+					if ((lightAbsorption[j][0]+lightAbsorption[j][1])  > 0) {
 						// Light is not used up as this is a flux
 						mediaDelta[j] = 0;
 					}
@@ -1031,17 +1031,23 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	 * @param lightFlux The "concentration" of photons i actually a flux [mmol photons/m^2/s]
 	 * @param biomass The total biomass in the grid cell of this organism [gDW]
 	 * @param gridSize The length scale of each grid in the cell [cm]
-	 * @param absorption The absorption coefficient [m^2/g DW]
+	 * @param absorption 1x2 array of absorption cofficients for a linear function. The first value is the intercept (in m^-1) and the second 
+	 *        value is the biomass-specific absorption coefficient [m^2/g DW]
 	 * @param gridVolum The volume of the grid (cm^3 aka mL)
 	**/
 	private double calcMaxLightUptake(double lightFlux, double biomass, double gridSize, 
-									  double absorption, double gridVolume)
+									  double [] absorption, double gridVolume)
 	{
-		
-		double absorbance = 1e4*absorption*biomass*gridSize/gridVolume; // 1e4 converts from centimeters to meters
+		// 1e-6 converts volume from cubic centimeters to cubic meters
+		// 1e-2 converts length from centimeters to meters
+		double biomassAbsorption =  absorption[1]*biomass/(gridVolume*1e-6);
+		double absorbance = (absorption[0] + biomassAbsorption)*gridSize*1e-2; 
 		double deltaFlux = lightFlux*(1-Math.exp(-absorbance));
+		
+		// The light absorbed is a ratio of the attenuated light flux, weighted by the relative absorption of the biomass
+		double absorbedFlux = deltaFlux*biomassAbsorption/(biomassAbsorption+absorption[0]);
 		// *3600 converts from per second to per hour. 1e-4 converts the gridsize from cm to meters
-		double absorbedPhotonsPerHourPerBiomass = 3600*1e-4*deltaFlux*gridSize*gridSize/biomass; // mmol photons / g DW / hour
+		double absorbedPhotonsPerHourPerBiomass = 3600*1e-4*absorbedFlux*gridSize*gridSize/biomass; // mmol photons / g DW / hour
 		return absorbedPhotonsPerHourPerBiomass;
 
 	}
