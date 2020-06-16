@@ -800,14 +800,14 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			{
 				if (lightAbsorption[j][0]+lightAbsorption[j][1] > 0) {
 					// Note: This function needs to be changed in order to account for multiple light-absorbing species
-					rates[j] = Math.min(Math.abs(lb[j]), calcMaxLightUptake(media[j], biomass[i], cParams.getSpaceWidth(), lightAbsorption[j], cParams.getSpaceVolume()));
+					rates[j] = Math.min(Math.abs(lb[i][j]), calcMaxLightUptake(media[j], biomass[i], cParams.getSpaceWidth(), lightAbsorption[j], cParams.getSpaceVolume()));
 				}
 			}
 
 			/************************* Write lower bounds *********************/
 			for (int j=0; j<lb.length; j++)
 			{
-				lb[j] = -1 * rates[j]/rho;
+				lb[i][j] = -1 * rates[j]/rho;
 			}
 			
 			if (DEBUG)
@@ -1046,8 +1046,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						{
 							mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
 	//						System.out.print("\t" + exchFlux[j]);
-							double [] lightAbsorption = ((FBAModel)models[i]).getLightAbsorption();
-							if (lightAbsorption[j] > 0) {
+							double [][] lightAbsorption = ((FBAModel)models[i]).getLightAbsorption();
+							if ((lightAbsorption[j][0]+lightAbsorption[j][1])  > 0) {
 								// Light is not used up as this is a flux
 								mediaDelta[j] = 0;
 							}

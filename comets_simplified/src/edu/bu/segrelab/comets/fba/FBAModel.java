@@ -122,7 +122,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 									  // not as "exact" as the kinetic constraints, but still time-independent
 	private double[][] lightAbsorption; // Absorption coefficients (default 0), also used to know which metabolites / 
 									  // exchange reactions that take up light, because they have to be treated differently from normal metabolites [m^2/g DW]
-	
+	private List<Signal> signals; // array of Signals that models' bounds respond to
 	private double flowDiffConst; // = 1e-5;
 	private double growthDiffConst; // = 5e-5;
 	private double elasticModulusConst;
@@ -2026,6 +2026,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					lineNum++;
 					blockOpen = false;
 					numExch = exchRxns.length;
+					}
 				}
 				
 				// thankfully, the rest will all have the same code shape.
