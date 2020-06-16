@@ -796,7 +796,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			
 			/***************** Calculate bounds for Light (photon) uptake **********/
 			double [][] lightAbsorption = ((FBAModel)models[i]).getLightAbsorption();
-			for (int j=0; j<lb.length; j++)
+			for (int j=0; j<lb[i].length; j++)
 			{
 				if (lightAbsorption[j][0]+lightAbsorption[j][1] > 0) {
 					// Note: This function needs to be changed in order to account for multiple light-absorbing species
@@ -805,7 +805,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			}
 
 			/************************* Write lower bounds *********************/
-			for (int j=0; j<lb.length; j++)
+			for (int j=0; j<lb[i].length; j++)
 			{
 				lb[i][j] = -1 * rates[j]/rho;
 			}
@@ -828,9 +828,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				System.out.println("ALL FLUX BOUNDS");
 				lb[i] = ((FBAModel)models[i]).getLowerBounds();
 				ub[i] = ((FBAModel)models[i]).getUpperBounds();
-				for (int j=0; j<lb.length; j++)
+				for (int j=0; j<lb[i].length; j++)
 				{
-					System.out.println(lb[j] + "\t" + ub[j]);
+					System.out.println(lb[i][j] + "\t" + ub[i][j]);
 				}
 			}
 			
@@ -1008,9 +1008,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						System.out.println("ALL FLUX BOUNDS");
 						lb[i] = ((FBAModel)models[i]).getLowerBounds();
 						ub[i] = ((FBAModel)models[i]).getUpperBounds();
-						for (int j=0; j<lb.length; j++)
+						for (int j=0; j<lb[i].length; j++)
 						{
-							System.out.println(lb[j] + "\t" + ub[j]);
+							System.out.println(lb[i][j] + "\t" + ub[i][j]);
 						}
 					}
 					
