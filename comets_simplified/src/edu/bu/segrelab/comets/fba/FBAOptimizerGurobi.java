@@ -908,7 +908,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 					}
 					ret=0;
 				} else {
-					System.out.println("MAXIMIZE_OBJECTIVE_FLUX: Model is not feasible");
+					//System.out.println("MAXIMIZE_OBJECTIVE_FLUX: Model is not feasible");
 					for(int i=0;i<rxnFluxes.length;i++){
 						fluxesModel[i]=0;
 					}
@@ -953,14 +953,14 @@ implements edu.bu.segrelab.comets.CometsConstants
 						ret=0;
 					}else {
 						//Do nothing, the maximization is OK
-						System.out.println("MAX_OBJECTIVE_MIN_TOTAL: Min_total, Model is not feasible");
+						//System.out.println("MAX_OBJECTIVE_MIN_TOTAL: Min_total, Model is not feasible");
 						//for(int i=0;i<rxnFluxes.length;i++){
 						//	fluxesModel[i]=0;
 						//}
 					}
 				}else {
 					//Do nothing, the maximization is OK
-					System.out.println("MAX_OBJECTIVE_MIN_TOTAL: Max_obj, Model is not feasible");
+					//System.out.println("MAX_OBJECTIVE_MIN_TOTAL: Max_obj, Model is not feasible");
 					//for(int i=0;i<rxnFluxes.length;i++){
 					//	fluxesModel[i]=0;
 					//}

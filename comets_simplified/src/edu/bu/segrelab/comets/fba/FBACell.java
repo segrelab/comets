@@ -758,9 +758,19 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						double hill = FBAParameters.getDefaultHill();
 						if (hillCoeffArr != null && hillCoeffArr.length > j && hillCoeffArr[j] > 0)
 							hill = hillCoeffArr[j];
-
-						rates[j] = Math.min(Math.abs(lb[i][j]),
-											Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
+						
+						// Start of modified code corrected lb 9/19/13 Ilija D. updated by DJORDJE 
+						if(media[j]/(cParams.getTimeStep()*biomass[i])<calcMichaelisMentenRate(media[j]/(cParams.getSpaceVolume()), km, vMax, hill))
+						{
+							rates[j] = Math.min(Math.abs(lb[i][j]),Math.abs(media[j]/(cParams.getTimeStep()*biomass[i])));
+						}
+						else
+							rates[j] = Math.min(Math.abs(lb[i][j]),
+											Math.abs(calcMichaelisMentenRate(media[j]/(cParams.getSpaceVolume()), km, vMax, hill)));
+					
+						
+						//rates[j] = Math.min(Math.abs(lb[i][j]),
+						//					Math.abs(calcMichaelisMentenRate(media[j]/cParams.getSpaceVolume(), km, vMax, hill)));
 					}
 					break;
 					
@@ -916,6 +926,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			}
 		}
 		
+		
 	    if (stationaryStatus == false)
 	    {		
 		/* If there are models with positive growth (i.e. stationaryStatus=false)
@@ -946,7 +957,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					}
 				}
 	
-				if (totUptake<0 & totUptake<(-thisCellMedia[k])) // if current metabolite isrunning out
+				if (totUptake<0 && totUptake<(-thisCellMedia[k])) // if current metabolite isrunning out
 				{
 					reOptimizeFlag = true;
 			        for (Integer l : uptakingModels) // for all models uptaking it 
@@ -968,6 +979,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			 * If any compound has run out, lower bounds for all models were fixed above, and now we 
 			 * need to re-run everything and update media and biomasses. 
 			 */
+			
 			if (reOptimizeFlag == true)
 			{
 				for (int a=0; a<models.length; a++)
