@@ -21,6 +21,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.distribution.*;
 
 import jdistlib.*;
+import jdistlib.rng.MersenneTwister;
 
 /**
  * FBACell
@@ -64,9 +65,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private CometsParameters cParams;
 	private FBAParameters pParams;
 	
-	//Distributions for neutral drift of the biomass.
-	private Poisson poissonDist;
-	private Gamma gammaDist;
+	
+	
 	
 	private PrintWriter PoissWriter;
 	/**
@@ -137,6 +137,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		world.putCellAt(x, y, this);
 		
 		updateDiffusibility();
+		
+		//Create Poisson and Gamma distributions for demographic noise
+		//poissonDist=new Poisson(1.0);
+		//gammaDist=new Gamma(1.0,1.0);
 		/*
 
 		if (!cParams.allowCellOverlap())
@@ -1171,15 +1175,15 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			//System.out.println("poiss  "+poissonLambda);
 			if(poissonLambda>0)
 		{
-				poissonDist=new Poisson(poissonLambda);
+				//poissonDist=new Poisson(poissonLambda);
 			
-				double gammaAlpha=poissonDist.random();
+				double gammaAlpha=Poisson.random(poissonLambda, new MersenneTwister());
 				//System.out.println("alpha  "+gammaAlpha);
 				if(gammaAlpha>0)
 			{
 					//System.out.println(gammaAlpha);
-					gammaDist=new Gamma(gammaAlpha,1.0);
-					double gammaSample=gammaDist.random();
+					//gammaDist=new Gamma(gammaAlpha,1.0);
+					double gammaSample=Gamma.random(gammaAlpha, 1.0, new MersenneTwister());
 					noisyBiomass=0.5*gammaSample*(cParams.getTimeStep()*noiseSigma*noiseSigma);
 					//System.out.println("biomass  "+noisyBiomass);
 			}
@@ -1355,6 +1359,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			if (biomass[i] == 0)
 				numDead++;
 		}
+		
+		
 		if (cParams.showGraphics())
 			cellColor = calculateColor();
 		

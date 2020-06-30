@@ -3688,10 +3688,12 @@ public class FBAWorld extends World2D
 			// 2. tell all the cells to run			
 			List<Cell> deadCells = new ArrayList<Cell>();
 			//long t = System.currentTimeMillis();
+			int[] randomCellOrder=new int[c.getCells().size()];
+			randomCellOrder=Utility.randomOrder(c.getCells().size());
 			for (int i = 0; i < c.getCells().size(); i++)
 			{
 				// print("running cell " + i + "...");
-				Cell cell = (Cell) c.getCells().get(i);
+				Cell cell = (Cell) c.getCells().get(randomCellOrder[i]);
 				int alive = cell.run();
 				if (alive == Cell.CELL_DEAD)
 					deadCells.add(cell);
@@ -3824,27 +3826,27 @@ public class FBAWorld extends World2D
 
 		// 7. Remove models that have lower biomass than the minimal required
 		//double[] totalBiomass = calculateTotalBiomass();		
-		List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
-		for (int i = 0; i < totalBiomass.length; i++)
-		{
+		//List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
+		//for (int i = 0; i < totalBiomass.length; i++)
+		//{
 			// JEREMY : I commented this out because otherwise the totalBiomass log is oddly skewed
 			// and I think we'd rather always see zeros.
 			//if (totalBiomass[i] > cParams.getCellSize())
 			//{
-				newModelsList.add(models[i]);					
+				//newModelsList.add(models[i]);					
 			//}
-		}
-		FBAModel[] newModels = new FBAModel[newModelsList.size()];
-		newModels = newModelsList.toArray(newModels);
+		//}
+		//FBAModel[] newModels = new FBAModel[newModelsList.size()];
+		//newModels = newModelsList.toArray(newModels);
 
 		// now change models in cells as well as in world
-		for (Cell cell : c.getCells())
-		{
-			cell.changeModelsInCell(models, newModels);
-		}
+		//for (Cell cell : c.getCells())
+		//{
+		//	cell.changeModelsInCell(models, newModels);
+		//}
 		
-		changeModelsInWorld(models, newModels);
-		setNumModels(newModels.length);		
+		//changeModelsInWorld(models, newModels);
+		//setNumModels(newModels.length);		
 		
 		currentTimePoint++;
 		if (pParams.writeFluxLog() && currentTimePoint % pParams.getFluxLogRate() == 0)
@@ -3900,7 +3902,13 @@ public class FBAWorld extends World2D
 		 * runThreads[i].setName("FBARunThread-" + i); } for (int i=0;
 		 * i<runThreads.length; i++) { runThreads[i].start(); }
 		 */
-		runCells.addAll(c.getCells());
+		int[] randomCellOrder=new int[c.getCells().size()];
+		randomCellOrder=Utility.randomOrder(c.getCells().size());
+		for(int i = 0; i < c.getCells().size(); i++)
+		{
+			Cell cell = (Cell) c.getCells().get(randomCellOrder[i]);
+			runCells.add(cell);
+		}
 		deadCells = new ArrayList<Cell>();
 		int numCells = runCells.size();
 		threadLock = 0;
