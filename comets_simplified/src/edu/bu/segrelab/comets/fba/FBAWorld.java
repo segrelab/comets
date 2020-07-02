@@ -4043,19 +4043,18 @@ public class FBAWorld extends World2D
 						// blah print
 						FBACell cell = (FBACell)it.next();
 						double[][] fluxes = cell.getFluxes();
-						if (fluxes[0] == null) // e.g., FBA hasn't been run yet.
-							continue;
-						else
+
+						for (int i=0; i<fluxes.length; i++) //fluxes[i][j] denotes flux j in species i
 						{
-							for (int i=0; i<fluxes.length; i++) //fluxes[i][j] denotes flux j in species i
-							{
-								fluxLogWriter.print(currentTimePoint + " " + (cell.getX() +1) + " " + (cell.getY() + 1) + " " + (i + 1));
-								for (int j=0; j<fluxes[i].length; j++)
-								{
-									fluxLogWriter.print(" " + nf.format(fluxes[i][j]));
-								}
-								fluxLogWriter.print("\n");
+							if (fluxes[i] == null) {
+								continue; // FBA hasn't run or model didn't grow
 							}
+							fluxLogWriter.print(currentTimePoint + " " + (cell.getX() +1) + " " + (cell.getY() + 1) + " " + (i + 1));
+							for (int j=0; j<fluxes[i].length; j++)
+							{
+								fluxLogWriter.print(" " + nf.format(fluxes[i][j]));
+							}
+							fluxLogWriter.print("\n");
 						}
 					}
 					break;
