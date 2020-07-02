@@ -90,7 +90,7 @@ public class Comets implements CometsConstants,
 							   CometsChangeListener
 {
 
-	private String versionString = "2.9.1, 25 June 2020";
+	private String versionString = "2.9.2, 7 July 2020";
 
 	
 	/**
