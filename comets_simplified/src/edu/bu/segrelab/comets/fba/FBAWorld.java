@@ -3808,8 +3808,6 @@ public class FBAWorld extends World2D
 		
 		if (!cParams.isCommandLineOnly())
 			updateInfoPanel();
-
-				
 		
 		double[] totalBiomass = calculateTotalBiomass();
 		//int[] FBAstatus = getFBAstatus();
@@ -3823,28 +3821,29 @@ public class FBAWorld extends World2D
 		}
 
 		// 7. Remove models that have lower biomass than the minimal required
-		//double[] totalBiomass = calculateTotalBiomass();		
-		List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
-		for (int i = 0; i < totalBiomass.length; i++)
-		{
-			// JEREMY : I commented this out because otherwise the totalBiomass log is oddly skewed
-			// and I think we'd rather always see zeros.
-			//if (totalBiomass[i] > cParams.getCellSize())
-			//{
-				newModelsList.add(models[i]);					
-			//}
-		}
-		FBAModel[] newModels = new FBAModel[newModelsList.size()];
-		newModels = newModelsList.toArray(newModels);
-
-		// now change models in cells as well as in world
-		for (Cell cell : c.getCells())
-		{
-			cell.changeModelsInCell(models, newModels);
+		// (For now, do this only in simulations with evolution)
+		if (cParams.getEvolution())
+		{	
+			List<FBAModel> newModelsList = new ArrayList<FBAModel>();		
+			for (int i = 0; i < totalBiomass.length; i++)
+			{
+				if (totalBiomass[i] > cParams.getCellSize())					
+					newModelsList.add(models[i]);
+			}
+			
+			FBAModel[] newModels = new FBAModel[newModelsList.size()];
+			newModels = newModelsList.toArray(newModels);
+	
+			// now change models in cells as well as in world
+			for (Cell cell : c.getCells())
+			{
+				cell.changeModelsInCell(models, newModels);
+			}
+			
+			changeModelsInWorld(models, newModels);
+			setNumModels(newModels.length);
 		}
 		
-		changeModelsInWorld(models, newModels);
-		setNumModels(newModels.length);		
 		
 		currentTimePoint++;
 		if (pParams.writeFluxLog() && currentTimePoint % pParams.getFluxLogRate() == 0)
@@ -5301,12 +5300,13 @@ public class FBAWorld extends World2D
 		double[] dilutedBiomass = new double[models.length];
 		
 		for (int i = 0; i < models.length; i++)
-			if (totalBiomass[i] > 0.0)
-				// biomass diluted by sampling from number of cells stochastically
-				dilutedBiomass[i] = samplePopulation((int)Math.floor(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
-				//dilutedBiomass[i] = totalBiomass[i]*dilution; // simple dilution of biomass 
-			else
+			if (totalBiomass[i] < (cellBiomass/2))
 				dilutedBiomass[i] = 0.0;
+			else
+				// biomass diluted by sampling from number of cells stochastically
+				dilutedBiomass[i] = samplePopulation((int)Math.round(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
+				//dilutedBiomass[i] = totalBiomass[i]*dilution; // simple dilution of biomass 
+
 		// cell where new biomass will be located
 		int seedCell = (int)Math.floor(c.getCells().size()/2);
 
@@ -5432,9 +5432,9 @@ public class FBAWorld extends World2D
 			nCells[a] = (int)Math.floor(totalDeltaBiomass[a]/cell_biomass);
 			if (nCells[a]>0)
 			{
-				// 2. compute number of new cells and mutations in each species 
+				// 2. compute number of new cells and mutations
+				// System.out.println("n: " + ((FBAModel)models[a]).getTotalRxns());
 				double currentDelRate = ((FBAModel)models[a]).getTotalRxns()*mutation_rate;
-
 				nMut[a] = samplePopulation(nCells[a], currentDelRate);
 				
 				// 3. if any mutation in model a, clone models and perform mutations,
@@ -5512,6 +5512,7 @@ public class FBAWorld extends World2D
 				continue;
 
 			// subdivide change in biomass into individual cells
+
 			nCells[a] = (int)Math.floor(totalDeltaBiomass[a]/cell_biomass);
 			if (nCells[a]>0)
 			{

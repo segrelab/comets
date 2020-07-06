@@ -434,6 +434,7 @@ public class Comets implements CometsConstants,
     protected void runScript(String filename)
     {
 		System.out.println("running script file: " + filename);
+		System.out.println("Current Java version: " + System.getProperty("java.version"));
 		try
 		{
 			BufferedReader reader = new BufferedReader(new FileReader(new File(filename)));

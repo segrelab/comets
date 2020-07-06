@@ -1191,17 +1191,20 @@ public abstract class World2D implements CometsConstants, IWorld
 	// needs import cern.jet.random.*;
 	public int samplePopulation(int population, double prob) 
 	{
-		double lambda = population * prob;
-		Poisson pois;
-		Binomial binom;
 		int nmut;
+		double lambda = population * prob;
 		
 		if (lambda > 10) {
+			Poisson pois;
 			pois = new Poisson(lambda, randomGenerator);
 			nmut = pois.nextInt();
 		} else {
+			// System.out.println("BINOMIAL population: " + population);			
+			// System.out.println("BINOMIAL prob: " + prob);			
+			Binomial binom;
 			binom = new Binomial(population, prob, randomGenerator);
 			nmut = binom.nextInt();
+			// System.out.println("BINOMIAL nmut: " + nmut);
 		}
 		return nmut;
 	}
