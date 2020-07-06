@@ -917,6 +917,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			}
 			// calculate toxin-mediated death and consumption of toxins during death:
 			Object[] temp = calcDeathRateAndMetConsumption((FBAModel)models[i], media, biomass[i]);
+			//String d = temp[0].toString(); //1.6
+			//double death_rate = Double.valueOf(d).doubleValue(); //1.6
 			double death_rate = (double)temp[0];
 			Map<Integer, Double> consumed_mets = (Map<Integer, Double>)temp[1];
 
