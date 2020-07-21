@@ -1327,12 +1327,20 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			String line_2 = null;
 			while ((line_2 = reader_2.readLine()) != null)
 			{
-				lines_sparse_s++;
-				if (line_2.contains("BOUNDS")) {
+				if (line_2.contains("SMATRIX"))
+				{
+					while ((line_2 = reader_2.readLine()) != null)
+					{
+						lines_sparse_s++;
+						if (line_2.contains("//"))
+						{
+							break;
+						}
+					}
 					break;
-				}				
+				}
 			}
-			lines_sparse_s = lines_sparse_s-3;
+			lines_sparse_s = lines_sparse_s-1;
 			reader_2.close();
 			
 			// first thing we need is the S-matrix. That **has** to be the first
@@ -1359,6 +1367,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					 * (metabs and rxns) as part of this line
 					 * if not, throw a ModelFileException)
 					 */
+					int sMatrixLineNum=0;
 					if (tokens.length != 3)
 					{
 						reader.close();
@@ -1415,10 +1424,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						
 						double stoic = Double.parseDouble(parsed[2]);
 						
-						S[lineNum-1][0] = x;
-						S[lineNum-1][1] = y;
-						S[lineNum-1][2] = stoic;
+						S[sMatrixLineNum][0] = x;
+						S[sMatrixLineNum][1] = y;
+						S[sMatrixLineNum][2] = stoic;
 
+						sMatrixLineNum++;
 						lineNum++;
 
 					}
