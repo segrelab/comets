@@ -388,7 +388,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			// origConstraints[cMet-1] = new GRBLinExpr();
 			//}
 
-			// add current term to constraints array 
+			// add current term to constraints array
 			origConstraints[cMet-1].addTerm(m[k][2], modelMinVars[cVar-1]);
 			// for these expressions, all senses are =, all rhs are 0
 			// senses[cMet-1] = GRB.EQUAL;

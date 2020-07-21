@@ -1183,24 +1183,24 @@ public abstract class World2D implements CometsConstants, IWorld
 		else reactionModel.run(); //the ReactionModel handles updating this world's media
 	}
 
-	// This function samples cells from a population (expressed as number of
-	// cells), given a probability.Internally, it uses binomial when cell
-	// numbers
-	// are small, and Poisson otherwise.
-	// needs import cern.jet.random.engine.*;
-	// needs import cern.jet.random.*;
+	/*
+	 *  This function samples cells from a population (expressed as number of
+	 *  cells), given a probability. It uses poisson when cell numbers are
+	 *  large and probability small (e.g. mutations in a large population) and 
+	 *  binomial otherwise
+	 *  
+	 *  needs import cern.jet.random.engine.*;
+	 *  needs import cern.jet.random.*;
+	 */
 	public int samplePopulation(int population, double prob) 
 	{
 		int nmut;
-		double lambda = population * prob;
 		
-		if (lambda > 10) {
+		if (population>1000 & prob<0.001) {
 			Poisson pois;
-			pois = new Poisson(lambda, randomGenerator);
+			pois = new Poisson(population*prob, randomGenerator);
 			nmut = pois.nextInt();
 		} else {
-			// System.out.println("BINOMIAL population: " + population);			
-			// System.out.println("BINOMIAL prob: " + prob);			
 			Binomial binom;
 			binom = new Binomial(population, prob, randomGenerator);
 			nmut = binom.nextInt();

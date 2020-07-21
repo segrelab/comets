@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
+import java.util.Random;
 
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
@@ -5286,15 +5287,27 @@ public class FBAWorld extends World2D
 		// get each model's biomass after dilution
 		double[] totalBiomass = calculateTotalBiomass();
 		double[] dilutedBiomass = new double[models.length];
-		
+		System.out.println("total biomass: " + Arrays.toString(totalBiomass));
 		for (int i = 0; i < models.length; i++)
-			if (totalBiomass[i] < (cellBiomass/2))
+			if (totalBiomass[i] < (cellBiomass/2)) {
+				// If the total biomass is less than 1/2 cell, make it zero				
 				dilutedBiomass[i] = 0.0;
-			else
+			} else if ((totalBiomass[i]/cellBiomass) > 2147000000) {
+				/*
+				 * if the number of cells is larger than the allowed range for int, 
+				 * we approximate with a gaussian distribution with mean np and 
+				 * variance np(1-p)
+				 */
+				Random r = new Random();
+				double current_mean = (totalBiomass[i]/cellBiomass) * dilution;
+				double current_sd = Math.sqrt((totalBiomass[i]/cellBiomass) * dilution * (1-dilution));				
+				dilutedBiomass[i] = (r.nextGaussian()*current_sd+current_mean)*cellBiomass;
+			} else {
 				// biomass diluted by sampling from number of cells stochastically
 				dilutedBiomass[i] = samplePopulation((int)Math.round(totalBiomass[i]/cellBiomass), dilution)* cellBiomass; 	// DJORDJE version		
 				//dilutedBiomass[i] = totalBiomass[i]*dilution; // simple dilution of biomass 
-
+			}
+		
 		// cell where new biomass will be located
 		int seedCell = (int)Math.floor(c.getCells().size()/2);
 
