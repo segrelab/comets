@@ -56,7 +56,7 @@ import java.lang.reflect.Field;
 
 import java.lang.Math.*;
 
-import edu.bu.segrelab.comets.util.WeightedSample; //djordje 
+import edu.bu.segrelab.comets.util.WeightedSample;
 
 
 //import org.apache.commons.math3.distribution.*;

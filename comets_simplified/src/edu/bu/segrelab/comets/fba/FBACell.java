@@ -861,7 +861,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			{
 				// failure! don't do anything right now.
 				// System.out.println("FBA failure status: " + stat);
-				//error check for JEAN (again may be redundant in later versions).
+				// error check for JEAN (again may be redundant in later versions).
 				deltaBiomass[i] = 0.0;
 				
 				// create empty mediaDelta, because model is not growing
@@ -1120,17 +1120,21 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					world3D.changeModelMedia(x, y, z, a, deltaMedia[a]);
 	
 			}
-			/* [Jean] Section for batch dilute Checks if models are growing 
-			 * and if they all stopped growing sets stationary phase in cell.
-			 * This flag will remain on until the environment is updated.
-			 */
 	    }
-	    
-		if(cParams.getBatchDilution()==true){
+
+		/* [Jean] Section for batch dilute Checks if models are growing 
+		 * and if they all stopped growing sets stationary phase in cell.
+		 * This flag will remain on until the environment is updated.
+		 */
+		if (cParams.getBatchDilution()==true){
 			stationaryStatus =true;
-			for (int a=0; a<models.length; a++){
-				if(deltaBiomass[a]>0.0){
-					stationaryStatus =false;
+			for (int a=0; a<deltaMedia.length; a++){
+				if (deltaMedia[a] != null) {
+					for (int b=0; b<deltaMedia[a].length; b++){
+						if(deltaMedia[a][b]!=0.0) {
+							stationaryStatus = false;
+						}
+					}
 				}
 			}
 		}

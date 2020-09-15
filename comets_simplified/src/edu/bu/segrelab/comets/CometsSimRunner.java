@@ -107,7 +107,7 @@ public class CometsSimRunner extends Thread
 				// do batch dilution here
 				{
 					if (c.getParameters().getBatchDilution())
-					{						
+					{	
 						if ((curCycle*c.getParameters().getTimeStep()) % c.getParameters().getDilutionTime() < 1E-7) 
 						{
 							// the if was set to <1E-7 for robustness to floating point errors
