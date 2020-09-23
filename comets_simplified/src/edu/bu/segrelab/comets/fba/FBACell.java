@@ -834,8 +834,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			/************************* SET MAX BIOMASS *****************************/
 		    //only set if the upper bound due to space constraints is lower than the default UB
 		    double bioub = (cParams.getMaxSpaceBiomass() - (Utility.sum(biomass) + Utility.sum(deltaBiomass))) / (biomass[i] * cParams.getTimeStep());
-			double basebioub = ((FBAModel)models[i]).getBaseUpperBounds()[((FBAModel)models[i]).getBiomassReaction() - 1];
-		    ((FBAModel)models[i]).setBiomassUpperBound(Math.min(basebioub, bioub));
+			double currentbioub = ((FBAModel)models[i]).getUpperBounds()[((FBAModel)models[i]).getBiomassReaction() - 1];
+		    ((FBAModel)models[i]).setBiomassUpperBound(Math.min(currentbioub, bioub));
 			
 			if (DEBUG)
 			{
