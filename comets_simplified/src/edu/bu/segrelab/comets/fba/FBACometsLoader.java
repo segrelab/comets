@@ -1091,7 +1091,6 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		for (int i=0; i<tokens.length-1; i++)
 		{
 			String modelFileName = tokens[i+1];
-			System.out.println("Loading '" + modelFileName + "' ...");
 
 			//2-level testing.
 			// first, check to see if the file, as given, is real.
