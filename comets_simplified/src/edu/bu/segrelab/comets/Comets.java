@@ -90,7 +90,7 @@ public class Comets implements CometsConstants,
 							   CometsChangeListener
 {
 
-	private String versionString = "2.10.2, 28 September 2020";
+	private String versionString = "2.10.3, 30 November 2020";
 
 	
 	/**
@@ -221,7 +221,7 @@ public class Comets implements CometsConstants,
 		{
 			// fail with a good explanation
 			System.out.println(e);
-			exitCommandLineError();
+			System.exit(1);
 		}
 		
 		
@@ -329,6 +329,7 @@ public class Comets implements CometsConstants,
 	private void applyArgs(Map<String, String> argsMap) throws CometsArgumentException, 
 										  					   IOException
 	{
+		
 		// First, make sure there's a loader
 		if (!argsMap.containsKey("-loader"))
 		{
@@ -358,6 +359,7 @@ public class Comets implements CometsConstants,
 		}
 	}
 	
+
 	/**
 	 * Exits the program when a command line error occurs, and displays
 	 * the program usage.
@@ -391,21 +393,55 @@ public class Comets implements CometsConstants,
 	 */
 	private Map<String, String> parseArgs(String[] args) throws CometsArgumentException
 	{
-		Map<String, String> argsMap = new HashMap<String, String>();
-		
-		/* Splits the args string array into a set of pairs of arguments.
-		 * Each even numbered element (and zero) is expected to start with a '-', and each
-		 * odd numbered element is just a string.
-		 * 
-		 * If any even numbered element doesn't start with a '-', return null.
+		/**
+		 * checks the arguments for common problems and, upon finding none,
+		 * puts the arguments into a map to be read by applyArgs
 		 */
+		Map<String, String> argsMap = new HashMap<String, String>();
 
-		// make sure there's at least one argument, or if there's more than one, that it's a mulitple of 2
-		if (args.length < 2 || (args.length > 1 && args.length % 2 != 0))
+		
+		// check if there are zero arguments and if so, recommend help and exit.
+		if (args.length == 0) 
 		{
-			throw new CometsArgumentException("COMETS requires at least one parameter - the name of the initial package loader class");
+			throw new CometsArgumentException("COMETS requires at least one parameter. See -h or -help for more information.");
 		}
 		
+		// if there is just 1 argument, it should be -v or -h
+		else if (args.length == 1)
+		{
+			if (args[0].equalsIgnoreCase("-v") ||
+					args[0].equalsIgnoreCase("-version"))
+			{
+				showVersion();
+				System.exit(0);
+			}
+			else if (args[0].equalsIgnoreCase("-h") ||
+					args[0].equalsIgnoreCase("-help"))
+			{
+				showHelp();
+				System.exit(0);
+			}
+			else
+			{
+				throw new CometsArgumentException("If only one argument is given to COMETS, it must be -version or -help. You gave the argument " +
+			                                      args[0] +
+			                                      ".\nsee -help for more information.");
+			}
+		}
+		else if (args.length % 2 != 0)
+		{
+			throw new CometsArgumentException("COMETS requires an even number of arguments to run a simulation.\nsee -help for more information");
+		}
+		else if ((args.length == 4) &&
+				(args[3].equalsIgnoreCase("-h") ||
+				args[3].equalsIgnoreCase("-help")))
+		// deal with the weird case where they use comets_scr and then put
+		// in -h rather than a script:
+		{
+			showHelp();
+			System.exit(0);
+		}
+
 		for (int i=0; i<=args.length-2; i+=2)
 		{
 			if (!args[i].startsWith("-"))
@@ -414,6 +450,47 @@ public class Comets implements CometsConstants,
 				argsMap.put(args[i], args[i+1]);
 		}
 		return argsMap;
+	}
+	
+	/**
+	 * Called when -h or -help are used as command line arguments
+	 */
+	private void showHelp()
+	{
+		System.out.println("comets help:\n" +
+						   "COMETS is a program for dynamic and spatial flux-balance analysis modeling.\n" +
+						   "for complete instructions, including how to use a python or matlab toolbox, go to https://www.runComets.org\n\n" +
+						   "running COMETS without a python or matlab toolbox:\n" +
+						   "\tNOTE: if you are running COMETS using comets_scr which was installed by the installer, see the note at the bottom.\n" +
+				           "\tCOMETS can be run on the command line or using a gui, by specifying a -loader argument:\n" +
+						   "\n\tTo run using the gui, use: \n"+
+						   "\t\tjava <jvm arguments> edu.bu.segrelab.comets.Comets -loader edu.bu.segrelab.comets.fba.FBACometsLoader\n"+
+						   "\t\toptionally, parameter default settings in the gui can be changed by specifying the parameters files with the extra arguments\n" +
+						   "\t\t\t-params <comets global parameters file name> -- the path to a comets global parameters file\n" + 
+						   "\t\t\t-pkgparams <comets package parameters file name> -- the path to a comets package parameters file\n" + 
+						   "\tTo run using on the command line, use:\n"+
+						   "\t\tjava <jvm arguments> edu.bu.segrelab.comets.Comets -loader edu.bu.segrelab.comets.fba.FBACometsLoader -script <scriptname>\n"+
+						   "\n" +
+						   "\t<jvm arguments> is usually used to set the java -classpath and -Djava.library.path, for example to add the path to the comets.jar. If you receive classdefnotfound errors, this likely needs to be modified.\n" +
+						   "\t<scriptname> is the name of a text file containing the location of the layout and parameters file(s). For example, if <scriptname> = simulation_data.txt, then the inside of simulation_data.txt could look like\n" +
+						   "\n\t\tload_layout current_layout.txt" +
+						   "\n\t\tload_comets_parameters global_params.txt" +
+						   "\n\t\tload_package_parameters package_params.txt\n" +
+						   "\n\t\tin this example, current_layout.txt is a COMETS layout file, and the other files are COMETS global and package parameters files.\n" +
+						   "\nto see the version use:\n" +
+						   "\tjava <jvm arguments> edu.bu.segrelab.comets.Comets -version\n" +
+						   "\nto see this help use:\n" +
+						   "\tjava <jvm arguments> edu.bu.segrelab.comets.Comets -help\n" +
+						   "\ncomets_scr: comets_scr simplifies running scripts by removing the need to specify the java classpath or COMETS class information. If you are running COMETS using comets_scr, you must give the filename of the COMETS script as the single required argument.\n" +
+						   "\te.g. comets_scr simulation_data.txt\n" +
+						   "\tsee <scriptname> under 'running COMETS' above for more details\n" +
+						   "\tto show this help, run: comets_scr -help"
+				);
+	}
+	
+	private void showVersion()
+	{
+		System.out.print(versionString);
 	}
 	
 	public void setParameters(CometsParameters cParams)
@@ -1897,7 +1974,8 @@ public class Comets implements CometsConstants,
 		}
 		catch (Exception e)
 		{
-			System.err.println(e);
+			System.err.println(e + "\nloader class not found. " +
+		"did you mean to use the argument -loader edu.bu.segrelab.comets.fba.FBACometsLoader ?");
 			e.printStackTrace();
 		}
 		
