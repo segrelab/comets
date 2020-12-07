@@ -4100,7 +4100,7 @@ public class FBAWorld extends World2D
 							for (int j=0; j<numRows; j++)
 							{
 								if (media[i][j][k] != 0)
-									mediaLogWriter.println(mediaNames[k] + " " + (currentTimePoint+1) + " " + (i+1) + " " + (j+1) + " " + nf.format(media[i][j][k]));
+									mediaLogWriter.println(mediaNames[k] + " " + (currentTimePoint) + " " + (i+1) + " " + (j+1) + " " + nf.format(media[i][j][k]));
 							}
 						}
 					}

@@ -680,6 +680,34 @@ implements edu.bu.segrelab.comets.CometsConstants
 						e.getMessage());
 			}
 		}
+		setLowerBoundsModelMin(nrxns, lb);
+		return PARAMS_OK;
+	}
+	
+	/**
+	 * Sets the array of lower bounds for all fluxes in the modelMin
+	 * Returns PARAMS_OK if number of reactions nrxns higher than zero,
+	 * MODEL_NOT_INITIALIZED if it is zero. This is called by
+	 * setLowerBounds()
+	 */	
+	public int setLowerBoundsModelMin(int nrxns, double[] lb)
+	{
+		if (nrxns == 0)
+		{
+			return MODEL_NOT_INITIALIZED;
+		}
+		for (int i = 0; i < nrxns; i++)
+		{
+			try{
+				modelMinVars[i].set(GRB.DoubleAttr.LB, lb[i]);
+			}
+			catch(GRBException e)
+			{
+				System.out.println("Error in FBAOptimizerGurobi.setLowerBoundsModelMin");
+				System.out.println("Error code: " + e.getErrorCode() + ". " +
+						e.getMessage());
+			}
+		}
 		return PARAMS_OK;
 	}
 
@@ -729,6 +757,35 @@ implements edu.bu.segrelab.comets.CometsConstants
 			catch(GRBException e)
 			{
 				System.out.println("Error in FBAOptimizerGurobi.setUpperBounds");
+				System.out.println("Error code: " + e.getErrorCode() + ". " +
+						e.getMessage());
+			}
+		}
+		setUpperBoundsModelMin(nrxns, ub);
+		return PARAMS_OK;
+	}
+	
+	/**
+	 * Sets the current upper bounds for the FBA problem in the modelMin
+	 * @param nrxns
+	 * @param ub upper bounds array
+	 * @return PARAMS_OK if the ub array is of the appropriate length,
+	 * MODEL_NOT_INITIALIZED if nrxns is zero.
+	 */
+	public int setUpperBoundsModelMin(int nrxns, double[] ub)
+	{
+		if (nrxns == 0)
+		{
+			return MODEL_NOT_INITIALIZED;
+		}
+		for (int i = 0; i < nrxns; i++)
+		{
+			try{
+				modelMinVars[i].set(GRB.DoubleAttr.UB, ub[i]);
+			}
+			catch(GRBException e)
+			{
+				System.out.println("Error in FBAOptimizerGurobi.setUpperBoundsModelMin");
 				System.out.println("Error code: " + e.getErrorCode() + ". " +
 						e.getMessage());
 			}
