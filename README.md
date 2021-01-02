@@ -8,7 +8,10 @@ COMETS is a software platform for performing computer simulations of spatially s
 COMETS is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. 
 
 Comets is developed with non-commercial use in mind and is presented as-is. To inquire about collaborations or commercial usage and development, please contact us at <comets@bu.edu>.
-    
+
+# Website
+The COMETS website is [runcomets.org](https://www.runcomets.org/).
+
 # Documentation
 Documentation on how to install and use COMETS is found at [comets-manual.readthedocs.io](https://comets-manual.readthedocs.io/en/latest/).
 
