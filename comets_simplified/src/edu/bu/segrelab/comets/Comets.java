@@ -90,7 +90,7 @@ public class Comets implements CometsConstants,
 							   CometsChangeListener
 {
 
-	private String versionString = "2.10.3, 30 November 2020";
+	private String versionString = "2.10.4, 2 January 2021";
 
 	
 	/**
@@ -1796,7 +1796,7 @@ public class Comets implements CometsConstants,
 	public void aboutDialog()
 	{
 		JLabel headerLabel = new JLabel("<html><h3>COMETS: Computation Of Microbial Ecosystems in Time and Space</h3></html>", JLabel.LEFT);
-		JLabel cometsLabel = new JLabel("<html><a href=\"http://www.bu.edu/segrelab/comets\">http://www.bu.edu/segrelab/comets</a>", JLabel.LEFT);
+		JLabel cometsLabel = new JLabel("<html><a href=\"https://www.runcomets.org\">https://www.runcomets.org/</a>", JLabel.LEFT);
 		JLabel buLabel = new JLabel("<html>Boston University</html>", JLabel.LEFT);
 		JLabel segreLabel = new JLabel("<html>Daniel Segre lab - <a href=\"http://www.bu.edu/segrelab\">http://www.bu.edu/segrelab</a></html>", JLabel.LEFT);
 		JLabel versionLabel = new JLabel("<html>Version " + versionString + "</html>");
@@ -1805,7 +1805,7 @@ public class Comets implements CometsConstants,
 				new MouseAdapter() {
 					public void mouseClicked(MouseEvent e)
 					{
-						openBrowserURL("http://www.bu.edu/segrelab/comets");
+						openBrowserURL("https://www.runcomets.org");
 					}
 				});
 
@@ -1843,6 +1843,42 @@ public class Comets implements CometsConstants,
 									  JOptionPane.PLAIN_MESSAGE);
 	}
 
+	/**
+	 * Makes a modal "Manual and Tutorials" dialog.
+	 */
+	public void manualDialog()
+	{
+		JLabel headerLabel = new JLabel("<html><h3>Manual and Tutorials</h3></html>", JLabel.LEFT);
+		JLabel manualLabel = new JLabel("<html><a href=\"https://segrelab.github.io/comets-manual/\">https://segrelab.github.io/comets-manual/</a>", JLabel.LEFT);
+		
+		
+		manualLabel.addMouseListener(
+				new MouseAdapter() {
+					public void mouseClicked(MouseEvent e)
+					{
+						openBrowserURL("https://segrelab.github.io/comets-manual/");
+					}
+				});
+		
+		JPanel panel = new JPanel(new GridBagLayout());
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.fill = GridBagConstraints.BOTH;
+		gbc.gridheight = 1;
+		gbc.weightx = gbc.weighty = 0.0;
+
+		gbc.gridwidth = 1;
+		gbc.gridx = 0;
+		gbc.gridy = 0;
+		panel.add(headerLabel, gbc);
+		gbc.gridy = 1;
+		panel.add(manualLabel, gbc);
+
+		JOptionPane.showMessageDialog(cFrame, 
+									  panel, 
+									  "Manual and Tutorials", 
+									  JOptionPane.PLAIN_MESSAGE);
+	}
+	
 	/**
 	 * If the desktop mechanism is supported, then this opens the given URL in
 	 * the operating system's default web browser
