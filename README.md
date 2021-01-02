@@ -13,13 +13,13 @@ Comets is developed with non-commercial use in mind and is presented as-is. To i
 The COMETS website is [runcomets.org](https://www.runcomets.org/).
 
 # Documentation
-Documentation on how to install and use COMETS is found at [comets-manual.readthedocs.io](https://comets-manual.readthedocs.io/en/latest/).
+Documentation on how to install and use COMETS is found at [https://segrelab.github.io/comets-manual/](https://segrelab.github.io/comets-manual/).
 
 # Installation
-COMETS can be downloaded from [www.bu.edu/segrelab/comets/](http://www.bu.edu/segrelab/comets/)
+COMETS can be downloaded from [https://www.runcomets.org/get-started](https://www.runcomets.org/get-started).
 
 # Toolboxes
-We have developed both a Matlab and a python toolbox to interface the Comets software. How to use these toolboxes are described in the [documentation](https://comets-manual.readthedocs.io/en/latest/).
+We have developed both a Matlab and a python toolbox to interface the Comets software. How to use these toolboxes are described in the [documentation](https://segrelab.github.io/comets-manual/).
  - Matlab toolbox: [github.com/segrelab/comets-toolbox](https://github.com/segrelab/comets-toolbox)
  - Python toolbox: [github.com/djbajic/COMETS-Python-Toolbox](https://github.com/djbajic/COMETS-Python-Toolbox)
 
