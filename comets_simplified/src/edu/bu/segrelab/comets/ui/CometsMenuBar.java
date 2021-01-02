@@ -486,6 +486,19 @@ public class CometsMenuBar extends JMenuBar implements CometsConstants
 					}
 				});
 		helpMenu.add(aboutItem);
+		
+		
+		JMenuItem manualItem = new JMenuItem("Manual and Tutorials");
+		manualItem.setMnemonic(KeyEvent.VK_M);
+		manualItem.addActionListener(
+				new ActionListener() {
+					public void actionPerformed(ActionEvent e)
+					{
+						c.manualDialog();
+					}
+				});
+		helpMenu.add(manualItem);
+		
 	}
 	
 	/**
