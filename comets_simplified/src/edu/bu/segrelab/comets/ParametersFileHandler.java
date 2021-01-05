@@ -29,6 +29,7 @@ public class ParametersFileHandler
 			{
 				parseParameterLine(line, lineCount++, cParams, pParams);
 			}
+			System.out.println("Parameters file "+filename+" loaded.");
 		} catch (ParameterFileException e) {
 			reader.close();
 			throw e;
