@@ -24,6 +24,7 @@
 package edu.bu.segrelab.comets;
 
 import javax.imageio.ImageIO;
+
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -35,6 +36,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.ImageIcon;
 
 import edu.bu.segrelab.comets.event.CometsChangeEvent;
 import edu.bu.segrelab.comets.event.CometsChangeListener;
@@ -90,7 +92,7 @@ public class Comets implements CometsConstants,
 							   CometsChangeListener
 {
 
-	private String versionString = "2.10.5, 5 January 2021";
+	private String versionString = "2.10.6, 20 May 2021";
 
 	
 	/**
@@ -294,6 +296,9 @@ public class Comets implements CometsConstants,
 		cFrame = new JFrame("COMETS");
 		cFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		cFrame.setSize(800, 800);
+		
+		//Set the frame icon to an image loaded from a file.
+		cFrame.setIconImage(new ImageIcon("comets-logo-small.png").getImage());
 
 		setupPane = new CometsSetupPanel(this);
 

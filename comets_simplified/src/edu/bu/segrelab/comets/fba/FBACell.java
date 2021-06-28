@@ -732,7 +732,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 			lb[i] = ((FBAModel)models[i]).getBaseExchLowerBounds();
 			ub[i] = ((FBAModel)models[i]).getBaseExchUpperBounds();
-			
+			//for(int j=0;j<lb[i].length;j++) System.out.println(i+" "+j+" "+lb[i][j]);
 			
 			// if a model has metabolite signal : reaction bound relationships,
 			// apply them
@@ -798,7 +798,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					for (int j=0; j<lb[i].length; j++)
 					{
 						rates[j] = Math.min(Math.abs(lb[i][j]),
-								Math.abs(calcStandardExchange(media[j]/(cParams.getSpaceVolume()))));
+								Math.abs(calcStandardExchange(media[j])));
+								//Math.abs(calcStandardExchange(media[j]/(cParams.getSpaceVolume()))));
 					}	
 					break;
 				
@@ -818,6 +819,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			for (int j=0; j<lb[i].length; j++)
 			{
 				lb[i][j] = -1 * rates[j]/rho;
+				//System.out.println("rates "+i+" "+j+" "+lb[i][j]);
 			}
 			
 			if (DEBUG)
@@ -847,6 +849,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			/*************************** RUN THE FBA! ****************************/
 			int stat = models[i].run();
 			fluxes[i] = ((FBAModel)models[i]).getFluxes();
+			//for(int j=0;j<fluxes[i].length;j++) System.out.println(i+" "+j+" "+fluxes[i][j]);
 
 			double[] exchFlux = ((FBAModel)models[i]).getExchangeFluxes();
 			allExchFluxes[i] = exchFlux;
