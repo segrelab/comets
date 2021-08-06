@@ -131,7 +131,8 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			MODEL_DIFFUSIVITY = "model_diffusivity",
 			SUBSTRATE_LAYOUT = "substrate_layout",
 			SPECIFIC_MEDIA = "specific_media",
-			VELOCITY_VECTORS = "velocity_vectors";;
+			VELOCITY_VECTORS = "velocity_vectors",
+			MODEL_MEDIA_CHEMOTAXIS_COEFFS = "model_media_chemotaxis_coeffs";;
 	/**
 	 * Returns the recently loaded World2D.
 	 */
@@ -481,6 +482,26 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseModelDiffusionConstantsBlock(lines,numMedia);
 						}
+
+						/****************** CHEMOTAXIS CONSTANTS BY MODEL ********************/
+
+						else if (worldParsed[0].equalsIgnoreCase(MODEL_MEDIA_CHEMOTAXIS_COEFFS))
+						{
+							if (worldParsed.length == 1)
+							{
+								throw new IOException("The model media chemotaxis coefficients must be a single keyword line followed by a block of coefficients.");
+							}
+
+							List<String> lines = collectLayoutFileBlock(reader);
+							double[][]ctxCoeffs = new double[models.length][numMedia];
+							if(c.getParameters().getNumLayers()==1)
+								state = parseChemotaxisCoeffsBlock(lines, ctxCoeffs);
+							/*else if(c.getParameters().getNumLayers()>1)
+								state = parseChemotaxisCoeffsBlock3D(worldParsed, lines, ctxCoeffs);
+							*/
+
+						}
+						
 
 						/****************** SUBSTRATE LAYOUT ********************/
 
@@ -1476,6 +1497,36 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		return LoaderState.OK;
 
 	}
+
+	private LoaderState parseChemotaxisCoeffsBlock(List<String> lines, double[][] ctxCoeffs) throws LayoutFileException,
+	NumberFormatException
+	{
+		/* this block is like this:
+		 * <model number> <media number> <chemotaxis coefficient>
+		 */
+		
+		for (String line : lines)
+		{
+			lineCount++;
+			// ignore empty lines.
+			if (line.length() == 0)
+				continue;
+
+			String[] ctxParsed = line.split("\\s+");
+			if (ctxParsed.length != 3)
+			{
+				throw(new LayoutFileException("Each line after 'model_media_chemotaxis_coeffs' must be two integers followed by a double."));
+			}
+			int modelIndex = ctxParsed[0];
+			int mediaIndex = ctxParsed[1];
+			double coeff = ctxParsed[2];
+			ctxCoeffs[modelIndex][mediaIndex] = coeff;
+		}
+		world.setChemotacticCoeffs(ctxCoeffs);
+		return LoaderState.OK;
+	}
+
+
 
 	private LoaderState parseSubstrateLayoutBlock(List<String> lines,int cols,int rows) throws LayoutFileException,
 	NumberFormatException

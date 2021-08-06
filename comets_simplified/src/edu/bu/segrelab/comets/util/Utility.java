@@ -935,6 +935,24 @@ public class Utility implements CometsConstants
 		return diffusion;
 	}
 	
+		/**
+	 * Returns the right hand side of the 2D convection equation with chemoraxis
+	 * @param biomass
+	 * @return
+	 * Hui Shi July 2021
+	 */
+	public static double[][] getRHSChemotaxis( double [][] deltaDensity, double[][] biomassDensityModel, double ctxCoeff, double[][] nutrient, boolean[][] barrier,double dX,double hillK, double hillN)
+	{   
+        //double[][] convectionRHS=new double[biomassDensity.length][biomassDensity[0].length];
+        //double[][] advection=advection2D(totalBiomassDensity, biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
+        //double[][] diffusion=diffusionGradDGradRho(biomassDensity,convDiffConstField,barrier,dX,advection)+diffusionDLaplaceRho(biomassDensity,convDiffConstField,barrier,dX,advection);
+		//System.out.println("Input "+deltaDensity[50][50]+" "+biomassDensity[50][50]+" "+biomassDensityModel[50][50]);
+		double[][] diffusionCtx=nablaChiRhoNablaNutrient(deltaDensity, biomassDensityModel, ctxCoeff, nutrient, barrier, dX, hillK, hillN);
+		//System.out.println("NonlinDiff "+diffusion[50][50]);
+		return diffusionCtx;
+	}
+	
+
 	/**
 	 * Returns the right hand side of the 2D convection equation; includes both advective and diffusive terms.
 	 * @param biomass
@@ -2350,8 +2368,12 @@ public class Utility implements CometsConstants
 		return diffusion;
 	}
 
+	/*
+	* Function that calculates chemotaxis using Keller Segel Model
+	* Hui Shi July 2021
+	*/
 
-	public static double[][] nablaDRhoNablaNutrient(double[][] deltaBiomass, double[][] biomassModel, double ctxCoeff, double[][] nutrient, boolean[][] barrier, double dX, double hillK, double hillN)
+	public static double[][] nablaChiRhoNablaNutrient(double[][] deltaBiomass, double[][] biomassModel, double ctxCoeff, double[][] nutrient, boolean[][] barrier, double dX, double hillK, double hillN)
 	{
 		int numCols=biomassModel.length;
 		int numRows=biomassModel[0].length;
@@ -2402,7 +2424,7 @@ public class Utility implements CometsConstants
 					}
 					
 					chemotaxis[i][j]+=ctxCoeff * 0.5 * (hillRight * biomassModel[i+1][j] + hillCenter * biomassModel[i][j])*(nutrient[i+1][j]-nutrient[i][j])/(dX*dX);
-					System.out.println("Hill  "+ hillCenter);
+					//System.out.println("Hill  "+ hillCenter);
 				}
 				else if((numCols==2 && i==1 && i!=0) || (i!=0 && i==numCols-1 && barrier[i-2][j]) || (i!=0 && i!=1 && i!=numCols-1 && barrier[i-2][j] && barrier[i+1][j]))
 				{

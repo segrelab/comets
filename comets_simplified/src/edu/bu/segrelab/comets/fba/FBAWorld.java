@@ -94,6 +94,8 @@ public class FBAWorld extends World2D
 	private long currentTimePoint;				// current simulation time cycle
 	private FBAModel[] models;					// FBA models in this system
 	private double[] freshMedia;				// fresh media composition (starting) // DJORDJE 
+	
+	private double[][] ctxCoeffs;   				//chemotaxis coefficients
 
 	
 	private List<int[]> modelExchList;			// indices of the exchange reactions for each model
@@ -174,6 +176,8 @@ public class FBAWorld extends World2D
 		diffuseBiomassIn = new boolean[numCols][numRows][numModels];
 		diffuseBiomassOut = new boolean[numCols][numRows][numModels];
 		nutrientDiffConsts = new double[numMedia];
+
+		ctxCoeffs = new double[numModels][numMedia];
 		/*
 		 * Initialize everything so that it can diffuse everywhere,
 		 * and the startingMedia is uniform across the grid.
@@ -195,6 +199,11 @@ public class FBAWorld extends World2D
 					diffuseBiomassIn[i][j][k] = true;
 					diffuseBiomassOut[i][j][k] = true;
 				}
+			}
+		}
+		for(int i = 0; i<numModels; i++){
+			for(int j = 0; j<numMedia; j++){
+				ctxCoeffs[i][j] = 0.0;
 			}
 		}
 		defaultDiffConst = pParams.getDefaultDiffusionConstant();
@@ -253,6 +262,9 @@ public class FBAWorld extends World2D
 		diffuseBiomassIn = new boolean[numCols][numRows][numModels];
 		diffuseBiomassOut = new boolean[numCols][numRows][numModels];
 		nutrientDiffConsts = new double[numMedia];
+
+		ctxCoeffs = new double[numModels][numMedia];
+
 		
 		/*
 		 * Initialize everything so that it can diffuse everywhere,
@@ -277,6 +289,13 @@ public class FBAWorld extends World2D
 				}
 			}
 		}
+
+		for(int i = 0; i<numModels; i++){
+			for(int j = 0; j<numMedia; j++){
+				ctxCoeffs[i][j] = 0.0;
+			}
+		}
+		
 		defaultDiffConst = pParams.getDefaultDiffusionConstant();
 		for (int i = 0; i < numMedia; i++)
 		{
@@ -1355,6 +1374,15 @@ public class FBAWorld extends World2D
 			}
 		}
 		return ret;
+	}
+
+		/**
+	 * Sets the chemotactic coefficients for the model and media
+	 * [model][media]
+	 */
+	public int setChemotacticCoeffs(final double[][]ctxCoeffsLocal)
+	{
+		this.ctxCoeffs = ctxCoeffsLocal;
 	}
 
 	/**
@@ -3212,6 +3240,207 @@ public class FBAWorld extends World2D
 			}
 		}
 	}
+
+
+	/*
+	This is a function that propagates the biomass with nonlinear diffusivity and chemotaxis.
+	Hui Shi July 2021
+	*/
+	private void convNonlinDiffCtx2DBiomass()
+	{
+		
+		double[][][] deltaDensity = new double[numModels][numCols][numRows];
+		double[][][] biomassDensity = new double[numModels][numCols][numRows];
+		double[][] totalBiomassDensity = new double[numCols][numRows];
+		double[][] totalBiomassDensityIntermediate = new double[numCols][numRows];
+		double[][][] biomassDensityIntermediate = new double[numModels][numCols][numRows];
+		double[][][] convectionRHS  = new double[numModels][numCols][numRows];
+		double[][][] convectionRHS1 = new double[numModels][numCols][numRows];
+		double[][][] convectionRHS2 = new double[numModels][numCols][numRows];
+		Iterator<Cell> it = c.getCells().iterator();
+		
+		
+		double dT = cParams.getTimeStep() * 3600; // time step is in hours, diffusion is in seconds
+		double dX = cParams.getSpaceWidth();
+		// capture the current biomass state
+
+		double[][] nutrient = new double[numCols][numRows];
+
+		while (it.hasNext())
+		{
+			FBACell cell = (FBACell)it.next();
+			double[] biomass = cell.getBiomass();  // total biomass
+			double[] deltaBiomass = cell.getDeltaBiomass(); // biomass produced this step
+			//System.out.println(deltaBiomass[0]);
+			
+			int x = cell.getX();
+			int y = cell.getY();
+			totalBiomassDensity[x][y]=0.0;
+			for (int k=0; k<numModels; k++)
+			{
+				biomassDensity[k][x][y]=biomass[k];// - deltaBiomass[k];
+				totalBiomassDensity[x][y]+=biomassDensity[k][x][y];
+				deltaDensity[k][x][y]=deltaBiomass[k];
+				//growthRate[k][x][y]=deltaBiomass[k]/(dT*(biomass[k] - deltaBiomass[k]));
+				convectionRHS1[k][x][y]=cell.getConvectionRHS1()[k];
+				convectionRHS2[k][x][y]=cell.getConvectionRHS2()[k];
+			}
+		}
+		
+		//System.out.println(cParams.allowCellOverlap());
+		
+		if (cParams.allowCellOverlap())
+		{
+				double[][] nonLinDiffConst=new double[numModels][2];
+				//double hillK=0.0;
+				//double hillN=0.0;
+				double[] nonLinDiffExponent=new double[numModels];
+			for (int k=0; k<numModels; k++)
+			{
+				nonLinDiffExponent[k]=((FBAModel)models[k]).getConvNonlinDiffExponent();
+				nonLinDiffConst[k][0]=((FBAModel)models[k]).getConvNonlinDiffZero();
+				nonLinDiffConst[k][1]=((FBAModel)models[k]).getConvNonlinDiffN();
+			}	
+			//System.out.println(nonLinDiffExponent[0]+" "+nonLinDiffConst[0][0]+" "+nonLinDiffConst[0][1]);
+			//hillK=((FBAModel)models[k]).getConvNonlinDiffHillK();
+			//hillN=((FBAModel)models[k]).getConvNonlinDiffHillN();
+				
+			for (int k=0; k<numModels; k++)
+			{
+				convectionRHS[k]= Utility.getRHSJointNonLinD(deltaDensity[k],totalBiomassDensity,biomassDensity[k],nonLinDiffConst[k],nonLinDiffExponent[k], barrier,dX,((FBAModel)models[k]).getConvNonlinDiffHillK(),((FBAModel)models[k]).getConvNonlinDiffHillN());
+				
+				for(int l = 0; l<numMedia; l++)
+				{
+					if(ctxCoeffs[k][l] != 0.0){
+						for(int i = 0; i<numCols; i++){
+							for(int j = 0; j< numRows; j++){
+								nutrient[i][j] = media[i][j][l];
+								convectionRHS[k] +=Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(l), ((FBAModel)models[k]).getChemotaxisHillN(l));
+								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 
+							}
+						}
+					}
+				}
+			}	
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{
+					totalBiomassDensityIntermediate[i][j]=0.0;
+					for (int k=0; k<numModels; k++)
+					{
+						biomassDensityIntermediate[k][i][j]=biomassDensity[k][i][j]+dT*(23.0*convectionRHS[k][i][j]-16.0*convectionRHS1[k][i][j]+5.0*convectionRHS2[k][i][j])/12.0;
+						if(biomassDensityIntermediate[k][i][j]<0.0)
+						{
+							biomassDensityIntermediate[k][i][j]=0.0;
+							System.out.println("Warning: Negative biomass at " + i +","+j+ " , reduce the time step.");
+						}
+							
+						totalBiomassDensityIntermediate[i][j]+=biomassDensityIntermediate[k][i][j];
+					}
+				}
+			}
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{
+					for (int k=0; k<numModels; k++)
+					{
+						convectionRHS2[k][i][j]=convectionRHS1[k][i][j];
+						convectionRHS1[k][i][j]=convectionRHS[k][i][j];
+					}
+				}
+			}
+			for (int k=0; k<numModels; k++)
+			{
+				convectionRHS[k]= Utility.getRHSJointNonLinD(deltaDensity[k],totalBiomassDensity,biomassDensity[k],nonLinDiffConst[k],nonLinDiffExponent[k], barrier,dX,((FBAModel)models[k]).getConvNonlinDiffHillK(),((FBAModel)models[k]).getConvNonlinDiffHillN());
+				
+				for(int l = 0; l<numMedia; l++)
+				{
+					if(ctxCoeffs[k][l] != 0.0){
+						for(int i = 0; i<numCols; i++){
+							for(int j = 0; j< numRows; j++){
+								nutrient[i][j] = media[i][j][l];
+								convectionRHS[k] +=Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(l), ((FBAModel)models[k]).getChemotaxisHillN(l));
+								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 
+							}
+						}
+					}
+				}
+			}
+				
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{   
+					for (int k=0; k<numModels; k++)
+					{
+						biomassDensity[k][i][j]=biomassDensity[k][i][j]+dT*(5.0*convectionRHS[k][i][j]+8.0*convectionRHS1[k][i][j]-1.0*convectionRHS2[k][i][j])/12.0;
+						//add random gaussian noise
+						//System.out.println(((FBAModel)models[k]).getNoiseVariance());
+						//System.out.println(Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance()));
+						//System.out.println("here0   "+pParams.getRandomSeed());
+						//System.out.println("1  "+biomassDensity[k][i][j]);
+						biomassDensity[k][i][j]=biomassDensity[k][i][j]+deltaDensity[k][i][j]*Utility.gaussianNoise(((FBAModel)models[k]).getNoiseVariance(),pParams.getRandomSeed());
+						//System.out.println("2  "+biomassDensity[k][i][j]);
+						if(biomassDensity[k][i][j]<0.0)
+						{
+							biomassDensity[k][i][j]=0.0;
+							System.out.println("Warning: Negative biomass at " + i +","+j+ " , reduce the time step.");
+						}
+					}
+				}
+			}
+				
+			
+		
+
+
+
+			// update the world with the results.
+		
+			for (int j=0; j<numRows; j++)
+			{
+				for (int i=0; i<numCols; i++)
+				{
+					// if there's some value at biomassState[][i][j];
+					double[] newBiomass = new double[numModels];
+					double[] newConvectionRHS1=new double[numModels];
+					double[] newConvectionRHS2=new double[numModels];
+					
+					for (int k=0; k<numModels; k++)
+					{
+						newBiomass[k] = biomassDensity[k][i][j];
+						newConvectionRHS1[k]=convectionRHS1[k][i][j];
+						newConvectionRHS2[k]=convectionRHS2[k][i][j];
+						//System.out.println(i+","+j+" "+k+"     "+biomassDensity[k][i][j]);
+					}
+				
+					if (Utility.hasNonzeroValue(newBiomass) || Utility.hasNonzeroValue(newConvectionRHS1) || Utility.hasNonzeroValue(newConvectionRHS1))
+					{
+						//System.out.println(i+"  "+j);
+						//System.out.println("OK");
+						if (isOccupied(i,j))
+						{
+							//System.out.println("OK1");
+							Cell cell = (Cell)getCellAt(i,j);
+							cell.setBiomass(newBiomass);
+							cell.setConvectionRHS1(newConvectionRHS1);
+							cell.setConvectionRHS2(newConvectionRHS2);
+						}
+						else // make a new Cell here
+						{   
+							//System.out.println("OK2");
+							Cell cell = new FBACell(i, j, newBiomass, this, (FBAModel[])models, cParams, pParams);
+							cell.setConvectionRHS1(newConvectionRHS1);
+							cell.setConvectionRHS2(newConvectionRHS2);
+							c.getCells().add(cell);
+						}
+					}
+				}
+			}
+		}
+	}
 	
 
 	
@@ -3788,6 +4017,9 @@ public class FBAWorld extends World2D
 				case CONV_NONLINDIFF_2D :
 					convNonlinDiff2DBiomass();
 					break; 
+				case CONV_NONLINDIFF_CTX_2D :
+					convNonlinDiffCtx2DBiomass();
+					break;
 				default :
 					System.out.println("No biomass diffusion! Set the diffusion parameter to 'Diffusion 2D(Crank-Nicolson)', 'Diffusion 2D(Eight Point)' or 'Convection 2D'");
 					break;

@@ -134,6 +134,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double convNonlinDiffExponent;
 	private double convNonlinDiffHillK;
 	private double convNonlinDiffHillN;
+	private double chemotaxisHillK;
+	private double chemotaxisHillN;
 	private double noiseVariance;
 	private int[] objReactions; //index of reactions, in order of priority
 	private boolean[] objMaximize; //is corresponding objective maximized? If not, it's minimized
@@ -1315,6 +1317,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   convNonlinDiffExponent=1,
 				   convNonlinDiffHillN=10,
 				   convNonlinDiffHillK=0.9,
+				   chemotaxisHillN = 1,
+				   chemotaxisHillK = 1,
 				   packDensity=1,
 				   noiseVariance=0.0,
 				   neutralDriftSigma=0.0;
@@ -1882,6 +1886,45 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					{
 						reader.close();
 						throw new ModelFileException("The convNonlinDiffHillN value given at line " + lineNum + "should be => 0");
+					}
+				}
+
+
+				/**************************************************************
+				 *******LOAD Chemotaxis HILL K ***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("chemotaxisHillK"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The chemotaxisHillK should be followed only by its value at line " + lineNum);
+					}
+					chemotaxisHillK = Double.parseDouble(tokens[1]);
+					if (chemotaxisHillK < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The chemotaxisHillK value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
+
+				/**************************************************************
+				 *******LOAD Chemotaxis HILL N ***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("chemotaxisHillN"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The chemotaxisHillN should be followed only by its value at line " + lineNum);
+					}
+					chemotaxisHillN = Double.parseDouble(tokens[1]);
+					//it said static error before until I put the variable in the try statement above for the default values
+					if (chemotaxisHillN < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The chemotaxisHillN value given at line " + lineNum + "should be => 0");
 					}
 				}
 				
@@ -2661,6 +2704,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setConvNonlinDiffN(convNonlinDiffN);
 			model.setConvNonlinDiffHillK(convNonlinDiffHillK);
 			model.setConvNonlinDiffHillN(convNonlinDiffHillN);
+			model.setChemotaxisHillK(chemotaxisHillK);
+			model.setChemotaxisHillN(chemotaxisHillN);
 			model.setConvNonlinDiffExponent(convNonlinDiffExponent);
 			model.setPackedDensity(packDensity);
 			model.setNoiseVariance(noiseVariance);
@@ -2854,7 +2899,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public double getConvNonlinDiffHillK()
 	{
-		return convNonlinDiffHillK;
+		return convNonlinDiffHillK;;
 	}
 	
 	/**
@@ -2878,9 +2923,42 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public void setConvNonlinDiffHillN(double val)
 	{
-		convNonlinDiffHillN=val;;
+		convNonlinDiffHillN=val;
+	}
+
+
+	/**
+	 * @return the value of K in the chemotaxis Hill step function (dRho/Rho)^N/(K^N+(dRho/Rho)^N)
+	 */
+	public double getChemotaxisHillK()
+	{
+		return chemotaxisHillK;
+	}
+
+	/**
+	 * Sets the value of K in the chemotaxis Hill step function (dRho/Rho)^N/(K^N+(dRho/Rho)^N)
+	 */
+	public void setChemotaxisHillK(double val)
+	{
+		chemotaxisHillK=val;
 	}
 	
+
+	/**
+	 * @return the value of N in the chemotaxis Hill step function for chemotaxis (dRho/Rho)^N/(K^N+(dRho/Rho)^N)
+	 */
+	public double getChemotaxisHillN()
+	{
+		return chemotaxisHillN;
+	}
+	
+	/**
+	 * Sets the value of N in the chemotaxis Hill step function (dRho/Rho)^N/(K^N+(dRho/Rho)^N)
+	 */
+	public void setChemotaxisHillN(double val)
+	{
+		chemotaxisHillN=val;
+	}
 	
 	public double getNoiseVariance()
 	{
