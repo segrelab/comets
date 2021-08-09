@@ -1515,11 +1515,12 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			String[] ctxParsed = line.split("\\s+");
 			if (ctxParsed.length != 3)
 			{
-				throw(new LayoutFileException("Each line after 'model_media_chemotaxis_coeffs' must be two integers followed by a double."));
+				System.out.println("parsed" + ctxParsed.length);
+				throw(new LayoutFileException("Each line after 'model_media_chemotaxis_coeffs' must be two integers followed by a double.", lineCount));
 			}
-			int modelIndex = ctxParsed[0];
-			int mediaIndex = ctxParsed[1];
-			double coeff = ctxParsed[2];
+			int modelIndex = Integer.parseInt(ctxParsed[0]);
+			int mediaIndex = Integer.parseInt(ctxParsed[1]);
+			double coeff = Double.parseDouble(ctxParsed[2]);
 			ctxCoeffs[modelIndex][mediaIndex] = coeff;
 		}
 		world.setChemotacticCoeffs(ctxCoeffs);
