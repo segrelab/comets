@@ -107,6 +107,8 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 	protected double[] exRxnRateConstants; //Kcat for enzymatic reactions, or the forward reaction rate for simple reactions
 	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
 	
+	protected double[][] ctxCoeffs; 
+	
 	private static final String MODEL_FILE = "model_file",
 			MODEL_WORLD = "model_world",
 			GRID_SIZE = "grid_size",
@@ -270,6 +272,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			List<int[]> noMediaIn = new ArrayList<int[]>();
 			Set<StaticPoint> staticPoints = new HashSet<StaticPoint>();
 			Set<RefreshPoint> refreshPoints = new HashSet<RefreshPoint>();
+
 
 			while ((line = reader.readLine()) != null)
 			{
@@ -487,15 +490,22 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 
 						else if (worldParsed[0].equalsIgnoreCase(MODEL_MEDIA_CHEMOTAXIS_COEFFS))
 						{
-							if (worldParsed.length == 1)
+							if (worldParsed.length != 1)
 							{
 								throw new IOException("The model media chemotaxis coefficients must be a single keyword line followed by a block of coefficients.");
 							}
+							
 
 							List<String> lines = collectLayoutFileBlock(reader);
-							double[][]ctxCoeffs = new double[models.length][numMedia];
-							if(c.getParameters().getNumLayers()==1)
-								state = parseChemotaxisCoeffsBlock(lines, ctxCoeffs);
+							//ctxCoeffs = new double[models.length][numMedia];
+							/*for(int i = 0; i<ctxCoeffs.length; i++) {
+								for(int j = 0; j<ctxCoeffs[0].length; j++) {
+									ctxCoeffs[i][j] = 0.0;
+								}
+							}*/
+							if(c.getParameters().getNumLayers()==1) {
+								state = parseChemotaxisCoeffsBlock(lines, numMedia);
+							}
 							/*else if(c.getParameters().getNumLayers()>1)
 								state = parseChemotaxisCoeffsBlock3D(worldParsed, lines, ctxCoeffs);
 							*/
@@ -825,6 +835,18 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 						if (periodicMedia.isSet) {
 							world.setPeriodicMedia(periodicMedia);
 						}
+
+						//set chemotaxis coefficients
+						/*
+						ctxCoeffs = new double[models.length][numMedia];
+						for(int i = 0; i<ctxCoeffs.length; i++) {
+							for(int j = 0; j<ctxCoeffs[0].length; j++) {
+								ctxCoeffs[i][j] = 0.0;
+							}
+						}
+						*/
+						world.setChemotacticCoeffs(ctxCoeffs);
+						
 
 						IWorld.reactionModel.setWorld(world);
 						
@@ -1498,13 +1520,13 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 
 	}
 
-	private LoaderState parseChemotaxisCoeffsBlock(List<String> lines, double[][] ctxCoeffs) throws LayoutFileException,
+	private LoaderState parseChemotaxisCoeffsBlock(List<String> lines, int numMedia) throws LayoutFileException,
 	NumberFormatException
 	{
 		/* this block is like this:
 		 * <model number> <media number> <chemotaxis coefficient>
 		 */
-		
+		ctxCoeffs = new double[models.length][numMedia];
 		for (String line : lines)
 		{
 			lineCount++;
@@ -1521,9 +1543,20 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			int modelIndex = Integer.parseInt(ctxParsed[0]);
 			int mediaIndex = Integer.parseInt(ctxParsed[1]);
 			double coeff = Double.parseDouble(ctxParsed[2]);
+			System.out.println("modelIndex " + modelIndex);
+			System.out.println("mediaIndex " + mediaIndex);
+			System.out.println("coeff " + coeff);
 			ctxCoeffs[modelIndex][mediaIndex] = coeff;
+			System.out.println(ctxCoeffs.length);
+			System.out.println(ctxCoeffs[0].length);
+			for(int i = 0; i<ctxCoeffs.length; i++) {
+				for(int j = 0; j<ctxCoeffs[0].length; j++) {
+					System.out.print(ctxCoeffs[i][j] + " ");
+				}
+			}
+			//System.out.println("2");
 		}
-		world.setChemotacticCoeffs(ctxCoeffs);
+		//world.setChemotacticCoeffs(ctxCoeffs);
 		return LoaderState.OK;
 	}
 

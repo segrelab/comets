@@ -2891,7 +2891,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public void setConvNonlinDiffExponent(double val)
 	{
-		convNonlinDiffExponent=val;;
+		convNonlinDiffExponent=val;
 	}
 	
 	/**
@@ -2899,7 +2899,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public double getConvNonlinDiffHillK()
 	{
-		return convNonlinDiffHillK;;
+		return convNonlinDiffHillK;
 	}
 	
 	/**
@@ -2907,7 +2907,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public void setConvNonlinDiffHillK(double val)
 	{
-		convNonlinDiffHillK=val;;
+		convNonlinDiffHillK=val;
 	}
 	
 	/**

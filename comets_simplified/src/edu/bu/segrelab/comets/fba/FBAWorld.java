@@ -1380,9 +1380,11 @@ public class FBAWorld extends World2D
 	 * Sets the chemotactic coefficients for the model and media
 	 * [model][media]
 	 */
-	public int setChemotacticCoeffs(final double[][]ctxCoeffsLocal)
+	public void setChemotacticCoeffs(final double[][]ctxCoeffsLocal)
 	{
+		System.out.println("Before"+ctxCoeffsLocal[0][0]);
 		this.ctxCoeffs = ctxCoeffsLocal;
+		System.out.println("Parsed"+this.ctxCoeffs[0][0]);
 	}
 
 	/**
@@ -3265,6 +3267,7 @@ public class FBAWorld extends World2D
 		// capture the current biomass state
 
 		double[][] nutrient = new double[numCols][numRows];
+		//System.out.println("In convNonlinDiffCtx2DBiomass");
 
 		while (it.hasNext())
 		{
@@ -3285,8 +3288,10 @@ public class FBAWorld extends World2D
 				convectionRHS1[k][x][y]=cell.getConvectionRHS1()[k];
 				convectionRHS2[k][x][y]=cell.getConvectionRHS2()[k];
 			}
+			//System.out.println("In while loop of convlin 2d ctx biomass");
 		}
 		
+		//System.out.println(cParams.allowCellOverlap());
 		//System.out.println(cParams.allowCellOverlap());
 		
 		if (cParams.allowCellOverlap())
@@ -3295,6 +3300,8 @@ public class FBAWorld extends World2D
 				//double hillK=0.0;
 				//double hillN=0.0;
 				double[] nonLinDiffExponent=new double[numModels];
+				
+			//System.out.println("allow Cell Overlap");
 			for (int k=0; k<numModels; k++)
 			{
 				nonLinDiffExponent[k]=((FBAModel)models[k]).getConvNonlinDiffExponent();
@@ -3315,7 +3322,9 @@ public class FBAWorld extends World2D
 						for(int i = 0; i<numCols; i++){
 							for(int j = 0; j< numRows; j++){
 								nutrient[i][j] = media[i][j][l];
-								convectionRHS[k] +=Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(l), ((FBAModel)models[k]).getChemotaxisHillN(l));
+								double[][] a = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
+								convectionRHS[k][i][j] += a[i][j];
+								//System.out.println("RHS one");
 								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 
 							}
 						}
@@ -3361,8 +3370,10 @@ public class FBAWorld extends World2D
 						for(int i = 0; i<numCols; i++){
 							for(int j = 0; j< numRows; j++){
 								nutrient[i][j] = media[i][j][l];
-								convectionRHS[k] +=Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(l), ((FBAModel)models[k]).getChemotaxisHillN(l));
-								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 
+								double[][] a = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
+								convectionRHS[k][i][j] += a[i][j];
+								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant())
+								//System.out.println(k + " " + i + " " + j + " "+ convectionRHS[k][i][j]); 
 							}
 						}
 					}
@@ -3440,6 +3451,7 @@ public class FBAWorld extends World2D
 				}
 			}
 		}
+
 	}
 	
 
@@ -4019,6 +4031,7 @@ public class FBAWorld extends World2D
 					break; 
 				case CONV_NONLINDIFF_CTX_2D :
 					convNonlinDiffCtx2DBiomass();
+					//System.out.println("convNonlinDiffCtx2DBiomass");
 					break;
 				default :
 					System.out.println("No biomass diffusion! Set the diffusion parameter to 'Diffusion 2D(Crank-Nicolson)', 'Diffusion 2D(Eight Point)' or 'Convection 2D'");

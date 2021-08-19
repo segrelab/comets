@@ -78,7 +78,7 @@ public class CometsParameters implements CometsConstants
 	
 	private boolean isCommandLine = false,
 					showGraphics = true,
-					allowCellOverlap = false,
+					allowCellOverlap = true,
 					toroidalWorld = false,
 					showCycleTime = true,
 					showCycleCount = true,

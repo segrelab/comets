@@ -936,7 +936,7 @@ public class Utility implements CometsConstants
 	}
 	
 		/**
-	 * Returns the right hand side of the 2D convection equation with chemoraxis
+	 * Returns the right hand side of the 2D convection equation with chemotaxis
 	 * @param biomass
 	 * @return
 	 * Hui Shi July 2021
@@ -949,6 +949,7 @@ public class Utility implements CometsConstants
 		//System.out.println("Input "+deltaDensity[50][50]+" "+biomassDensity[50][50]+" "+biomassDensityModel[50][50]);
 		double[][] diffusionCtx=nablaChiRhoNablaNutrient(deltaDensity, biomassDensityModel, ctxCoeff, nutrient, barrier, dX, hillK, hillN);
 		//System.out.println("NonlinDiff "+diffusion[50][50]);
+		//System.out.println("getRHSChemotaxis");
 		return diffusionCtx;
 	}
 	
@@ -2750,13 +2751,14 @@ public class Utility implements CometsConstants
 					
 					//System.out.println("10b  "+avrgDiffConstRhoNHillRight+"  "+avrgDiffConstRhoNHillLeft+"  "+ biomass[i][j+1]+"  "+biomass[i][j]+"  "+biomass[i][j-1]);
 					//System.out.println("10c  "+hill+"  "+hillLeft+"  "+diffConsRhoNLeft+"  "+diffConsRhoN+"  "+diffConsRhoNRight);
-					
+					//System.out.println(i + " " + j + " "+ chemotaxis[i][j]);
 				}
 			}
 		}
 		//System.out.println("Diff "+avrgDiffConstRhoNHillRight+" "+avrgDiffConstRhoNHillLeft);
 		
 		//System.out.println("Method "+diffusion[50][50]);
+		
 		return chemotaxis;
 	}
 
