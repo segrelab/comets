@@ -2757,7 +2757,7 @@ public class Utility implements CometsConstants
 					
 					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
 					
-					chemotaxis[i][j] += -1.0*ctxCoeff * (((hillRight * biomassModel[i][j+1]) + (hillCenter*biomassModel[i][j])/2) * (nutrient[i][j+1]-nutrient[i][j]) - ((hillCenter*biomassModel[i][j] + hillLeft *biomassModel[i][j-1])/2) *(nutrient[i][j]-nutrient[i][j-1])) / (dX * dX);
+					chemotaxis[i][j] += -1.0*ctxCoeff * (((hillRight * biomassModel[i][j+1] + hillCenter*biomassModel[i][j])/2) * (nutrient[i][j+1]-nutrient[i][j]) - ((hillCenter*biomassModel[i][j] + hillLeft *biomassModel[i][j-1])/2) *(nutrient[i][j]-nutrient[i][j-1])) / (dX * dX);
 					//System.out.println("x "+ctxCoeff+"  "+chemotaxis[i][j]);
 					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
 					
