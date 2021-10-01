@@ -3259,6 +3259,7 @@ public class FBAWorld extends World2D
 		double[][][] convectionRHS  = new double[numModels][numCols][numRows];
 		double[][][] convectionRHS1 = new double[numModels][numCols][numRows];
 		double[][][] convectionRHS2 = new double[numModels][numCols][numRows];
+		double[][][] chemotaxisRHS  = new double[numModels][numCols][numRows];
 		Iterator<Cell> it = c.getCells().iterator();
 		
 		
@@ -3318,16 +3319,26 @@ public class FBAWorld extends World2D
 				
 				for(int l = 0; l<numMedia; l++)
 				{
-					if(ctxCoeffs[k][l] != 0.0){
-						for(int i = 0; i<numCols; i++){
-							for(int j = 0; j< numRows; j++){
+					if(ctxCoeffs[k][l] != 0.0)
+					{
+						for(int i = 0; i<numCols; i++)
+						{
+							for(int j = 0; j< numRows; j++)
+							{
 								nutrient[i][j] = media[i][j][l];
-								double[][] a = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
-								convectionRHS[k][i][j] += a[i][j];
-								//System.out.println("RHS one");
-								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 
 							}
 						}
+						chemotaxisRHS[k] = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
+						for(int i = 0; i<numCols; i++)
+						{
+							for(int j = 0; j< numRows; j++)
+							{		
+								convectionRHS[k][i][j] += chemotaxisRHS[k][i][j];
+								//System.out.println(chemotaxisRHS[k][i][j]);
+							}
+						}
+								//System.out.println("RHS one");
+								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 
 					}
 				}
 			}	
@@ -3367,18 +3378,29 @@ public class FBAWorld extends World2D
 				for(int l = 0; l<numMedia; l++)
 				{
 					if(ctxCoeffs[k][l] != 0.0){
-						for(int i = 0; i<numCols; i++){
-							for(int j = 0; j< numRows; j++){
+						for(int i = 0; i<numCols; i++)
+						{
+							for(int j = 0; j< numRows; j++)
+							{
 								nutrient[i][j] = media[i][j][l];
-								double[][] a = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
-								convectionRHS[k][i][j] += a[i][j];
-								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant())
-								//System.out.println(k + " " + i + " " + j + " "+ convectionRHS[k][i][j]); 
 							}
 						}
+						chemotaxisRHS[k] = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
+								//System.out.println("chem "+a[i][j]+" conv "+convectionRHS[k][i][j]);
+						for(int i = 0; i<numCols; i++)
+						{
+							for(int j = 0; j< numRows; j++)
+							{		
+									convectionRHS[k][i][j] += chemotaxisRHS[k][i][j];
+							}
+						}
+								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant())
+								//System.out.println(k + " " + i + " " + j + " "+ convectionRHS[k][i][j]); 
 					}
 				}
 			}
+				
+			
 				
 			for(int i=0;i<numCols;i++)
 			{
