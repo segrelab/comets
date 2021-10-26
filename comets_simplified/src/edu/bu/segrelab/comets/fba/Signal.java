@@ -50,8 +50,11 @@ public class Signal {
 		this.lb = lb;
 		this.ub = ub;
 		this.consume_met = consume_met;
+		if (reaction != -1) {
+			reaction -= 1; // convert from 1-base to 0-base
+		}
 		this.reaction = reaction;
-		this.exch_met = exch_met - 1;  // don't ask me why this is off-by-one but not reaction!?!?
+		this.exch_met = exch_met - 1;  // because we let people write in terms of 1-base, but java is 0-order
 		this.function = function.toLowerCase();
 		
 		this.parameters = new ArrayList<>();
