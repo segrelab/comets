@@ -2073,7 +2073,7 @@ public class Utility implements CometsConstants
 					if(hillK==0.0)
 					{
 						hill=1.0;
-						hillLeft=0.0;
+						hillLeft=1.0;
 					}
 					else
 					{
