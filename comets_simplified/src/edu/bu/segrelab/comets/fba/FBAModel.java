@@ -1144,6 +1144,21 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		return v;
 	}
 
+	/**
+	 * @return The shadow prices from the most recent FBA run
+	 */
+	public double[] getShadowPrices()
+	{
+
+		double[] v = new double[numMetabs];
+		if (runSuccess)
+		{
+			v=fbaOptimizer.getShadowPrices();
+
+		}
+		return v;
+	}
+	
 	/* Debug code	
 	public double[] getFluxesTest(double[] test)
 	{

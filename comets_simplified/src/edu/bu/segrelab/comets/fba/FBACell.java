@@ -60,6 +60,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private boolean stationaryStatus = false; //Jean
   
 	private double[][] fluxes;
+	private double[][] shadowPrices;
 	private int[] FBAstatus;
 	  
 	private CometsParameters cParams;
@@ -134,6 +135,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		else
 			cellColor = 0;
 		fluxes = new double[fbaModels.length][];
+		shadowPrices = new double[fbaModels.length][];
 		world.putCellAt(x, y, this);
 		
 		updateDiffusibility();
@@ -621,6 +623,15 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		return fluxes; 
 	}
 	
+	/**
+	 * @return the shadow prices calculated from the most recent FBA run for all species in the cell.
+	 * This is a 2D double array. Each double[i][j] represents shadow price j from species i.
+	 */
+	public double[][] getShadowPrices() 
+	{ 
+		return shadowPrices; 
+	}
+	
 	/* (non-Javadoc)
 	 * @see edu.bu.segrelab.comets.Cell#getID()
 	 */
@@ -878,6 +889,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			/*************************** RUN THE FBA! ****************************/
 			int stat = models[i].run();
 			fluxes[i] = ((FBAModel)models[i]).getFluxes();
+			shadowPrices[i] = ((FBAModel)models[i]).getShadowPrices();
+			//shadowPrices[i]=((FBAModel)models[i]).getShadowPrices();
 			//for(int j=0;j<fluxes[i].length;j++) System.out.println(i+" "+j+" "+fluxes[i][j]);
 
 			double[] exchFlux = ((FBAModel)models[i]).getExchangeFluxes();
@@ -1063,6 +1076,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					/*************************** RUN THE FBA! ****************************/
 					int stat = models[i].run();
 					fluxes[i] = ((FBAModel)models[i]).getFluxes();
+					//shadowPrices[i]=((FBAModel)models[i]).getShadowPrices();
 	
 					if (stat != 5 && stat != 180)
 					{
@@ -1170,7 +1184,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		if (cParams.showGraphics())
 			cellColor = calculateColor();
 		
-		return updateCellData(deltaBiomass, fluxes, allModelsGrowthRates);
+		return updateCellData(deltaBiomass, fluxes, shadowPrices, allModelsGrowthRates);
 	}
 	
 	private double calcMichaelisMentenRate(double mediaConc, double km, double vMax, double hill)
@@ -1359,12 +1373,13 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	 * @return Cell.CELL_DEAD if this cell has no more active biomass, Cell.CELL_OK 
 	 * otherwise
 	 */
-	public int updateCellData(double[] deltaBiomass, double[][] fluxes, double[] biomassGrowthRates)
+	public int updateCellData(double[] deltaBiomass, double[][] fluxes, double[][] shadowPrices, double[] biomassGrowthRates)
 	{
 
 
 		this.deltaBiomass = deltaBiomass;
 		this.fluxes = fluxes;
+		this.shadowPrices = shadowPrices;
 		
 		// apply BASELINE biomass death rate, regardless of whether growth is feasible.
 		int numDead = 0;

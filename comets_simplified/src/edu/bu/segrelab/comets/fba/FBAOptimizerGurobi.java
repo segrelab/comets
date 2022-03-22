@@ -38,13 +38,16 @@ import java.util.Collections;
 public class FBAOptimizerGurobi extends edu.bu.segrelab.comets.fba.FBAOptimizer 
 implements edu.bu.segrelab.comets.CometsConstants
 {
-
+	
 	private GRBEnv env;     // Gurobi environment
 	private GRBModel model; // Gurobi model
 	private GRBVar[] rxnFluxes; //These are optimization variables, i.e. fluxes. Indexed 0 to N-1
 	private GRBLinExpr[] rxnExpressions; //These are constraints on fluxes, one for each metabolite
 	private double[] fluxesModel; //Indexed 0 to N-1
 
+	private GRBConstr[] constrains; //These are the constrains, needed to get the shadow prices. Same number as metabolites. 
+	private double[] shadowPricesModel; //These are the shadow prices. Indexed 0 to Number of mets-1.
+	
 	private double[][] stoichMatrix; //This is used only in the clone() method. TODO eliminate this.
 
 
@@ -953,16 +956,29 @@ implements edu.bu.segrelab.comets.CometsConstants
 				setObjectiveReaction(numRxns,objReactions,objMaximize);
 				model.update();
 				model.optimize();
-
+				
 				status = model.get(GRB.IntAttr.Status);
 
 				rxnFluxes=model.getVars();
+				//constrains=model.getConstrs();
+				//System.out.println("OK-1  ");
+				//double xvals = constrains[1].get(GRB.DoubleAttr.Pi); 
+				//System.out.println(status);
+				//double[] xvals= model.get(GRB.DoubleAttr.Pi, model.getConstrs());
+				//System.out.println(xvals);
+				//System.out.println("OK1  ");
+				//System.out.println("OK0  "+xvals);
 				// check to see if optimal
 				int optimstatus = model.get(GRB.IntAttr.Status);
 				if (optimstatus == GRB.Status.OPTIMAL) {
 					for(int i=0;i<rxnFluxes.length;i++){
 						fluxesModel[i]=rxnFluxes[i].get(GRB.DoubleAttr.X);
 					}
+					//for(int i=0;i<constrains.length;i++){
+						//System.out.println("OK1  "+i);
+						//shadowPricesModel[i]=shadowPrices[i].get(GRB.DoubleAttr.Pi);
+						//System.out.println("OK2  "+constrains[i].get(GRB.DoubleAttr.Pi));
+					//}
 					ret=0;
 				} else {
 					//System.out.println("MAXIMIZE_OBJECTIVE_FLUX: Model is not feasible");
@@ -994,18 +1010,24 @@ implements edu.bu.segrelab.comets.CometsConstants
 					// now fix the objectives in the min abs. sum. model, then run that one.
 					for (int i = 0; i < objReactions.length; i++) {
 						double maximizedObjective = rxnFluxes[objReactions[i]-1].get(GRB.DoubleAttr.X);
-						setObjectiveFluxToSpecificValue(i,maximizedObjective);
+						setObjectiveFluxToSpecificValue(i,maximizedObjective); //This line introduces modelMin
 					}
 					modelMin.optimize();
 
 					status = model.get(GRB.IntAttr.Status);
-
+					
 					int optimstatus_minflux = model.get(GRB.IntAttr.Status);
 					if (optimstatus_minflux == GRB.Status.OPTIMAL) {
 						// save the new fluxes.
 						modelMinVars =modelMin.getVars();
 						for (int k = 0; k < modelMinVars.length / 2; k++){
 							fluxesModel[k] = modelMinVars[k].get(GRB.DoubleAttr.X);
+						}
+						constrains=modelMin.getConstrs();
+						shadowPricesModel= new double[constrains.length] ;
+						for(int i=0;i<constrains.length;i++){
+							shadowPricesModel[i]=0.0;
+							shadowPricesModel[i]=constrains[i].get(GRB.DoubleAttr.Pi);
 						}
 						ret=0;
 					}else {
@@ -1101,6 +1123,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 		return v;
 	}
+	
 
 	/**
 	 * @return the exchange fluxes from the most recent FBA run
@@ -1280,5 +1303,22 @@ implements edu.bu.segrelab.comets.CometsConstants
 		return PARAMS_OK;
 	}
 
+	/**
+	 * @return The fluxes from the most recent FBA run
+	 */
+	public double[] getShadowPrices()
+	{
+
+		double[] v = new double[numMetabs];
+
+		if (runSuccess)
+		{
+			for (int i = 0; i < numMetabs; i++)
+			{
+				v[i]=shadowPricesModel[i];
+			}
+		}
+		return v;
+	}
 
 }

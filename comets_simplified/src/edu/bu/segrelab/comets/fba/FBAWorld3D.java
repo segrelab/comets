@@ -91,6 +91,7 @@ implements CometsConstants
 
 	private PrintWriter mediaLogWriter,	
 	fluxLogWriter,
+	shadowPricesLogWriter,
 	biomassLogWriter,
 	totalBiomassLogWriter;
 
@@ -238,6 +239,33 @@ implements CometsConstants
 				fluxLogWriter = null;
 			}
 		}
+		
+		// Init shadow priceslog and write the first line
+				if (pParams.writeShadowPricesLog())
+				{
+					String name = adjustLogFileName(pParams.getShadowPricesLogName(), timeStamp);
+					try
+					{
+						shadowPricesLogWriter = new PrintWriter(new FileWriter(new File(name)));
+						writeShadowPricesLog();
+						//Write the file name in the manifest file.
+						try
+						{
+							FileWriter manifestWriter=new FileWriter(new File(pParams.getManifestFileName()),true);
+							manifestWriter.write("FluxFileName: "+name+System.getProperty("line.separator"));
+							manifestWriter.close();
+						}
+						catch (IOException e)
+						{
+							System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
+						}		
+					}
+					catch (IOException e)
+					{
+						System.out.println("Unable to initialize flux log file '" + name + "'\nContinuing without saving log.");
+						fluxLogWriter = null;
+					}
+				}
 
 		// Init media log and write the first line
 		if (pParams.writeMediaLog())
@@ -2238,6 +2266,8 @@ implements CometsConstants
 		currentTimePoint++;
 		if (pParams.writeFluxLog() && currentTimePoint % pParams.getFluxLogRate() == 0)
 			writeFluxLog();
+		if (pParams.writeShadowPricesLog() && currentTimePoint % pParams.getShadowPricesLogRate() == 0)
+			writeShadowPricesLog();
 		if (pParams.writeMediaLog() && currentTimePoint % pParams.getMediaLogRate() == 0)
 			writeMediaLog();
 		if (pParams.writeBiomassLog() && currentTimePoint % pParams.getBiomassLogRate() == 0)
@@ -2426,6 +2456,85 @@ implements CometsConstants
 		}
 	}
 
+	
+	/**
+	 * Writes to the currently initialized shadow prices log, if it is the right time. See documentation
+	 * for the formats.
+	 */
+	private void writeShadowPricesLog()
+	{
+		if (shadowPricesLogWriter != null && (currentTimePoint == 1 || currentTimePoint % pParams.getShadowPricesLogRate() == 0)) // log writer is initialized
+		{			
+			//NumberFormat nf = NumberFormat.getInstance();
+			//nf.setGroupingUsed(false);
+			//nf.setMaximumFractionDigits(4);
+			NumberFormat nf = new DecimalFormat("0.##########E0");
+
+			switch(pParams.getShadowPricesLogFormat())
+			{
+				case MATLAB:
+					/*
+					 * Matlab .m file format:
+					 * fluxes{time}{x}{y}{species} = [array];
+					 * so it'll be one bigass structure.
+					 */
+					Iterator<Cell> it = c.getCells().iterator();
+					while (it.hasNext())
+					{
+						FBACell cell = (FBACell)it.next();
+						double shadowPrices[][] = cell.getShadowPrices();
+						if (shadowPrices == null)
+							continue; // SPs uninitialized.
+						else
+						{
+							for (int i=0; i<shadowPrices.length; i++)
+							{
+								if (shadowPrices[i] != null)
+								{
+									shadowPricesLogWriter.write("shadowPrices{" + (currentTimePoint) + "}{" + (cell.getX()+1) + "}{" + (cell.getY()+1) + "}{\" + (cell.getZ()+1) + \"}{" + (i+1) + "} = [");
+									for (int j=0; j<shadowPrices[i].length; j++)
+									{
+										shadowPricesLogWriter.write(nf.format(shadowPrices[i][j]) + " ");
+									}
+									shadowPricesLogWriter.write("];\n");
+								}
+							}
+						}
+					}
+					break;
+					
+				case COMETS:
+					/* print all fluxes from each cell
+					 * format:
+					 * timepoint x y speciesNum1 flux1 flux2 ... fluxn\n
+					 * timepoint x y speciesNum2 flux1 flux2 ... fluxn\n
+					 */
+					it = c.getCells().iterator();
+					while (it.hasNext())
+					{
+						// blah print
+						FBACell cell = (FBACell)it.next();
+						double[][] shadowPrices = cell.getShadowPrices();
+
+						for (int i=0; i<shadowPrices.length; i++) //fluxes[i][j] denotes flux j in species i
+						{
+							if (shadowPrices[i] == null) {
+								continue; // FBA hasn't run or model didn't grow
+							}
+							shadowPricesLogWriter.print(currentTimePoint + " " + (cell.getX() +1) + " " + (cell.getY() + 1) + " " + (cell.getZ() + 1) + " " + (i + 1));
+							for (int j=0; j<shadowPrices[i].length; j++)
+							{
+								shadowPricesLogWriter.print(" " + nf.format(shadowPrices[i][j]));
+							}
+							shadowPricesLogWriter.print("\n");
+						}
+					}
+					break;
+			}
+			shadowPricesLogWriter.flush();
+		}
+	}
+	
 	/**
 	 * Writes to the media log if it is the right time point. See documentation for the format.
 	 */

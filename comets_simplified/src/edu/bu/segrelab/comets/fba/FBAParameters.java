@@ -145,12 +145,14 @@ public class FBAParameters implements PackageParameters
 	writeTotalBiomassLog,
 	writeSpecificMediaLog,
 	writeMatFile,
+	writeShadowPricesLog,
 	useLogNameTimeStamp,
 	randomOrder = true, //shuffle the order each model in a cell is run
 	monodOverride,
 	pseudoOverride, 
 	costlyGenome = false,
-	allowFluxWithoutGrowth = true; //if false, an FBACell will prevent models from updating media when they don't grow  
+	allowFluxWithoutGrowth = true; // if true, inverse Michaelis Menthen formula is used to calculate extracellular reaction rates, kcat*E*S/(km+E) E=enzyme 
+	private static boolean inverseMM = false;
 
 	private String fluxLogName,
 	mediaLogName,
@@ -159,7 +161,8 @@ public class FBAParameters implements PackageParameters
 	totalBiomassLogName,
 	specificMediaLogName,
 	specificMedia, // different fron specificMediaLogName.  This string stores the names of the extracelluar mets t log
-	matFileName;
+	matFileName,
+	shadowPricesLogName;
 
 	private String manifestFileName = "COMETS_manifest.txt";
 	private final String nopathManifestFileName="COMETS_manifest.txt";
@@ -173,7 +176,8 @@ public class FBAParameters implements PackageParameters
 			totalBiomassLogRate = 1,
 			specificMediaLogRate = 1,
 			numExRxnSubsteps = 12, //12 chosen as default so if timestep is 1h, minimum substep is < 1sec
-			matFileRate = 1;
+			matFileRate = 1,
+			shadowPricesLogRate = 1;
 
 	private long randomSeed=0;
 
@@ -184,7 +188,8 @@ public class FBAParameters implements PackageParameters
 	private LogFormat biomassLogFormat = LogFormat.MATLAB,
 			mediaLogFormat = LogFormat.MATLAB,
 			fluxLogFormat = LogFormat.MATLAB,
-			velocityLogFormat = LogFormat.MATLAB;
+			velocityLogFormat = LogFormat.MATLAB,
+			shadowPricesLogFormat = LogFormat.MATLAB;
 
 	private static double growthDiffRate = 1e-7,
 			flowDiffRate = 1e-7,
@@ -195,8 +200,9 @@ public class FBAParameters implements PackageParameters
 			defaultW = 10,
 			defaultDiffConst = 1e-5,
 			geneFractionalCost = 0,
-			minConcentration = 1e-26; //Here's hoping 1 atom per liter is enough precision
-
+			minConcentration = 1e-26, //Here's hoping 1 atom per liter is enough precision
+			enzymeSubstrateCriticalRatio = 1e-6; //Critical ration ov enzyme/substrate concentrations under which Inverse Michaelis Menten is calculates for extracellular reactions
+	
 	private double[] defaultVelocityVector={0.0,0.0,0.0};
 
 
@@ -221,6 +227,7 @@ public class FBAParameters implements PackageParameters
 		writeTotalBiomassLog = false;
 		writeSpecificMediaLog = false;
 		writeMatFile = false;
+		writeShadowPricesLog = false;
 		useLogNameTimeStamp = true;
 
 		fluxLogName = "flux_log.txt";
@@ -231,6 +238,7 @@ public class FBAParameters implements PackageParameters
 		totalBiomassLogName = "total_biomass_log.txt";
 		specificMediaLogName = "specific_media_log.txt";
 		specificMedia = "";
+		shadowPricesLogName = "shadow_prices_log.txt";
 
 		paramValues = new HashMap<String, Object>();
 		paramTypes = new HashMap<String, ParameterType>();
@@ -252,6 +260,9 @@ public class FBAParameters implements PackageParameters
 	{
 		paramValues.put("writefluxlog", new Boolean(writeFluxLog));
 		paramTypes.put("writefluxlog", ParameterType.BOOLEAN);
+		
+		paramValues.put("writeshadowpriceslog", new Boolean(writeShadowPricesLog));
+		paramTypes.put("writeshadowpriceslog", ParameterType.BOOLEAN);
 
 		paramValues.put("writemedialog", new Boolean(writeMediaLog));
 		paramTypes.put("writemedialog", ParameterType.BOOLEAN);
@@ -279,6 +290,9 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("fluxlogname", fluxLogName);
 		paramTypes.put("fluxlogname", ParameterType.STRING);
+		
+		paramValues.put("shadowpriceslogname", shadowPricesLogName);
+		paramTypes.put("shadowpriceslogname", ParameterType.STRING);
 
 		paramValues.put("medialogname", mediaLogName);
 		paramTypes.put("medialogname", ParameterType.STRING);
@@ -303,6 +317,9 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("fluxlogformat", fluxLogFormat);
 		paramTypes.put("fluxlogformat", ParameterType.STRING);
+		
+		paramValues.put("shadowpriceslogformat", shadowPricesLogFormat);
+		paramTypes.put("shadowpriceslogformat", ParameterType.STRING);
 
 		paramValues.put("medialogformat", mediaLogFormat);
 		paramTypes.put("medialogformat", ParameterType.STRING);
@@ -348,6 +365,9 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("fluxlograte", new Integer(fluxLogRate));
 		paramTypes.put("fluxlograte", ParameterType.INT);
+		
+		paramValues.put("shadowpriceslograte", new Integer(shadowPricesLogRate));
+		paramTypes.put("shadowpriceslograte", ParameterType.INT);
 
 		paramValues.put("medialograte", new Integer(mediaLogRate));
 		paramTypes.put("medialograte", ParameterType.INT);
@@ -384,12 +404,19 @@ public class FBAParameters implements PackageParameters
 		
 		paramValues.put("genefractionalcost", new Double(geneFractionalCost));
 		paramTypes.put("genefractionalcost", ParameterType.DOUBLE);
+		
+		paramValues.put("enzymesubstratecriticalratio", new Double(enzymeSubstrateCriticalRatio));
+		paramTypes.put("enzymesubstratecriticalratio", ParameterType.DOUBLE);
+		
+		paramValues.put("inversemm", new Boolean(inverseMM));
+		paramTypes.put("inversemm", ParameterType.BOOLEAN);
 
 	}
 
 	public void loadParameterState()
 	{
 		writeFluxLog(((Boolean)paramValues.get("writefluxlog")).booleanValue());
+		writeShadowPricesLog(((Boolean)paramValues.get("writeshadowpriceslog")).booleanValue());
 		writeMediaLog(((Boolean)paramValues.get("writemedialog")).booleanValue());
 		writeBiomassLog(((Boolean)paramValues.get("writebiomasslog")).booleanValue());
 		writeVelocityLog(((Boolean)paramValues.get("writevelocitylog")).booleanValue());
@@ -398,6 +425,7 @@ public class FBAParameters implements PackageParameters
 		writeMatFile(((Boolean)paramValues.get("writematfile")).booleanValue());
 		useLogNameTimeStamp(((Boolean)paramValues.get("uselognametimestamp")).booleanValue());
 		setFluxLogName((String)paramValues.get("fluxlogname"));
+		setShadowPricesLogName((String)paramValues.get("shadowpriceslogname"));
 		setMediaLogName((String)paramValues.get("medialogname"));
 		setBiomassLogName((String)paramValues.get("biomasslogname"));
 		setVelocityLogName((String)paramValues.get("velocitylogname"));
@@ -410,12 +438,18 @@ public class FBAParameters implements PackageParameters
 		setCostlyGenome(((Boolean)paramValues.get("costlygenome")).booleanValue());
 		setAllowFluxWithoutGrowth(((Boolean)paramValues.get("allowfluxwithoutgrowth")).booleanValue());
 		setGeneFractionalCost(((Double)paramValues.get("genefractionalcost")).doubleValue());
+		setInverseMM(((Boolean)paramValues.get("inversemm")).booleanValue());
 
 
 		if(paramValues.get("fluxlogformat") instanceof String)
 			setFluxLogFormat(LogFormat.findByName((String)paramValues.get("fluxlogformat")));
 		else
 			setFluxLogFormat((LogFormat)paramValues.get("fluxlogformat"));
+		
+		if(paramValues.get("shadowpriceslogformat") instanceof String)
+			setShadowPricesLogFormat(LogFormat.findByName((String)paramValues.get("shadowpriceslogformat")));
+		else
+			setShadowPricesLogFormat((LogFormat)paramValues.get("shadowpriceslogformat"));
 
 		//setMediaLogFormat((LogFormat)paramValues.get("medialogformat"));
 
@@ -459,6 +493,7 @@ public class FBAParameters implements PackageParameters
 		setDefaultAlpha(((Double)paramValues.get("defaultalpha")).doubleValue());
 		setDefaultW(((Double)paramValues.get("defaultw")).doubleValue());
 		setFluxLogRate(((Integer)paramValues.get("fluxlograte")).intValue());
+		setShadowPricesLogRate(((Integer)paramValues.get("shadowpriceslograte")).intValue());
 		setMediaLogRate(((Integer)paramValues.get("medialograte")).intValue());
 		setBiomassLogRate(((Integer)paramValues.get("biomasslograte")).intValue());
 		setVelocityLogRate(((Integer)paramValues.get("velocitylograte")).intValue());
@@ -468,6 +503,8 @@ public class FBAParameters implements PackageParameters
 		setNumDiffusionsPerStep(((Integer)paramValues.get("numdiffperstep")).intValue());
 		setDefaultDiffusionConstant(((Double)paramValues.get("defaultdiffconst")).doubleValue());
 		setRandomSeed(((Long)paramValues.get("randomseed")).longValue());
+		setEnzymeSubstrateCriticalRatio(((Double)paramValues.get("enzymesubstratecriticalratio")).doubleValue());
+		
 	}
 
 	public ParameterState setParameter(String p, String v)
@@ -614,6 +651,25 @@ public class FBAParameters implements PackageParameters
 			fluxLogRate = i;
 	}
 
+	/**
+	 * @return the number of simulation steps that occur between every flux log write
+	 */
+	public int getShadowPricesLogRate() 
+	{
+		return shadowPricesLogRate; 
+	}
+
+	/**
+	 * Sets the number of steps that occur between every flux log write. If <code>i</code>
+	 * is less than zero, nothing is changed.
+	 * @param i
+	 */
+	public void setShadowPricesLogRate(int i)
+	{
+		if (i > 0)
+			shadowPricesLogRate = i;
+	}
+	
 	/**
 	 * @return the number of simulation steps that occur between every media log write
 	 */
@@ -1049,6 +1105,63 @@ public class FBAParameters implements PackageParameters
 	}
 
 	/**
+	 * @return true if a shadow prices log will be written
+	 */
+	public boolean writeShadowPricesLog() 
+	{ 
+		return writeShadowPricesLog; 
+	}
+
+	/**
+	 * Tells COMETS to write a shadow prices log or not. See the COMETS documentation for format
+	 * details.
+	 * @param b if true, write a shadow prices log file
+	 */
+	public void writeShadowPricesLog(boolean b) 
+	{
+		writeShadowPricesLog = b; 
+	}
+
+	/**
+	 * Sets the name of the shadow prices log file, if one is going to be written.
+	 * <br>
+	 * See documentation for the format.
+	 * @param name the name of the shadow prices log file.
+	 */
+	public void setShadowPricesLogName(String name)
+	{ 
+		shadowPricesLogName = name; 
+	}
+
+	/**
+	 * @return the name of the shadow prices log file.
+	 */
+	public String getShadowPricesLogName()
+	{
+		return shadowPricesLogName; 
+	}
+
+	/**
+	 * Sets the format of the shadow prices log file. Currently only supports either
+	 * MATLAB_FORMAT or COMETS_FORMAT, others are ignored.
+	 * @param format
+	 */
+	public void setShadowPricesLogFormat(LogFormat format) 
+	{
+		shadowPricesLogFormat = format;
+	}
+
+	/**
+	 * Returns the current shadow prices log file format
+	 * @return either MATLAB_FORMAT or COMETS_FORMAT
+	 */
+	public LogFormat getShadowPricesLogFormat()
+	{
+		return shadowPricesLogFormat; 
+	}
+
+	
+	/**
 	 * @return true if a flux log will be written
 	 */
 	public boolean writeFluxLog() 
@@ -1104,6 +1217,7 @@ public class FBAParameters implements PackageParameters
 		return fluxLogFormat; 
 	}
 
+	
 	/**
 	 * @return true if a velocity log will be written
 	 */
@@ -1538,5 +1652,21 @@ public class FBAParameters implements PackageParameters
 	public void setAllowFluxWithoutGrowth(boolean allowFluxWithoutGrowth) {
 		this.allowFluxWithoutGrowth = allowFluxWithoutGrowth;
 	}
-
+	
+	public static boolean getInverseMM() {
+		return inverseMM;
+	}	
+	
+	public void setInverseMM(boolean inverseMM) {
+		this.inverseMM=inverseMM;
+	}	
+	
+	public static double getEnzymeSubstrateCriticalRatio() {
+		return enzymeSubstrateCriticalRatio;
+	}	
+	
+	public void setEnzymeSubstrateCriticalRatio(double enzymeSubstrateCriticalRatio) {
+		this.enzymeSubstrateCriticalRatio=enzymeSubstrateCriticalRatio;
+	}	
+	
 }

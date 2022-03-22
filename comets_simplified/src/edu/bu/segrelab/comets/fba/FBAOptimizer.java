@@ -40,6 +40,8 @@ public abstract class FBAOptimizer  implements edu.bu.segrelab.comets.CometsCons
 	
 	public abstract double[] getFluxes();
 	
+	public abstract double[] getShadowPrices();
+	
 	public abstract double[] getExchangeFluxes(int[] exch);
 	
 	public abstract FBAOptimizer clone();

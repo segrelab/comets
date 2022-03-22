@@ -122,7 +122,16 @@ public class ExternalReactionCalculator{
 			double denom = km + subCon;
 			if (denom == 0.0){ rate = kcat * eCon;}
 			else{
-				rate = (kcat * eCon * subCon) / (km + subCon); //Michaelis-Menten rate
+				if(FBAParameters.getInverseMM()) {
+					//Implement inverse MM with a criterium of using one or the other based on the reatio of concs. subCon/eCon
+					if(eCon>0.0 && subCon>0.0 && eCon/subCon < FBAParameters.getEnzymeSubstrateCriticalRatio()) {
+						rate = (kcat * eCon * subCon) / (km + eCon); //Inverse Michaelis-Menten rate 
+					}
+				}
+				else {
+				rate = (kcat * eCon * subCon) / (km + subCon); //Michaelis-Menten rate 
+				}
+				//Implement inverse MM with a criterium of using one or the other based on the reatio of concs. subCon/eCon
 			}
 
 			if (subIdxArr.length == 0){ //for the edge case/hack where km = 0
