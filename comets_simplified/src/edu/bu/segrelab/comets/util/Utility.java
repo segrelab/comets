@@ -1959,7 +1959,7 @@ public class Utility implements CometsConstants
 				{
 					diffusion[i][j]+=0.0;
 				}
-				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && barrier[i-1][j] && barrier[i+2][j]))
+				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && i<numCols-2 && barrier[i-1][j] && barrier[i+2][j]))
 				{
 					if(hillK==0.0)
 					{
@@ -2156,13 +2156,13 @@ public class Utility implements CometsConstants
 					//System.out.println("Hill  "+ hill);
 					//System.out.println("5b  "+ diffusion[i][j]+"  "+biomass[i][j]+"   "+Math.pow(biomass[i][j],nonLinDiffExponent));
 				}
-				
+				System.out.println(i+" "+j);
 				//Then do y direction 
 				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) || (j!=0 && j!=(numRows-1) && barrier[i][j-1] && barrier[i][j+1]))
 				{
 					diffusion[i][j]+=0.0;
 				}
-				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && barrier[i][j-1] && barrier[i][j+2]))
+				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && j<numRows-2 && barrier[i][j-1] && barrier[i][j+2]))
 				{
 					if(hillK==0.0)
 					{
@@ -2396,7 +2396,7 @@ public class Utility implements CometsConstants
 				{
 					chemotaxis[i][j]+=0.0;
 				}
-				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && barrier[i-1][j] && barrier[i+2][j]))
+				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && i<numCols-2 && barrier[i-1][j] && barrier[i+2][j]))
 				{
 					if(hillK==0.0)
 					{
@@ -2582,7 +2582,7 @@ public class Utility implements CometsConstants
 				{
 					chemotaxis[i][j]+=0.0;
 				}
-				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && barrier[i][j-1] && barrier[i][j+2]))
+				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && j<numRows-2 && barrier[i][j-1] && barrier[i][j+2]))
 				{
 					if(hillK==0.0)
 					{
