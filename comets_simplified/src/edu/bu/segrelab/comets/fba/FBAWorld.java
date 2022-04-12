@@ -97,7 +97,8 @@ public class FBAWorld extends World2D
 	
 	private double[][] ctxCoeffs;   				//chemotaxis coefficients
 
-	
+	private double nutrientParams;
+
 	private List<int[]> modelExchList;			// indices of the exchange reactions for each model
 	private SpaceInfoPanel infoPanel;			// the info panel for the spaces in the world
 												// see the SpaceInfoPanel inner class below
@@ -178,6 +179,8 @@ public class FBAWorld extends World2D
 		nutrientDiffConsts = new double[numMedia];
 
 		ctxCoeffs = new double[numModels][numMedia];
+
+		nutrientParams = 0.0;
 		/*
 		 * Initialize everything so that it can diffuse everywhere,
 		 * and the startingMedia is uniform across the grid.
@@ -264,7 +267,7 @@ public class FBAWorld extends World2D
 		nutrientDiffConsts = new double[numMedia];
 
 		ctxCoeffs = new double[numModels][numMedia];
-
+		nutrientParams = 0.0;
 		
 		/*
 		 * Initialize everything so that it can diffuse everywhere,
@@ -1385,6 +1388,16 @@ public class FBAWorld extends World2D
 		System.out.println("Before"+ctxCoeffsLocal[0][0]);
 		this.ctxCoeffs = ctxCoeffsLocal;
 		System.out.println("Parsed"+this.ctxCoeffs[0][0]);
+	}
+		/**
+	 * Sets the nutrient parameters for the model and media
+	 * [model][media]
+	 */
+	public void setNutrientParams(final double nutrientParamsLocal)
+	{
+		System.out.println("Before"+nutrientParamsLocal);
+		this.nutrientParams = nutrientParamsLocal;
+		System.out.println("Parsed"+this.nutrientParamsLocal);
 	}
 
 	/**
@@ -3246,7 +3259,7 @@ public class FBAWorld extends World2D
 
 	/*
 	This is a function that propagates the biomass with nonlinear diffusivity and chemotaxis.
-	Hui Shi July 2021
+	Hui Shi July 2021, April 2022
 	*/
 	private void convNonlinDiffCtx2DBiomass()
 	{
@@ -3328,7 +3341,7 @@ public class FBAWorld extends World2D
 								nutrient[i][j] = media[i][j][l];
 							}
 						}
-						chemotaxisRHS[k] = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
+						chemotaxisRHS[k] = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrientParams, nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
 						for(int i = 0; i<numCols; i++)
 						{
 							for(int j = 0; j< numRows; j++)
@@ -3385,7 +3398,7 @@ public class FBAWorld extends World2D
 								nutrient[i][j] = media[i][j][l];
 							}
 						}
-						chemotaxisRHS[k] = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
+						chemotaxisRHS[k] = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrientParams, nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
 								//System.out.println("chem "+a[i][j]+" conv "+convectionRHS[k][i][j]);
 						for(int i = 0; i<numCols; i++)
 						{

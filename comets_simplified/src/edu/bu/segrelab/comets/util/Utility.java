@@ -940,15 +940,17 @@ public class Utility implements CometsConstants
 	 * Returns the right hand side of the 2D convection equation with chemotaxis
 	 * @param biomass
 	 * @return
-	 * Hui Shi July 2021
+	 * Hui Shi July 2021, April 2022
 	 */
-	public static double[][] getRHSChemotaxis( double [][] deltaDensity, double[][] biomassDensityModel, double ctxCoeff, double[][] nutrient, boolean[][] barrier,double dX,double hillK, double hillN)
+	public static double[][] getRHSChemotaxis( double [][] deltaDensity, double[][] biomassDensityModel, double ctxCoeff, double nutrientParam, double[][] nutrient, boolean[][] barrier,double dX,double hillK, double hillN)
 	{   
         //double[][] convectionRHS=new double[biomassDensity.length][biomassDensity[0].length];
         //double[][] advection=advection2D(totalBiomassDensity, biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
         //double[][] diffusion=diffusionGradDGradRho(biomassDensity,convDiffConstField,barrier,dX,advection)+diffusionDLaplaceRho(biomassDensity,convDiffConstField,barrier,dX,advection);
 		//System.out.println("Input "+deltaDensity[50][50]+" "+biomassDensity[50][50]+" "+biomassDensityModel[50][50]);
-		double[][] diffusionCtx=nablaChiRhoNablaNutrient(deltaDensity, biomassDensityModel, ctxCoeff, nutrient, barrier, dX, hillK, hillN);
+		double[][] diffusionCtx=nablaChiRhoOverNutrientPlusConstNablaNutrient(deltaDensity, biomassDensityModel, ctxCoeff, nutrientParam, nutrient, barrier, dX, hillK, hillN);
+		//double[][] diffusionCtx=nablaChiRhoNablaNutrient(deltaDensity, biomassDensityModel, ctxCoeff, nutrient, barrier, dX, hillK, hillN);
+
 		//System.out.println("NonlinDiff "+diffusion[50][50]);
 		//System.out.println("getRHSChemotaxis");
 		return diffusionCtx;

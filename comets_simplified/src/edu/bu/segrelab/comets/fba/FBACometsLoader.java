@@ -108,6 +108,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 	protected int[] exRxnEnzymes; //index of the corresponding reaction's enzyme in the World Media list. Non-enzymatic reactions have -1 here
 	
 	protected double[][] ctxCoeffs; 
+	protected double nutrientParams;
 	
 	private static final String MODEL_FILE = "model_file",
 			MODEL_WORLD = "model_world",
@@ -134,7 +135,8 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			SUBSTRATE_LAYOUT = "substrate_layout",
 			SPECIFIC_MEDIA = "specific_media",
 			VELOCITY_VECTORS = "velocity_vectors",
-			MODEL_MEDIA_CHEMOTAXIS_COEFFS = "model_media_chemotaxis_coeffs";;
+			MODEL_MEDIA_CHEMOTAXIS_COEFFS = "model_media_chemotaxis_coeffs",
+			MODEL_MEDIA_NUTRIENT_PARAMS = "model_media_nutrient_params";;
 	/**
 	 * Returns the recently loaded World2D.
 	 */
@@ -511,6 +513,24 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							*/
 
 						}
+						/****************** NUTRIENT PARAMETERS BY MODEL ********************/
+
+						else if (worldParsed[0].equalsIgnoreCase(MODEL_MEDIA_NUTRIENT_PARAMS))
+						{
+							if (worldParsed.length != 1)
+							{
+								throw new IOException("The model media nutrient parameter must be a single keyword line followed by a double.");
+							}
+							
+
+							List<String> lines = collectLayoutFileBlock(reader);
+			
+							if(c.getParameters().getNumLayers()==1) {
+								state = parseNutrientParamsConstantBlock(lines, numMedia);
+							}
+		
+
+						}
 						
 
 						/****************** SUBSTRATE LAYOUT ********************/
@@ -846,6 +866,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 						}
 						*/
 						world.setChemotacticCoeffs(ctxCoeffs);
+						world.setNutrientParams(nutrientParams);
 						
 
 						IWorld.reactionModel.setWorld(world);
@@ -1560,7 +1581,46 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		return LoaderState.OK;
 	}
 
+	private LoaderState parseNutrientParamsConstantBlock(List<String> lines, int numMedia) throws LayoutFileException,
+	NumberFormatException
+	{
+		/* this block is like this:
+		 * <model number> <media number> <chemotaxis coefficient>
+		 */
+		ctxCoeffs = new double[models.length][numMedia];
+		double nutrientParams;
+		for (String line : lines)
+		{
+			lineCount++;
+			// ignore empty lines.
+			if (line.length() == 0)
+				continue;
 
+			String[] nutrientParsed = line.split("\\s+");
+			if (nutrientParsed.length != 3)
+			{
+				System.out.println("parsed" + nutrientParsed.length);
+				throw(new LayoutFileException("Each line after 'model_media_nutrient_params' must be a double.", lineCount));
+			}
+			int modelIndex = Integer.parseInt(nutrientParsed[0]);
+			int mediaIndex = Integer.parseInt(nutrientParsed[1]);
+			double param = Double.parseDouble(nutrientParsed[2]);
+			System.out.println("modelIndex " + modelIndex);
+			System.out.println("mediaIndex " + mediaIndex);
+			System.out.println("coeff " + coeff);
+			nutrientParams[modelIndex][mediaIndex] = coeff;
+			System.out.println(nutrientParams.length);
+			System.out.println(nutrientParams[0].length);
+			for(int i = 0; i<nutrientParams.length; i++) {
+				for(int j = 0; j<nutrientParams[0].length; j++) {
+					System.out.print(nutrientParams[i][j] + " ");
+				}
+			}
+			//System.out.println("2");
+		}
+		//world.setChemotacticCoeffs(ctxCoeffs);
+		return LoaderState.OK;
+	}
 
 	private LoaderState parseSubstrateLayoutBlock(List<String> lines,int cols,int rows) throws LayoutFileException,
 	NumberFormatException
