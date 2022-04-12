@@ -2778,6 +2778,7 @@ public class Utility implements CometsConstants
 	/*
 	* Function that calculates chemotaxis using GE Model
 	* Ilija Dukovski April 2022
+	* Hui Shi
 	*/
 
 	public static double[][] nablaChiRhoOverNutrientPlusConstNablaNutrient(double[][] deltaBiomass, double[][] biomassModel, double ctxCoeff, double nutrientParam, double[][] nutrient, boolean[][] barrier, double dX, double hillK, double hillN)
@@ -2833,6 +2834,7 @@ public class Utility implements CometsConstants
 					chemotaxis[i][j]+= -1.0*ctxCoeff * 0.5 * (hillRight * biomassModel[i+1][j] + hillCenter * biomassModel[i][j])*(nutrient[i+1][j]-nutrient[i][j])/((0.5*(nutrient[i+1][j]+nutrient[i][j])+nutrientParam)*(dX*dX));
 					//System.out.println("Hill  "+ hillCenter);
 					//System.out.println(chemotaxis[i][j]);
+					//done in y axis
 				}
 				else if((numCols==2 && i==1 && i!=0) || (i!=0 && i==numCols-1 && barrier[i-2][j]) || (i!=0 && i!=1 && i!=numCols-1 && barrier[i-2][j] && barrier[i+1][j]))
 				{
@@ -2866,6 +2868,7 @@ public class Utility implements CometsConstants
 					chemotaxis[i][j]+= -1.0* ctxCoeff * 0.5 * (hillLeft * biomassModel[i-1][j] + hillCenter * biomassModel[i][j])*(nutrient[i][j]-nutrient[i-1][j])/((0.5*(nutrient[i-1][j]+nutrient[i][j])+nutrientParam)*(dX*dX));
 					//System.out.println("2  "+ diffusion[i][j]);
 					//System.out.println(chemotaxis[i][j]);
+					//done in y axis
 				}
 				else if(i==0 || barrier[i-1][j])
 				{
@@ -2900,6 +2903,8 @@ public class Utility implements CometsConstants
 					chemotaxis[i][j]+= -1.0*ctxCoeff * 0.5 * (hillRight * biomassModel[i+1][j] + hillCenter * biomassModel[i][j])*(nutrient[i+1][j]-nutrient[i][j])/(dX*dX);
 					//System.out.println("3  "+ diffusion[i][j]);
 					//System.out.println(chemotaxis[i][j]);
+					//done in y axis
+					
 				}
 				else if(i==(numCols-1) || barrier[i+1][j])
 				{
@@ -2933,6 +2938,7 @@ public class Utility implements CometsConstants
 					chemotaxis[i][j]+= -1.0*ctxCoeff*0.5 * (hillLeft*biomassModel[i-1][j] + hillCenter*biomassModel[i][j]) * (nutrient[i][j]-nutrient[i-1][j])/(dX*dX);
 					//System.out.println("4  "+ diffusion[i][j]);
 					//System.out.println(chemotaxis[i][j]);
+					//done in y axis
 				}
 				else
 				{
@@ -2980,6 +2986,7 @@ public class Utility implements CometsConstants
 					//System.out.println("x "+ctxCoeff+"  "+chemotaxis[i][j]);
 					//System.out.println("5b  "+ diffusion[i][j]+"  "+biomass[i][j]+"   "+Math.pow(biomass[i][j],nonLinDiffExponent));
 					//System.out.println(chemotaxis[i][j]);
+					//done in y axis
 				}
 				
 				//Then do y direction 
@@ -3017,7 +3024,7 @@ public class Utility implements CometsConstants
 					}
 
 					
-					chemotaxis[i][j]+=-1.0*ctxCoeff*0.5*(hillRight * biomassModel[i][j+1] + hillCenter * biomassModel[i][j]) *(nutrient[i][j+1]-nutrient[i][j])/(dX*dX);
+					chemotaxis[i][j]+= -1.0*ctxCoeff * 0.5 * (hillRight * biomassModel[i][j+1] + hillCenter * biomassModel[i][j])*(nutrient[i][j+1]-nutrient[i][j])/((0.5*(nutrient[i][j+1]+nutrient[i][j])+nutrientParam)*(dX*dX));
 					//System.out.println("6  "+ diffusion[i][j]);
 					//System.out.println(chemotaxis[i][j]);
 				}
@@ -3051,7 +3058,8 @@ public class Utility implements CometsConstants
 					}
 					
 					
-					chemotaxis[i][j]+= -1.0*ctxCoeff*0.5*(hillLeft*biomassModel[i][j-1] + hillCenter * biomassModel[i][j])*(nutrient[i][j]-nutrient[i][j-1])/(dX*dX);
+					chemotaxis[i][j]+= -1.0* ctxCoeff * 0.5 * (hillLeft * biomassModel[i][j-1] + hillCenter * biomassModel[i][j])*(nutrient[i][j]-nutrient[i][j-1])/((0.5*(nutrient[i][j-1]+nutrient[i][j])+nutrientParam)*(dX*dX));
+
 					//System.out.printl("7  "+ diffusion[i][j]);
 					//System.out.println(chemotaxis[i][j]);
 				}
@@ -3084,7 +3092,8 @@ public class Utility implements CometsConstants
 						}
 					}
 					
-					chemotaxis[i][j]+=-1.0*ctxCoeff*0.5*(hillRight*biomassModel[i][j+1] + hillCenter*biomassModel[i][j])*(nutrient[i][j+1]-nutrient[i][j])/(dX*dX);
+					chemotaxis[i][j]+= -1.0*ctxCoeff * 0.5 * (hillRight * biomassModel[i][j+1] + hillCenter * biomassModel[i][j])*(nutrient[i][j+1]-nutrient[i][j])/(dX*dX);
+
 					//System.out.println(chemotaxis[i][j]);
 				}
 				//NEED -1 HERE? didn't have it in diffusion
@@ -3117,7 +3126,8 @@ public class Utility implements CometsConstants
 						}
 					}
 					
-					chemotaxis[i][j]+= -1.0*ctxCoeff*0.5*(hillLeft*biomassModel[i][j-1] + hillCenter*biomassModel[i][j])*(nutrient[i][j]-nutrient[i][j-1])/(dX*dX);
+					chemotaxis[i][j]+= -1.0*ctxCoeff*0.5 * (hillLeft*biomassModel[i][j-1] + hillCenter*biomassModel[i][j]) * (nutrient[i][j]-nutrient[i][j-1])/(dX*dX);
+
 					//System.out.println("9  "+ diffusion[i][j]);
 					//System.out.println(chemotaxis[i][j]);
 				}
@@ -3162,7 +3172,11 @@ public class Utility implements CometsConstants
 					
 					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
 					
-					chemotaxis[i][j] += -1.0*ctxCoeff * (((hillRight * biomassModel[i][j+1] + hillCenter*biomassModel[i][j])/2) * (nutrient[i][j+1]-nutrient[i][j]) - ((hillCenter*biomassModel[i][j] + hillLeft *biomassModel[i][j-1])/2) *(nutrient[i][j]-nutrient[i][j-1])) / (dX * dX);
+					chemotaxis[i][j]+=-1.0*ctxCoeff * (((hillRight * biomassModel[i][j+1] + hillCenter*biomassModel[i][j])/2) * (nutrient[i][j+1]-nutrient[i][j])/(0.5*(nutrient[i][j+1]+nutrient[i][j])+nutrientParam)) - ((hillCenter*biomassModel[i][j] + hillLeft *biomassModel[i][j-1])/2) *((nutrient[i][j]-nutrient[i][j-1])/(0.5*(nutrient[i][j-1]+nutrient[i][j])+nutrientParam))/ (dX * dX);
+					// the above line originally had 3 closing parenthesis after nutrient params - I added an opening one to match the second closing parenthesis to group the term but
+					// was not sure about the 3rd closing parenthesis so I took it off for now
+					//chemotaxis[i][j] += -1.0*ctxCoeff * (((hillRight * biomassModel[i][j+1] + hillCenter*biomassModel[i][j])/2) * (nutrient[i][j+1]-nutrient[i][j])/(0.5*(nutrient[i+1][j]+nutrient[i][j])+nutrientParam)) - ((hillCenter*biomassModel[i][j] + hillLeft *biomassModel[i][j-1])/2) *(nutrient[i][j]-nutrient[i][j-1])) / (dX * dX);
+
 					//System.out.println("x "+ctxCoeff+"  "+chemotaxis[i][j]);
 					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
 					
