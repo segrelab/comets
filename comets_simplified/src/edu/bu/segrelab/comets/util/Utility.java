@@ -2757,6 +2757,411 @@ public class Utility implements CometsConstants
 					
 					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
 					
+					chemotaxis[i][j] += -1.0*ctxCoeff * (((hillRight * biomassModel[i][j+1] + hillCenter*biomassModel[i][j])/2) * (nutrient[i][j+1]-nutrient[i][j])/(0.5*(nutrient[i+1][j]+nutrient[i][j])+nutrientParam)) - ((hillCenter*biomassModel[i][j] + hillLeft *biomassModel[i][j-1])/2) *(nutrient[i][j]-nutrient[i][j-1])) / (dX * dX);
+					//System.out.println("x "+ctxCoeff+"  "+chemotaxis[i][j]);
+					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
+					
+					//System.out.println("10b  "+avrgDiffConstRhoNHillRight+"  "+avrgDiffConstRhoNHillLeft+"  "+ biomass[i][j+1]+"  "+biomass[i][j]+"  "+biomass[i][j-1]);
+					//System.out.println("10c  "+hill+"  "+hillLeft+"  "+diffConsRhoNLeft+"  "+diffConsRhoN+"  "+diffConsRhoNRight);
+					//System.out.println(i + " " + j + " "+ chemotaxis[i][j]);
+					//System.out.println(chemotaxis[i][j]);
+				}
+			}
+		}
+		//System.out.println("Diff "+avrgDiffConstRhoNHillRight+" "+avrgDiffConstRhoNHillLeft);
+		
+		//System.out.println("Method "+diffusion[50][50]);
+		//System.out.println(Arrays.deepToString(chemotaxis));
+		return chemotaxis;
+	}
+
+	/*
+	* Function that calculates chemotaxis using GE Model
+	* Ilija Dukovski April 2022
+	*/
+
+	public static double[][] nablaChiRhoOverNutrientPlusConstNablaNutrient(double[][] deltaBiomass, double[][] biomassModel, double ctxCoeff, double nutrientParam, double[][] nutrient, boolean[][] barrier, double dX, double hillK, double hillN)
+	{
+		int numCols=biomassModel.length;
+		int numRows=biomassModel[0].length;
+		double[][] chemotaxis=new double[numCols][numRows];
+		double hillCenter=0.0;
+		double hillRight=0.0;
+		double hillLeft=0.0;
+		
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				//System.out.println(i+" "+j+"\n" );
+				chemotaxis[i][j]=0.0;
+				//Do x direction first Hill*D1*(nablaRho)^2+Hill*(D0+D1rho)*LaplacianRho+D1NablaHill*NablaRho
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+					chemotaxis[i][j]+=0.0;
+				}
+				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && i<numCols-2 && barrier[i-1][j] && barrier[i+2][j]))
+				{
+					if(hillK==0.0)
+					{
+						hillCenter=1.0;
+						hillRight=1.0;
+					}
+					else
+					{
+					
+						if(biomassModel[i][j]==0.0)
+						{
+							hillCenter=0.0;
+						}
+						else
+						{
+							hillCenter=(Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN));
+						}
+					
+						if(biomassModel[i+1][j]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i+1][j]/biomassModel[i+1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i+1][j]/biomassModel[i+1][j],hillN));
+						}
+					}
+					
+					chemotaxis[i][j]+= -1.0*ctxCoeff * 0.5 * (hillRight * biomassModel[i+1][j] + hillCenter * biomassModel[i][j])*(nutrient[i+1][j]-nutrient[i][j])/((0.5*(nutrient[i+1][j]+nutrient[i][j])+nutrientParam)*(dX*dX));
+					//System.out.println("Hill  "+ hillCenter);
+					//System.out.println(chemotaxis[i][j]);
+				}
+				else if((numCols==2 && i==1 && i!=0) || (i!=0 && i==numCols-1 && barrier[i-2][j]) || (i!=0 && i!=1 && i!=numCols-1 && barrier[i-2][j] && barrier[i+1][j]))
+				{
+					if(hillK==0.0)
+					{
+						hillCenter=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomassModel[i][j]==0.0)
+						{
+							hillCenter=0.0;
+						}
+						else
+						{
+							hillCenter=(Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN));
+						}
+						
+						if(biomassModel[i-1][j]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i-1][j]/biomassModel[i-1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i-1][j]/biomassModel[i-1][j],hillN));
+						}
+					}
+					
+					chemotaxis[i][j]+= -1.0* ctxCoeff * 0.5 * (hillLeft * biomassModel[i-1][j] + hillCenter * biomassModel[i][j])*(nutrient[i][j]-nutrient[i-1][j])/((0.5*(nutrient[i-1][j]+nutrient[i][j])+nutrientParam)*(dX*dX));
+					//System.out.println("2  "+ diffusion[i][j]);
+					//System.out.println(chemotaxis[i][j]);
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					if(hillK==0.0)
+					{
+						hillCenter=1.0;
+						hillRight=1.0;
+					}
+					else
+					{
+					
+						if(biomassModel[i][j]==0.0)
+						{
+							hillCenter=0.0;
+						}
+						else
+						{
+							hillCenter=(Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN));
+						}
+						
+						if(biomassModel[i+1][j]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i+1][j]/biomassModel[i+1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i+1][j]/biomassModel[i+1][j],hillN));
+						}
+					}
+					
+					
+					chemotaxis[i][j]+= -1.0*ctxCoeff * 0.5 * (hillRight * biomassModel[i+1][j] + hillCenter * biomassModel[i][j])*(nutrient[i+1][j]-nutrient[i][j])/(dX*dX);
+					//System.out.println("3  "+ diffusion[i][j]);
+					//System.out.println(chemotaxis[i][j]);
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					if(hillK==0.0)
+					{
+						hillCenter=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomassModel[i][j]==0.0)
+						{
+							hillCenter=0.0;
+						}
+						else
+						{
+							hillCenter=(Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN));
+						}
+						
+						if(biomassModel[i-1][j]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i-1][j]/biomassModel[i-1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i-1][j]/biomassModel[i-1][j],hillN));
+						}
+					}
+					
+					chemotaxis[i][j]+= -1.0*ctxCoeff*0.5 * (hillLeft*biomassModel[i-1][j] + hillCenter*biomassModel[i][j]) * (nutrient[i][j]-nutrient[i-1][j])/(dX*dX);
+					//System.out.println("4  "+ diffusion[i][j]);
+					//System.out.println(chemotaxis[i][j]);
+				}
+				else
+				{
+					if(hillK==0.0)
+					{
+						hillCenter=1.0;
+						hillRight=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomassModel[i][j]==0.0)
+						{
+							hillCenter=0.0;
+						}
+						else
+						{
+						
+							hillCenter=(Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN));
+						}
+						
+						if(biomassModel[i+1][j]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i+1][j]/biomassModel[i+1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i+1][j]/biomassModel[i+1][j],hillN));
+						}
+						
+						if(biomassModel[i-1][j]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i-1][j]/biomassModel[i-1][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i-1][j]/biomassModel[i-1][j],hillN));
+						}
+					}
+					
+					//System.out.println("5a  "+ diffusion[i][j]+"  "+biomass[i][j]+"   "+Math.pow(biomass[i][j],nonLinDiffExponent));
+					
+					chemotaxis[i][j]+=-1.0*ctxCoeff * (((hillRight * biomassModel[i+1][j] + hillCenter*biomassModel[i][j])/2) * (nutrient[i+1][j]-nutrient[i][j])/(0.5*(nutrient[i+1][j]+nutrient[i][j])+nutrientParam)) - ((hillCenter*biomassModel[i][j] + hillLeft *biomassModel[i-1][j])/2) *(nutrient[i][j]-nutrient[i-1][j])/(0.5*(nutrient[i-1][j]+nutrient[i][j])+nutrientParam)))/ (dX * dX);
+					//System.out.println("x "+ctxCoeff+"  "+chemotaxis[i][j]);
+					//System.out.println("5b  "+ diffusion[i][j]+"  "+biomass[i][j]+"   "+Math.pow(biomass[i][j],nonLinDiffExponent));
+					//System.out.println(chemotaxis[i][j]);
+				}
+				
+				//Then do y direction 
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) || (j!=0 && j!=(numRows-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					chemotaxis[i][j]+=0.0;
+				}
+				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && j<numRows-2 && barrier[i][j-1] && barrier[i][j+2]))
+				{
+					if(hillK==0.0)
+					{
+						hillCenter=1.0;
+						hillRight=1.0;
+					}
+					else
+					{
+						
+						if(biomassModel[i][j]==0.0)
+						{
+							hillCenter=0.0;
+						}
+						else
+						{
+							hillCenter=(Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN));
+						}
+						
+						if(biomassModel[i][j+1]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i][j+1]/biomassModel[i][j+1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j+1]/biomassModel[i][j+1],hillN));
+						}
+					}
+
+					
+					chemotaxis[i][j]+=-1.0*ctxCoeff*0.5*(hillRight * biomassModel[i][j+1] + hillCenter * biomassModel[i][j]) *(nutrient[i][j+1]-nutrient[i][j])/(dX*dX);
+					//System.out.println("6  "+ diffusion[i][j]);
+					//System.out.println(chemotaxis[i][j]);
+				}
+				else if((numRows==2 && j==1 && j!=0) || (j!=0 && j==numRows-1 && barrier[i][j-2]) || (j!=0 && j!=1 && j!=numRows-1 && barrier[i][j-2] && barrier[i][j+1]))
+				{
+					if(hillK==0.0)
+					{
+						hillCenter=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomassModel[i][j]==0.0)
+						{
+							hillCenter=0.0;
+						}
+						else
+						{
+							hillCenter=(Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN));
+						}
+						
+						if(biomassModel[i][j-1]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i][j-1]/biomassModel[i][j-1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j-1]/biomassModel[i][j-1],hillN));
+						}
+					}
+					
+					
+					chemotaxis[i][j]+= -1.0*ctxCoeff*0.5*(hillLeft*biomassModel[i][j-1] + hillCenter * biomassModel[i][j])*(nutrient[i][j]-nutrient[i][j-1])/(dX*dX);
+					//System.out.printl("7  "+ diffusion[i][j]);
+					//System.out.println(chemotaxis[i][j]);
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					if(hillK==0.0)
+					{
+						hillCenter=1.0;
+						hillRight=1.0;
+					}
+					else
+					{
+					
+						if(biomassModel[i][j]==0.0)
+						{
+							hillCenter=0.0;
+						}
+						else
+						{
+							hillCenter=(Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN));
+						}
+						
+						if(biomassModel[i][j+1]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i][j+1]/biomassModel[i][j+1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j+1]/biomassModel[i][j+1],hillN));
+						}
+					}
+					
+					chemotaxis[i][j]+=-1.0*ctxCoeff*0.5*(hillRight*biomassModel[i][j+1] + hillCenter*biomassModel[i][j])*(nutrient[i][j+1]-nutrient[i][j])/(dX*dX);
+					//System.out.println(chemotaxis[i][j]);
+				}
+				//NEED -1 HERE? didn't have it in diffusion
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					if(hillK==0.0)
+					{
+						hillCenter=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomassModel[i][j]==0.0)
+						{
+							hillCenter=0.0;
+						}
+						else
+						{
+							hillCenter=(Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN));
+						}
+						
+						if(biomassModel[i][j-1]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i][j-1]/biomassModel[i][j-1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j-1]/biomassModel[i][j-1],hillN));
+						}
+					}
+					
+					chemotaxis[i][j]+= -1.0*ctxCoeff*0.5*(hillLeft*biomassModel[i][j-1] + hillCenter*biomassModel[i][j])*(nutrient[i][j]-nutrient[i][j-1])/(dX*dX);
+					//System.out.println("9  "+ diffusion[i][j]);
+					//System.out.println(chemotaxis[i][j]);
+				}
+				else
+				{
+					if(hillK==0.0)
+					{
+						hillCenter=1.0;
+						hillRight=1.0;
+						hillLeft=1.0;
+					}
+					else
+					{
+					
+						if(biomassModel[i][j]==0.0)
+						{
+							hillCenter=0.0;
+						}
+						else
+						{
+							hillCenter=(Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j]/biomassModel[i][j],hillN));
+						}
+						
+						if(biomassModel[i][j+1]==0.0)
+						{
+							hillRight=0.0;
+						}
+						else
+						{
+							hillRight=(Math.pow(deltaBiomass[i][j+1]/biomassModel[i][j+1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j+1]/biomassModel[i][j+1],hillN));
+						}
+						
+						if(biomassModel[i][j-1]==0.0)
+						{
+							hillLeft=0.0;
+						}
+						else
+						{
+							hillLeft=(Math.pow(deltaBiomass[i][j-1]/biomassModel[i][j-1],hillN))/(Math.pow(hillK,hillN)+Math.pow(deltaBiomass[i][j-1]/biomassModel[i][j-1],hillN));
+						}
+					}
+					
+					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
+					
 					chemotaxis[i][j] += -1.0*ctxCoeff * (((hillRight * biomassModel[i][j+1] + hillCenter*biomassModel[i][j])/2) * (nutrient[i][j+1]-nutrient[i][j]) - ((hillCenter*biomassModel[i][j] + hillLeft *biomassModel[i][j-1])/2) *(nutrient[i][j]-nutrient[i][j-1])) / (dX * dX);
 					//System.out.println("x "+ctxCoeff+"  "+chemotaxis[i][j]);
 					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
