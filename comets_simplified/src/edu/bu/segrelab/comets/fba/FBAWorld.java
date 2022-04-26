@@ -97,7 +97,7 @@ public class FBAWorld extends World2D
 	
 	private double[][] ctxCoeffs;   				//chemotaxis coefficients
 
-	private double[][] nutrientParams;
+	private double[][] nutrientParams;				//nutrient parameters
 
 	private List<int[]> modelExchList;			// indices of the exchange reactions for each model
 	private SpaceInfoPanel infoPanel;			// the info panel for the spaces in the world
@@ -209,6 +209,11 @@ public class FBAWorld extends World2D
 				ctxCoeffs[i][j] = 0.0;
 			}
 		}
+		for(int i = 0; i<numModels; i++){
+			for(int j = 0; j<numMedia; j++){
+				nutrientParams[i][j] = 0.0;
+			}
+		}
 		defaultDiffConst = pParams.getDefaultDiffusionConstant();
 		for (int i = 0; i < numMedia; i++)
 		{
@@ -296,6 +301,12 @@ public class FBAWorld extends World2D
 		for(int i = 0; i<numModels; i++){
 			for(int j = 0; j<numMedia; j++){
 				ctxCoeffs[i][j] = 0.0;
+			}
+		}
+
+		for(int i = 0; i<numModels; i++){
+			for(int j = 0; j<numMedia; j++){
+				nutrientParams[i][j] = 0.0;
 			}
 		}
 		
@@ -3332,7 +3343,8 @@ public class FBAWorld extends World2D
 				
 				for(int l = 0; l<numMedia; l++)
 				{
-					if(ctxCoeffs[k][l] != 0.0)
+					if((ctxCoeffs[k][l] != 0.0) && (nutrientParams[k][l]!=0.0))
+					//^previously it was just ctxCoeffs != 0.0 but I added the nutrient Params
 					{
 						for(int i = 0; i<numCols; i++)
 						{
@@ -3390,7 +3402,8 @@ public class FBAWorld extends World2D
 				
 				for(int l = 0; l<numMedia; l++)
 				{
-					if(ctxCoeffs[k][l] != 0.0){
+					if((ctxCoeffs[k][l] != 0.0) && (nutrientParams[k][l]!=0.0)){
+						//^previously it was just ctxCoeffs != 0.0 but I added the nutrient Params
 						for(int i = 0; i<numCols; i++)
 						{
 							for(int j = 0; j< numRows; j++)
