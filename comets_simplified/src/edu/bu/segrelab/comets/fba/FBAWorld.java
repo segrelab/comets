@@ -1396,9 +1396,9 @@ public class FBAWorld extends World2D
 	 */
 	public void setChemotacticCoeffs(final double[][]ctxCoeffsLocal)
 	{
-		System.out.println("Before"+ctxCoeffsLocal[0][0]);
+		//System.out.println("Before"+ctxCoeffsLocal[0][0]);
 		this.ctxCoeffs = ctxCoeffsLocal;
-		System.out.println("Parsed"+this.ctxCoeffs[0][0]);
+		//System.out.println("Parsed"+this.ctxCoeffs[0][0]);
 	}
 		/**
 	 * Sets the nutrient parameters for the model and media
@@ -1406,9 +1406,9 @@ public class FBAWorld extends World2D
 	 */
 	public void setNutrientParams(final double[][] nutrientParamsLocal)
 	{
-		System.out.println("Before"+nutrientParamsLocal[0][0]);
+		//System.out.println("Before"+nutrientParamsLocal[0][0]);
 		this.nutrientParams = nutrientParamsLocal;
-		System.out.println("Parsed"+this.nutrientParams[0][0]);
+		//System.out.println("Parsed"+this.nutrientParams[0][0]);
 	}
 
 	/**
@@ -3343,9 +3343,10 @@ public class FBAWorld extends World2D
 				
 				for(int l = 0; l<numMedia; l++)
 				{
-					if((ctxCoeffs[k][l] != 0.0) && (nutrientParams[k][l]!=0.0))
+					//if((ctxCoeffs[k][l] != 0.0) && (nutrientParams[k][l] != 0.0))
 					//^previously it was just ctxCoeffs != 0.0 but I added the nutrient Params
-					{
+					//{
+					if((ctxCoeffs[k][l]!= 0.0) && (nutrientParams[k][l] != 0.0)) {
 						for(int i = 0; i<numCols; i++)
 						{
 							for(int j = 0; j< numRows; j++)
@@ -3354,16 +3355,19 @@ public class FBAWorld extends World2D
 							}
 						}
 						chemotaxisRHS[k] = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrientParams[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
+						//System.out.println("After getRHSChemotaxis" + chemotaxisRHS[k]);
+						
 						for(int i = 0; i<numCols; i++)
 						{
 							for(int j = 0; j< numRows; j++)
 							{		
 								convectionRHS[k][i][j] += chemotaxisRHS[k][i][j];
-								//System.out.println(chemotaxisRHS[k][i][j]);
+								//System.out.println("Chemotaxis"+chemotaxisRHS[k][i][j]);
 							}
 						}
 								//System.out.println("RHS one");
 								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 
+					//}
 					}
 				}
 			}	
@@ -3402,7 +3406,7 @@ public class FBAWorld extends World2D
 				
 				for(int l = 0; l<numMedia; l++)
 				{
-					if((ctxCoeffs[k][l] != 0.0) && (nutrientParams[k][l]!=0.0)){
+					if((ctxCoeffs[k][l] != 0.0) && (nutrientParams[k][l] != 0.0)){
 						//^previously it was just ctxCoeffs != 0.0 but I added the nutrient Params
 						for(int i = 0; i<numCols; i++)
 						{

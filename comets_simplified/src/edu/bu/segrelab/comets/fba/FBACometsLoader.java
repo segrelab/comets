@@ -507,6 +507,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							}*/
 							if(c.getParameters().getNumLayers()==1) {
 								state = parseChemotaxisCoeffsBlock(lines, numMedia);
+								//System.out.println("after parseCtxCoeffs" + ctxCoeffs[0][2]);
 							}
 							/*else if(c.getParameters().getNumLayers()>1)
 								state = parseChemotaxisCoeffsBlock3D(worldParsed, lines, ctxCoeffs);
@@ -865,7 +866,9 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							}
 						}
 						*/
+						System.out.println("Before world.setctx" + ctxCoeffs[0][2]);
 						world.setChemotacticCoeffs(ctxCoeffs);
+						System.out.println("After world.setctx" + ctxCoeffs[0][2]);						
 						world.setNutrientParams(nutrientParams);
 						
 
@@ -1561,6 +1564,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 				System.out.println("parsed" + ctxParsed.length);
 				throw(new LayoutFileException("Each line after 'model_media_chemotaxis_coeffs' must be two integers followed by a double.", lineCount));
 			}
+			
 			int modelIndex = Integer.parseInt(ctxParsed[0]);
 			int mediaIndex = Integer.parseInt(ctxParsed[1]);
 			double coeff = Double.parseDouble(ctxParsed[2]);
@@ -1568,13 +1572,13 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			System.out.println("mediaIndex " + mediaIndex);
 			System.out.println("coeff " + coeff);
 			ctxCoeffs[modelIndex][mediaIndex] = coeff;
-			System.out.println(ctxCoeffs.length);
+			/*System.out.println(ctxCoeffs.length);
 			System.out.println(ctxCoeffs[0].length);
 			for(int i = 0; i<ctxCoeffs.length; i++) {
 				for(int j = 0; j<ctxCoeffs[0].length; j++) {
 					System.out.print(ctxCoeffs[i][j] + " ");
 				}
-			}
+			}*/
 			//System.out.println("2");
 		}
 		//world.setChemotacticCoeffs(ctxCoeffs);
@@ -1604,17 +1608,17 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		   int modelIndex = Integer.parseInt(nutrientParsed[0]);
 		   int mediaIndex = Integer.parseInt(nutrientParsed[1]);
 		   double param = Double.parseDouble(nutrientParsed[2]);
-		   System.out.println("modelIndex " + modelIndex);
-		   System.out.println("mediaIndex " + mediaIndex);
-		   System.out.println("parameter " + param);
+		   //System.out.println("modelIndex " + modelIndex);
+		   //System.out.println("mediaIndex " + mediaIndex);
+		   //System.out.println("parameter " + param);
 		   ctxCoeffs[modelIndex][mediaIndex] = param;
-		   System.out.println(nutrientParams.length);
-		   System.out.println(nutrientParams[0].length);
-		   for(int i = 0; i<nutrientParams.length; i++) {
+		   //System.out.println(nutrientParams.length);
+		   //System.out.println(nutrientParams[0].length);
+		   /*for(int i = 0; i<nutrientParams.length; i++) {
 			   for(int j = 0; j<nutrientParams[0].length; j++) {
 				   System.out.print(nutrientParams[i][j] + " ");
 			   }
-		   }
+		   }*/
 		   //System.out.println("2");
 	   }
 	   return LoaderState.OK;
