@@ -1611,7 +1611,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		   //System.out.println("modelIndex " + modelIndex);
 		   //System.out.println("mediaIndex " + mediaIndex);
 		   //System.out.println("parameter " + param);
-		   ctxCoeffs[modelIndex][mediaIndex] = param;
+		   nutrientParams[modelIndex][mediaIndex] = param;
 		   //System.out.println(nutrientParams.length);
 		   //System.out.println(nutrientParams[0].length);
 		   /*for(int i = 0; i<nutrientParams.length; i++) {
