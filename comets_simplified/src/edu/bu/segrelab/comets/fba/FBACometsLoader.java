@@ -507,7 +507,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							}*/
 							if(c.getParameters().getNumLayers()==1) {
 								state = parseChemotaxisCoeffsBlock(lines, numMedia);
-								//System.out.println("after parseCtxCoeffs" + ctxCoeffs[0][2]);
+								System.out.println("after parseCtxCoeffs" + ctxCoeffs[0][8]);
 							}
 							/*else if(c.getParameters().getNumLayers()>1)
 								state = parseChemotaxisCoeffsBlock3D(worldParsed, lines, ctxCoeffs);
@@ -528,6 +528,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			
 							if(c.getParameters().getNumLayers()==1) {
 								state = parseNutrientParamsBlock(lines, numMedia);
+								System.out.println("after parseNutrCoeffs" + nutrientParams[0][8]);
 							}
 		
 
@@ -866,9 +867,9 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							}
 						}
 						*/
-						System.out.println("Before world.setctx" + ctxCoeffs[0][2]);
+						//System.out.println("Before world.setctx" + ctxCoeffs[0][8]);
 						world.setChemotacticCoeffs(ctxCoeffs);
-						System.out.println("After world.setctx" + ctxCoeffs[0][2]);						
+						//System.out.println("After world.setctx" + ctxCoeffs[0][8]);						
 						world.setNutrientParams(nutrientParams);
 						
 
@@ -1551,6 +1552,13 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		 * <model number> <media number> <chemotaxis coefficient>
 		 */
 		ctxCoeffs = new double[models.length][numMedia];
+		for(int i=0;i<models.length;i++)
+		{
+			for(int j=0;j<numMedia;j++)
+			{
+				ctxCoeffs[i][j]=0.0;
+			}
+		}
 		for (String line : lines)
 		{
 			lineCount++;
@@ -1573,7 +1581,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			System.out.println("coeff " + coeff);
 			ctxCoeffs[modelIndex][mediaIndex] = coeff;
 			/*System.out.println(ctxCoeffs.length);
-			System.out.println(ctxCoeffs[0].length);
+			//System.out.println(ctxCoeffs[0].length);
 			for(int i = 0; i<ctxCoeffs.length; i++) {
 				for(int j = 0; j<ctxCoeffs[0].length; j++) {
 					System.out.print(ctxCoeffs[i][j] + " ");
@@ -1611,7 +1619,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		   //System.out.println("modelIndex " + modelIndex);
 		   //System.out.println("mediaIndex " + mediaIndex);
 		   //System.out.println("parameter " + param);
-		   ctxCoeffs[modelIndex][mediaIndex] = param;
+		   nutrientParams[modelIndex][mediaIndex] = param;
 		   //System.out.println(nutrientParams.length);
 		   //System.out.println(nutrientParams[0].length);
 		   /*for(int i = 0; i<nutrientParams.length; i++) {

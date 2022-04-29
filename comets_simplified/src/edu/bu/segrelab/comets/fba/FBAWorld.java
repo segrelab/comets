@@ -204,16 +204,16 @@ public class FBAWorld extends World2D
 				}
 			}
 		}
-		for(int i = 0; i<numModels; i++){
-			for(int j = 0; j<numMedia; j++){
-				ctxCoeffs[i][j] = 0.0;
-			}
-		}
-		for(int i = 0; i<numModels; i++){
-			for(int j = 0; j<numMedia; j++){
-				nutrientParams[i][j] = 0.0;
-			}
-		}
+		//for(int i = 0; i<numModels; i++){
+		//	for(int j = 0; j<numMedia; j++){
+		//		ctxCoeffs[i][j] = 0.0;
+		//	}
+		//}
+		//for(int i = 0; i<numModels; i++){
+		//	for(int j = 0; j<numMedia; j++){
+		//		nutrientParams[i][j] = 0.0;
+		//	}
+		//}
 		defaultDiffConst = pParams.getDefaultDiffusionConstant();
 		for (int i = 0; i < numMedia; i++)
 		{
@@ -3346,7 +3346,8 @@ public class FBAWorld extends World2D
 					//if((ctxCoeffs[k][l] != 0.0) && (nutrientParams[k][l] != 0.0))
 					//^previously it was just ctxCoeffs != 0.0 but I added the nutrient Params
 					//{
-					if((ctxCoeffs[k][l]!= 0.0) && (nutrientParams[k][l] != 0.0)) {
+					if((ctxCoeffs[k][l] != 0.0) && (nutrientParams[k][l] != 0.0)) {
+						//System.out.println("cx"+k+" "+l+" "+ctxCoeffs[k][l]);
 						for(int i = 0; i<numCols; i++)
 						{
 							for(int j = 0; j< numRows; j++)
@@ -3354,6 +3355,7 @@ public class FBAWorld extends World2D
 								nutrient[i][j] = media[i][j][l];
 							}
 						}
+						//System.out.println(ctxCoeffs[k][l]+" start "+nutrientParams[k][l]);
 						chemotaxisRHS[k] = Utility.getRHSChemotaxis(deltaDensity[k], biomassDensity[k], ctxCoeffs[k][l], nutrientParams[k][l], nutrient, barrier, dX, ((FBAModel)models[k]).getChemotaxisHillK(), ((FBAModel)models[k]).getChemotaxisHillN());
 						//System.out.println("After getRHSChemotaxis" + chemotaxisRHS[k]);
 						
@@ -3367,8 +3369,8 @@ public class FBAWorld extends World2D
 						}
 								//System.out.println("RHS one");
 								//convectionRHS[k]=Utility.getConvectionRHS(biomassDensity[k],biomassDensity[k],convDiffConstField,((FBAModel)models[k]).getPackedDensity(),barrier,dX,((FBAModel)models[k]).getElasticModulusConstant(),((FBAModel)models[k]).getFrictionConstant()); 
-					//}
 					}
+					
 				}
 			}	
 			for(int i=0;i<numCols;i++)
@@ -3455,10 +3457,6 @@ public class FBAWorld extends World2D
 				}
 			}
 				
-			
-		
-
-
 
 			// update the world with the results.
 		
