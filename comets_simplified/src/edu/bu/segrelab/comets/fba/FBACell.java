@@ -749,6 +749,15 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 
 					for (int j=0; j<lb[i].length; j++)
 					{
+						
+						// Lowerbounds greater than 0.0 indicating forced production
+						// set rate linearly and skip michaelis-menten calculation
+						if (lb[i][j] > 0.0)
+						{
+							rates[j] = -lb[i][j];
+							continue;
+						}
+
 						double km = FBAParameters.getDefaultKm();
 						if (kmArr != null && kmArr.length > j && kmArr[j] > 0)
 							km = kmArr[j];
@@ -760,6 +769,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 							hill = hillCoeffArr[j];
 						
 						// Start of modified code corrected lb 9/19/13 Ilija D. updated by DJORDJE 
+						
+						// If mm is bigger than the (met_conc / biomass*timestep), rate = min(abs(lb), met_conc / biomass*timestep)
 						if(media[j]/(cParams.getTimeStep()*biomass[i])<calcMichaelisMentenRate(media[j]/(cParams.getSpaceVolume()), km, vMax, hill))
 						{
 							rates[j] = Math.min(Math.abs(lb[i][j]),Math.abs(media[j]/(cParams.getTimeStep()*biomass[i])));
@@ -780,6 +791,15 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					
 					for (int j=0; j<lb[i].length; j++)
 					{
+
+						// Lowerbounds greater than 0.0 indicating forced production
+						// set rate linearly and skip michaelis-menten calculation
+						if (lb[i][j] > 0.0)
+						{
+							rates[j] = -lb[i][j];
+							continue;
+						}
+
 						double alpha = FBAParameters.getDefaultAlpha();
 						if (alphaArr != null && alphaArr.length > j && alphaArr[j] > 0)
 							alpha = alphaArr[j];
@@ -797,6 +817,15 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				default :  // STANDARD_EXCHANGE
 					for (int j=0; j<lb[i].length; j++)
 					{
+
+						// Lowerbounds greater than 0.0 indicating forced production
+						// set rate linearly and skip michaelis-menten calculation
+						if (lb[i][j] > 0.0)
+						{
+							rates[j] = -lb[i][j];
+							continue;
+						}
+
 						rates[j] = Math.min(Math.abs(lb[i][j]),
 								Math.abs(calcStandardExchange(media[j])));
 								//Math.abs(calcStandardExchange(media[j]/(cParams.getSpaceVolume()))));
