@@ -95,12 +95,10 @@ public class Signal {
 		}
 		this.reaction = reaction;
 		for (int i = 0; i < exch_mets.length; i++) {
-			exch_mets[i] = exch_mets[i] - 1; // because we let people write in terms of 1-base, but java is 0-order
+			exch_mets[i] = exch_mets[i] - 1; // 1-base to 0-base
 		}
 		this.exch_mets = exch_mets;
 		this.multiToxinParms = parms;
-
-		// needs error checking
 	}
 	
 	
@@ -196,8 +194,7 @@ public class Signal {
 		return bound;
 	}
 	
-	// should prob be private, and in calculateBound,
-	// which should be made to generalize
+	// an if statement does this or calculateBound in FBAModel
 	public double multipleHillToxin(double[] met_concs) {
 		double vmax = this.multiToxinParms[0][0];
 		double[] kms = this.multiToxinParms[1]; // 

@@ -2522,10 +2522,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					while (!(line = reader.readLine().trim()).equalsIgnoreCase("//")) {
 						String parsed[] = line.split("\\s+");
 						if ("multitoxin".equalsIgnoreCase(parsed[0])) {
-							System.out.println("in test line");
-							for (String piece : parsed) {
-								System.out.println(piece);
-							}
 							int rxn_num = Integer.valueOf(parsed[1]);
 							//parse the multiple toxin exch nums
 							String[] exch_met_strs = parsed[2].split(",");
@@ -2543,7 +2539,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 							for (int j = 0; j < hills.length; j++) {
 								hills[j] = Double.valueOf(parsed[6].split(",")[j]);
 							}
-							System.out.println(hills[0]);
 							double [][] parms = {{vmax}, kms, hills};
 							if ("lb".equalsIgnoreCase(bound)) {
 								signals.add(new Signal(true, false, rxn_num,
