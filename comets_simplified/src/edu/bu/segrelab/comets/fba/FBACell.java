@@ -1295,24 +1295,26 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					continue;
 				}
 				
+				int signal_rxn = signal.getReaction();
+				double new_bound;
+				if (signal.isMultiToxin()) { // special case of mult signals : one bound
+					int[] signal_mets = signal.getExchMets();
+					double[] signal_concs = new double[signal_mets.length];
+					// convert from mmol to concentration
+					for (int i = 0; i < signal_mets.length; i++) {
+						signal_concs[i] = media[signal_mets[i]] / space_volume;
+					}
+					new_bound = signal.multipleHillToxin(signal_concs);
+				}else { // normal case of one signal : one bound
+					int signal_met = signal.getExchMet();
+					new_bound = signal.calculateBound(media[signal_met] / space_volume);
+				}
 				if (signal.affectsLb()) {
-					int signal_met = signal.getExchMet();
-					int signal_rxn = signal.getReaction();
-					// useful to double check.  its because the stupid -1 for exchs but not for rxns!?
-					//String[] exchNames = model.getExchangeReactionNames();
-					//String[] rxnNames = model.getReactionNames();
-					//System.out.println(exchNames[signal_met]);
-					//System.out.println(rxnNames[signal_rxn]);
-					
-					double new_lb = signal.calculateBound(media[signal_met] / space_volume);
-					all_lb[signal_rxn] = new_lb;
+					all_lb[signal_rxn] = new_bound;
+				}else {
+					all_ub[signal_rxn] = new_bound;
 				}
-				if (signal.affectsUb()) {
-					int signal_met = signal.getExchMet();
-					int signal_rxn = signal.getReaction();
-					double new_ub = signal.calculateBound(media[signal_met] / space_volume);
-					all_ub[signal_rxn] = new_ub;	
-				}
+
 			}
 			model.setLowerBounds(all_lb);
 			model.setUpperBounds(all_ub);			

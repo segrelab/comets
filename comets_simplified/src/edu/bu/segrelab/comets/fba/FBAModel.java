@@ -2521,6 +2521,34 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				{
 					while (!(line = reader.readLine().trim()).equalsIgnoreCase("//")) {
 						String parsed[] = line.split("\\s+");
+						if ("multitoxin".equalsIgnoreCase(parsed[0])) {
+							int rxn_num = Integer.valueOf(parsed[1]);
+							//parse the multiple toxin exch nums
+							String[] exch_met_strs = parsed[2].split(",");
+							int[] exch_mets = new int[exch_met_strs.length];
+							for (int j = 0; j < exch_mets.length; j++) {
+								exch_mets[j] = Integer.valueOf(exch_met_strs[j]);
+							}
+							String bound = parsed[3];
+							double vmax = Double.valueOf(parsed[4]);
+							double[] kms = new double[exch_met_strs.length];
+							for (int j = 0; j < kms.length; j++) {
+								kms[j] = Double.valueOf(parsed[5].split(",")[j]);
+							}
+							double[] hills = new double[exch_met_strs.length];
+							for (int j = 0; j < hills.length; j++) {
+								hills[j] = Double.valueOf(parsed[6].split(",")[j]);
+							}
+							double [][] parms = {{vmax}, kms, hills};
+							if ("lb".equalsIgnoreCase(bound)) {
+								signals.add(new Signal(true, false, rxn_num,
+										exch_mets, parms));
+							}else if ("ub".equalsIgnoreCase(bound)) {
+								signals.add(new Signal(false, true, rxn_num,
+										exch_mets, parms));
+							}
+							continue;
+						}
 
 						if (parsed.length < 5) {
 							reader.close();

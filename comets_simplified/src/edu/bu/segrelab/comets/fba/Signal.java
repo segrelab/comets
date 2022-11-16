@@ -31,6 +31,10 @@ public class Signal {
 
 	private List<Double> parameters;
 	
+	private boolean is_multitoxin = false;
+	private int[] exch_mets;
+	private double[][] multiToxinParms;
+	
 	/**
 	 * creates a Signal object.  
 	 * 
@@ -79,6 +83,22 @@ public class Signal {
 
 		addDefaultParameters();
 
+	}
+	
+	public Signal(boolean lb, boolean ub, int reaction, 
+			int[] exch_mets, double[][] parms){
+		this.lb = lb;
+		this.ub = ub;
+		this.is_multitoxin = true;
+		if (reaction != -1) {
+			reaction -= 1; // convert from 1-base to 0-base
+		}
+		this.reaction = reaction;
+		for (int i = 0; i < exch_mets.length; i++) {
+			exch_mets[i] = exch_mets[i] - 1; // 1-base to 0-base
+		}
+		this.exch_mets = exch_mets;
+		this.multiToxinParms = parms;
 	}
 	
 	
@@ -174,6 +194,18 @@ public class Signal {
 		return bound;
 	}
 	
+	// an if statement does this or calculateBound in FBAModel
+	public double multipleHillToxin(double[] met_concs) {
+		double vmax = this.multiToxinParms[0][0];
+		double[] kms = this.multiToxinParms[1]; // 
+		double[] hills = this.multiToxinParms[2];
+		double bound = vmax;
+		for (int i = 0; i < met_concs.length; i++) {
+			bound = bound * Math.pow(kms[i], hills[i]) / (Math.pow(met_concs[i], hills[i]) + Math.pow(kms[i], hills[i]));
+		}
+		return bound;		
+	}
+	
 	public double calculateBound(double met_conc) {
 		double bound = 0;
 		switch(this.function){
@@ -215,6 +247,13 @@ public class Signal {
 	
 	public int getExchMet() {
 		return this.exch_met;
+	}
+	public int[] getExchMets() {
+		//specifically for multitoxins
+		return this.exch_mets;
+	}
+	public boolean isMultiToxin() {
+		return this.is_multitoxin;
 	}
 		
 
