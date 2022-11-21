@@ -1013,7 +1013,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			 * If any compound has run out, lower bounds for all models were fixed above, and now we 
 			 * need to re-run everything and update media and biomasses. 
 			 */
-			//
+			
 			if (reOptimizeFlag == true)
 			{
 				for (int a=0; a<models.length; a++)
