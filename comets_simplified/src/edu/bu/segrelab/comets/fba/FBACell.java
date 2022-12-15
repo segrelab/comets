@@ -943,16 +943,74 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					biomass[i]=addDemographicNoise(biomass[i], allModelsGrowthRates[i], fbaModels[i].getNeutralDriftSigma());
 					//if(oldBiomass>biomass[i])
 					//biomass[i]=oldBiomass;
+					if(biomass[i]>old_biomass[i]){
+						for (int j=0; j<lb[i].length; j++)
+						{
+							//lb[i][j] = -1 * rates[j]/rho;
+							lb[i][j]*=(biomass[i]-old_biomass[i])/(oldBiomass-old_biomass[i]);
+							//System.out.println("rates "+i+" "+j+" "+lb[i][j]);
+						}
 					
-					for (int j=0; j<mediaDelta.length; j++)
-					{
-						//if(exchFlux[j]<0.0 && biomass[i]>oldBiomass)mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
-						//if(exchFlux[j]>0.0 && biomass[i]<oldBiomass)
-						mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
+						((FBAModel)models[i]).setExchLowerBounds(lb[i]); // here is where the new bounds are set 
 						
+						/*************************** RUN THE FBA! ****************************/
+						stat = models[i].run();
+						fluxes[i] = ((FBAModel)models[i]).getFluxes();
+						//for(int j=0;j<fluxes[i].length;j++) System.out.println(i+" "+j+" "+fluxes[i][j]);
+	
+						exchFlux = ((FBAModel)models[i]).getExchangeFluxes();
+						allExchFluxes[i] = exchFlux;	
+						
+						if (stat != 5 && stat != 180)
+						{
+							deltaBiomass[i] = 0.0;
+							
+							// create empty mediaDelta, because model is not growing
+							Arrays.fill(mediaDelta, 0);
+							deltaMedia[i] = mediaDelta;
+						} else {
+							
+							/***************** GET BIOMASS CONCENTRATION CHANGE ****************/
+							// biomass is in grams
+							biomassGrowthRate = (double)(((FBAModel)models[i]).getBiomassFluxSolution());
+							deltaBiomass[i] = (double)(((FBAModel)models[i]).getBiomassFluxSolution()) * cParams.getTimeStep() * biomass[i];
+							allModelsGrowthRates[i]=biomassGrowthRate;
+							deltaBiomass[i] *= (1-(double)(((FBAModel)models[i]).getGenomeCost()));
+				
+							
+							//old_biomass[i]=biomass[i];
+							biomass[i]=old_biomass[i]+deltaBiomass[i];
+							//oldBiomass=biomass[i];
+							
+							
+							for (int j=0; j<mediaDelta.length; j++)
+							{
+									mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
+							}
+							deltaMedia[i] = mediaDelta;				
+						}	
+						/*
+						for (int j=0; j<mediaDelta.length; j++)
+						{
+							
+							//if(exchFlux[j]<0.0 && biomass[i]>oldBiomass)mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
+							//if(exchFlux[j]>0.0 && biomass[i]<oldBiomass)
+							mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
+							
+						}
+						deltaMedia[i] = mediaDelta;
+						*/	
 					}
-					deltaMedia[i] = mediaDelta;
-						
+					/*
+					else 
+					{
+						for (int j=0; j<mediaDelta.length; j++)
+						{
+								mediaDelta[j] = (double)exchFlux[j] * biomass[i] * cParams.getTimeStep();
+						}
+						deltaMedia[i] = mediaDelta;	
+					}
+					*/
 				 }
 				else if(fbaModels[i].getNeutralDrift() && cParams.getDeathRate()!=0.0)
 				{
