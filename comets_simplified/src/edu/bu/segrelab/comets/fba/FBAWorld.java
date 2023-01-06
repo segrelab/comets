@@ -1611,7 +1611,10 @@ public class FBAWorld extends World2D
 				media[x][y][mediaList[i]] += mediaDelta[i];
 				//System.out.println("model "+model+" "+i+" medList "+mediaList[i]+"  "+mediaNames[mediaList[i]]+"  "+media[x][y][mediaList[i]]);
 				if (media[x][y][mediaList[i]] < 0)
+				{	
+					//System.out.println("ALERT  "+mediaList[i]+" " +media[x][y][mediaList[i]]);
 					media[x][y][mediaList[i]] = 0;
+				}
 			}
 			return PARAMS_OK;			
 		}
