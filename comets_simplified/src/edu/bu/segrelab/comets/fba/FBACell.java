@@ -897,6 +897,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				// create empty mediaDelta, because model is not growing
 				Arrays.fill(mediaDelta, 0);
 				deltaMedia[i] = mediaDelta;
+				old_biomass[i]=biomass[i];
 			} else {
 				
 				// We have a valid solution, so update this cell and the world.
@@ -1031,8 +1032,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					System.err.println("Error in model "+i+": Demographic noise is applies only if the death rate for the model is zero. Noise will not be applied.");
 				}
 							
-				if (cParams.showGraphics())
-					cellColor = calculateColor();
+				//if (cParams.showGraphics())
+				//	cellColor = calculateColor();
 				
 				/***************** REPORT IF THERE IS AN INFEASIBLE SOLUTION ****************/
 				
