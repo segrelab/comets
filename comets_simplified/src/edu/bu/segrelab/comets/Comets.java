@@ -92,11 +92,9 @@ public class Comets implements CometsConstants,
 							   CometsChangeListener
 {
 
-<<<<<<< HEAD
+
 	private String versionString = "2.10.9, 21 June 2023";
-=======
-	private String versionString = "2.10.9, 21 June 2023";
->>>>>>> refs/heads/master
+
 
 	
 	/**
