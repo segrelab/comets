@@ -1,0 +1,39 @@
+model_file e_coli_core.txt
+	model_world
+		grid_size 1 1
+		world_media
+		ac[e] 0.0
+		acald[e] 0
+		akg[e] 0
+		co2[e] 0
+		etoh[e] 0
+		for[e] 0
+		fru[e] 0
+		fum[e] 0
+		glc__D[e] 0.55
+		gln__L[e] 0
+		glu__L[e] 0
+		h2o[e] 1000
+		h[e] 1000
+		lac__D[e] 0
+		mal__L[e] 0
+		nh4[e] 1000
+		o2[e] 1000.0
+		pi[e] 1000
+		pyr[e] 0
+		succ[e] 0
+	//
+	diffusion_constants 1.000000e-07
+	//
+	media
+	//
+	media_refresh 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+	//
+	static_media 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.011e-6 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+	//
+	barrier
+	//
+//
+initial_pop
+	0 0 1.000000e-9
+//
