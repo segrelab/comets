@@ -1314,31 +1314,31 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		double noisyBiomass=currentBiomass;
 		if(biomassGrowthRate>0.0)
 		{	
-			double noiseSigma = biomassGrowthRate*demographicNoiseSigmaZero;
+			double noiseSigma = Math.sqrt(biomassGrowthRate)*demographicNoiseSigmaZero;
 			//System.out.println("sigma  "+noiseSigma);
 			double poissonLambda=2.0*currentBiomass/(cParams.getTimeStep()*noiseSigma*noiseSigma);
 			//System.out.println("poiss  "+poissonLambda);
 			if(poissonLambda>0)
-		{
+		    {
 				//poissonDist=new Poisson(poissonLambda);
 			
 				double gammaAlpha=Poisson.random(poissonLambda, new MersenneTwister());
 				//System.out.println("alpha  "+gammaAlpha);
 				if(gammaAlpha>0)
-			{
+			    {
 					//System.out.println(gammaAlpha);
 					//gammaDist=new Gamma(gammaAlpha,1.0);
 					double gammaSample=Gamma.random(gammaAlpha, 1.0, new MersenneTwister());
 					noisyBiomass=0.5*gammaSample*(cParams.getTimeStep()*noiseSigma*noiseSigma);
 					//System.out.println("biomass  "+noisyBiomass);
-			}
+			    }
 				else if(gammaAlpha==0)
 				{
 					noisyBiomass=0.0;
-		}
-	}
+		        }
+	        }
 			else if(poissonLambda==0)
-	{
+	        {
 				noisyBiomass=0.0;
 			}
 		}
