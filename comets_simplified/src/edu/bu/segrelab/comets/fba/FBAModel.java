@@ -138,6 +138,9 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private int[] objReactions; //index of reactions, in order of priority
 	private boolean[] objMaximize; //is corresponding objective maximized? If not, it's minimized
 	private int biomassReaction;
+
+	private int maintenanceRxn = -1; //default has no maintenance reaction (-1 as flag)
+	private double maintenanceFlux = 0;
 	private int objStyle;
 	
 	private double defaultLB = 0,
@@ -377,10 +380,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		this(m,l,u,r,objMax,r[0],exch,exchDiffConsts,exchKm,exchVmax,exchHillCoeff,exchAlpha,
 				exchW,lightAbsorption,metabNames,rxnNames,objStyle,optim);
 	}
-
-
-	
-
 
 	public double getDefaultLB()
 	{
@@ -1061,6 +1060,23 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		objMaximize = objMax;
 		return fbaOptimizer.setObjectiveMaximize(objMax);
 	}
+
+	public int setMaintenance(int rxn, double flux) {
+		this.maintenanceFlux = flux;
+		return this.maintenanceRxn = rxn;
+	}
+
+	public int getMaintenance() {
+		return this.maintenanceRxn;
+	}
+
+	public double getMaintenanceFlux() {
+		return this.maintenanceFlux;
+	}
+
+	public double getMaintenanceFluxSolution() {
+		return fbaOptimizer.getObjectiveSolution(maintenanceRxn);
+	}
 	
 	public List<Signal> getSignals(){
 		return this.signals;
@@ -1298,6 +1314,9 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			double[] exchHillCoeff = null;
 			double[][] lightAbsorption = null;
 
+			int maintRxn = -1;
+			double maintFlux = 0;
+
 			List<Signal> signals = new ArrayList<Signal>();		
 			double defaultAlpha = -1,
 				   defaultW = -1,
@@ -1505,6 +1524,32 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					}
 					lineNum++;
 					blockOpen = false;
+				}
+
+				/**************************************************************
+				 ******************** LOAD MAINTENANCE REACTION ***************
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("MAINTENANCE")) {
+					blockOpen = true;
+
+					String maintenanceLine = null;
+
+					while (!(maintenanceLine = reader.readLine().trim()).equalsIgnoreCase("//")) {
+						lineNum++;
+
+						if (maintenanceLine.length() == 0)
+							continue;
+
+						String[] parsed = maintenanceLine.split("\\s+");
+
+						if (parsed.length != 2) {
+							reader.close();
+							throw new ModelFileException("Please enter a maintenance reaction and its corresponding flux");
+						}
+
+						maintRxn = Integer.parseInt(parsed[0]);
+						maintFlux = Double.parseDouble(parsed[1]);
+					}
 				}
 				
 				/**************************************************************
@@ -2695,6 +2740,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setSignals(signals);
 			model.setNeutralDrift(neutralDrift);
 			model.setNeutralDriftSigma(neutralDriftSigma);
+
+			model.setMaintenance(maintRxn, maintFlux);
 			
 			model.setFileName(filename);
 			return model;
@@ -3115,6 +3162,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		modelCopy.setNoiseVariance(getNoiseVariance());
 		modelCopy.setLightAbsorption(getLightAbsorption());
 		modelCopy.setSignals(getSignals());
+
+		modelCopy.setMaintenance(maintenanceRxn, maintenanceFlux);
 		//modelCopy.setParameters();
 		
 		return modelCopy;
