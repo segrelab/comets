@@ -165,7 +165,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	//private int optimizer;
 	
 	public static final int GUROBI =0;
-	public static final int GLPK   =1;
+	public static final int GLOP   =1;
+	public static final int GLPK   =2;
 	
 	
 	private ModelParametersPanel paramsPanel;
@@ -219,12 +220,21 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		runSuccess = false;
 		objStyle = MAX_OBJECTIVE_MIN_TOTAL;
 	
+		//System.out.println("here "+optim);
+		//System.out.println("here1 "+GUROBI);
+		//System.out.println("here2 "+GLOP);
+		//System.out.println("here3 "+GLPK);
+		
 		switch(optim){
 		case GUROBI:
 			fbaOptimizer=new FBAOptimizerGurobi(m, l, u, objs, objsMax);
 			break;
+		case GLOP:
+			fbaOptimizer=new FBAOptimizerGlop(m, l, u, objs, objsMax);
+			break;
 		case GLPK:
 			fbaOptimizer=new FBAOptimizerGLPK(m,l,u,objs);
+			break;
 		default:
 			break;
 		}
@@ -886,7 +896,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			return PARAMS_ERROR;
 		
 		fbaOptimizer.setExchLowerBounds(exch, lb);	
-		
+				
 		return PARAMS_OK;
 	}
 
@@ -1417,7 +1427,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						}
 
 						int y = Integer.parseInt(parsed[1]);
-						if (x < 1 || x > numMets) {
+						if (y < 1 || y > numRxns) {
 							reader.close();
 							throw new ModelFileException("The second element of the SMATRIX block at line " + lineNum + " corresponds to the column, and should be between 1 and the number of columns specified.");
 						}
@@ -1651,8 +1661,11 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						throw new ModelFileException("The OPTIMIZER should be followed only by the optimizer value. " + lineNum);
 					}
 					optim=-1;
+					//System.out.println(tokens[1]);
 					if(tokens[1].equalsIgnoreCase("GUROBI"))
 						optim= GUROBI;
+					else if(tokens[1].equalsIgnoreCase("GLOP"))
+						optim= GLOP;
 					else if(tokens[1].equalsIgnoreCase("GLPK"))
 						optim= GLPK;
 				}
@@ -2672,7 +2685,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			if (bio == 0){ //if the Biomass reaction wasn't specified, use the primary Objective reaction
 				bio = objs[0];
 			}
-			
+			System.out.println("optim= "+optim);
 			FBAModel model = new FBAModel(S, lb, ub, objs, objMax, bio, exchRxns, diffConsts, exchKm, exchVmax, exchHillCoeff, exchAlpha, exchW, lightAbsorption, metNames, rxnNames, objSt, optim);
 			model.setDefaultAlpha(defaultAlpha);
 			model.setDefaultW(defaultW);

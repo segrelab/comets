@@ -1046,7 +1046,10 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}else if(status == 3){
 			status = 4;
 		}
-
+		
+		//System.out.println("Solution:");
+	    //System.out.println("Objective value = " + getObjectiveSolution(objReactions[0]));
+		
 		return status;
 	}
 
@@ -1150,6 +1153,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		double[] res = new double[objs.length];
 		for (int i = 0; i < objs.length; i ++) {
 			res[i] = getObjectiveSolution(objs[i]);
+			System.out.println("here"+res[i]);
 		}
 		return res;
 	}

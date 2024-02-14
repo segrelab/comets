@@ -9,7 +9,7 @@ import com.google.ortools.linearsolver.MPVariable;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Collections;
+//import java.util.Collections;
 
 /**
  * This class provides the GLOP optimizer functionality for the FBAModel class.
@@ -18,8 +18,8 @@ import java.util.Collections;
  * The best way to use this class is as follows:
  * <ol>
  * <li>The user loads a GLOP optimizer by using a constructor directly.
- * <li>Set the lower bound for the exchange fluxes with setExchLowerBounds(int[],double[]).
- * <li>Run the optimizer with run(int).
+ * <li>Set the lower bound for the exchange fluxes with setExchLowerBounds(int[],double[]). In Comets we assume that uptake is negative exchange flux. 
+ * <li>Run the optimizer with run(int). The input integer set the optimization method: Max. the objective (FBA), Max. obj. min. sum of absolute values of fluxes (pFBA). 
  * <li>Fetch the results with various accessory methods: getFluxes(), getExchangeFluxes(),
  *     getObjectiveSolution() etc.
  * </ol>
@@ -35,13 +35,14 @@ import java.util.Collections;
  * 
  * 
  */
+
 public class FBAOptimizerGlop extends edu.bu.segrelab.comets.fba.FBAOptimizer 
 implements edu.bu.segrelab.comets.CometsConstants
 {
 
 	// Create the linear solver with the GLOP backend.
-	private MPSolver solver;//= MPSolver.createSolver("GLOP");
-	private MPVariable[] rxnFluxes;
+	private MPSolver solver;  //= MPSolver.createSolver("GLOP");
+	private MPVariable[] rxnFluxes;  
 	private MPConstraint[] rxnExpressions;
 	private MPObjective objective;//= solver.objective();
 	private MPSolver.ResultStatus resultStatus;
@@ -68,11 +69,11 @@ implements edu.bu.segrelab.comets.CometsConstants
 	}
 
 	/**
-	 * Create a new FBAOptimizerGurobi with stoichiometric matrix m, lower bounds l, upper bounds u,
+	 * Create a new FBAOptimizerGlop with stoichiometric matrix m, lower bounds l, upper bounds u,
 	 * and objective reaction r. 
 	 * @param m Stoichiometric matrix
-	 * @param l lower bounds
-	 * @param u upper bounds
+	 * @param l lower bounds of the reaction fluxes
+	 * @param u upper bounds of the reaction fluxes
 	 * @param objIdxs list of indexes for objective reactions, from 1 to N, in order of priority with the highest first
 	 * @param objMaximize list signifying if the corresponding objective rxn should be maximized, otherwise it will be minimized
 	 */
@@ -80,40 +81,49 @@ implements edu.bu.segrelab.comets.CometsConstants
 	{
 		this();
 		
-		stoichMatrix=m;
-		objReactions=objIdxs;
-		objMaximize=objMax;
-		sortByColumn(m, 0);
+		stoichMatrix=m; 		// The stoichiometric matrix is in a sparse form m[LineNum][n]. 
+								// LinNum is the line number in the model input file. m[LineNum][0] is an index of a metabolite: 1 to NumMetabs, m[][1] of a reaction: 1 to NumRxns, and m[][2] is the stoichiometric 
+								// coefficient of the reaction for each linear equation for each metabolite. Ilija D. 09/19/2023  
+		objReactions=objIdxs;	// The indices of reactions that go into the lin. combo of the objective.
+		 
+		sortByColumn(m, 0);     // Here we sort the matrix by ascending metabolite index. 
 		
 		// everything below here is for initializing the basic model
-		Double mtb = m[m.length-1][0];		
-		numMetabs = mtb.intValue();  
-		numRxns = l.length;
+		Double mtb = m[m.length-1][0];		//The maximum value of the metabolites index, simply number of metabolites.
+											//Keep in mind that the indices of the metabolites are the values in the [][0] elements in the sparse m matrix.
+		numMetabs = mtb.intValue();         //m is a Double matrix, so needs to be cast to int.
+		numRxns = l.length;                 //Number of reactions. It is determined outside of the class. 
 		
-		rxnFluxes = new MPVariable[numRxns];
-		rxnExpressions = new MPConstraint[numMetabs];
+		rxnFluxes = new MPVariable[numRxns];			//glop variables
+		rxnExpressions = new MPConstraint[numMetabs];   //glop constraints 
 		
-		// all our variables (fluxes) are always continuous
+		// all our variables (fluxes) are always continuous. Here we set the lower and upper bounds, and name them.
 		for(int i=0;i<numRxns;i++){
 			rxnFluxes[i] = solver.makeNumVar(l[i], u[i], "Flux_"+String.valueOf(i));
 		}
 		
+		//Here we create the constrains and name them. The first two arguments are lower and upper bound. Here we have 0<rxnEx<0 so rxnEx==0.
 		for(int j=0; j<numMetabs; j++) {
-			rxnExpressions[j] = solver.makeConstraint(0.0, 0.0, "c_"+String.valueOf(j));
-			for(int i=0; i<numRxns; i++)rxnExpressions[j].setCoefficient(rxnFluxes[i], 0);
-		}
-		for(int j=0; j<m.length; j++) {
-			Double m_local_zero=m[j][0];
-			Double m_local_one=m[j][1];
-			Double m_local_two=m[j][2];
-			rxnExpressions[m_local_zero.intValue()-1].setCoefficient(rxnFluxes[m_local_one.intValue()-1], m_local_two);
+			rxnExpressions[j] = solver.makeConstraint(0.0, 0.0, "c_"+String.valueOf(j));   //V1+V2+...=0
+			for(int i=0; i<numRxns; i++)rxnExpressions[j].setCoefficient(rxnFluxes[i], 0); //First reset all coeffs. to zero. 
 		}
 		
+		for(int j=0; j<m.length; j++) {
+			Double m_local_zero=m[j][0];  //This is the metabolite index, i.e. glop constraint index, but from 1 to N. 
+			Double m_local_one=m[j][1];   //This is the reaction index, i.e. glop variable index, also 1-M.
+			Double m_local_two=m[j][2];   //This is the stoichiometric coefficient. 
+			rxnExpressions[m_local_zero.intValue()-1].setCoefficient(rxnFluxes[m_local_one.intValue()-1], m_local_two); //Here we set the soichiometric coeffs. Also map from 1-N to 0-N-1 for the indices. 
+		}
+		
+		//The objective is a linear combination of the reaction fluxes. Here we reset all coeffs. to zero. 
 		for(int i=0;i<numRxns;i++){
 			objective.setCoefficient(rxnFluxes[i], 0);
 		}
-		objective.setCoefficient(rxnFluxes[objIdxs[0]], 1);
-		objIndex=objIdxs[0];
+		
+		//Here we set only the first coefficiant in the list of reactions that go into the objective. 
+		//TODO NEED TO WORK TO GENERALIZE THIS Ilija 10.17.2023
+		objective.setCoefficient(rxnFluxes[objIdxs[0]-1], 1);
+		objIndex=objIdxs[0]; //Not sure why I needed this?
 	}
 
 	/**
@@ -132,38 +142,55 @@ implements edu.bu.segrelab.comets.CometsConstants
 		{
 			return MODEL_NOT_INITIALIZED;
 		}
-		// an internal status checker. If this = 0 after a run, everything is peachy.
-		int ret = -1;
-
-		// gurobi optimization status.
-		// 2 = optimal, 3 = infeasible, 4 = infeasible or unbounded
-		// to parallel the GLPK implementation, if gurobi returns 2, then
+		
+		// Optimization status values returned by solver.solve():
+		// enum ResultStatus {
+	    /// optimal.
+	    //OPTIMAL,
+	    /// feasible, or stopped by limit.
+	    //FEASIBLE,
+	    /// proven infeasible.
+	    //INFEASIBLE,
+	    /// proven unbounded.
+	    //UNBOUNDED,
+	    /// abnormal, i.e., error of some kind.
+	    //ABNORMAL,
+	    /// the model is trivially invalid (NaN coefficients, etc).
+	    //MODEL_INVALID,
+	    /// not been solved yet.
+	    //NOT_SOLVED = 6
+	    //};
+		// to parallel the GLPK implementation, if glop returns OPTIMAL, then
 		// run() returns 5 (which is GLPK's optimal status)
-		// otherwise it will return 4 (GLPK's infeasible status)
+		// otherwise it will return 4 (GLPK's infeasible status, we blanket cover all other possibilities with this)
+		// TODO change the blanket 4 to more detailed one
+		// If failed completely, eqivalent to glop's ABNORMAL
 		int status = -1; 
 		switch(objSty)
 		{
 		// the usual, just max the objective
 		case FBAModel.MAXIMIZE_OBJECTIVE_FLUX:
 			objective.setMaximization();
-			resultStatus = solver.solve();
+				resultStatus = solver.solve();
 			break;
 		default:
-
 			break;
 		}
 
-		if (ret == 0)
-		{   
-			runSuccess = true;
-		}
-
-		// convert gurobi status indicators into GLPK statuses
-		if (status == 2){
-			status = 5;
-		}else if(status == 3){
-			status = 4;
-		}
+		if (resultStatus == MPSolver.ResultStatus.OPTIMAL) {
+			  status = 5;
+			} else if(resultStatus == MPSolver.ResultStatus.ABNORMAL)  {
+			  //System.err.println("The problem does not have an optimal solution!");
+			  status = -1;	;
+			} else if(resultStatus == MPSolver.ResultStatus.INFEASIBLE)  {
+				  //System.err.println("The problem does not have an optimal solution!");
+			  status = 4;	;
+			} 
+			
+		//if (ret == 0)
+		//{   
+		//	runSuccess = true; TODO get rid of this. Ilija 10.17.2023
+		//}
 
 		return status;
 	}
@@ -179,7 +206,8 @@ implements edu.bu.segrelab.comets.CometsConstants
 					v[i]=rxnFluxes[i].solutionValue();
 				}
 			} else {
-			  System.err.println("The problem does not have an optimal solution!");
+			  //System.err.println("The problem does not have an optimal solution!");
+				;
 			}
 		return v;
 	}
@@ -195,7 +223,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 	{		
 			if (resultStatus == MPSolver.ResultStatus.OPTIMAL)
 				return rxnFluxes[objreact-1].solutionValue();
-			else System.err.println("The problem does not have an optimal solution!");
+			else ;//System.err.println("The problem does not have an optimal solution!");
 		return -Double.MAX_VALUE;
 	}
 	
@@ -263,11 +291,21 @@ implements edu.bu.segrelab.comets.CometsConstants
 	 */
 
 	public int setUpperBounds(int nrxns, double[] ub)
-	{
+	{	
+		if (ub.length != nrxns)
+			return PARAMS_ERROR;
+
+		for (int i=0; i<ub.length; i++) rxnFluxes[i].setUb(ub[i]); //Attention, the annoying 1-n to 0-n-1 conversion again!
+		
 		return PARAMS_OK;
 	}
 	public int setLowerBounds(int nrxns, double[] lb)
 	{
+		if (lb.length != nrxns)
+			return PARAMS_ERROR;
+
+		for (int i=0; i<lb.length; i++) rxnFluxes[i].setLb(lb[i]); //Attention, the annoying 1-n to 0-n-1 conversion again!
+			
 		return PARAMS_OK;
 	}
 	
@@ -282,6 +320,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		}
 		return u;
 	}
+	
 	public double[] getLowerBounds(int nrxns)
 	{	
 		MPVariable[] rxnFluxesLocal= this.rxnFluxes;
@@ -313,17 +352,52 @@ implements edu.bu.segrelab.comets.CometsConstants
 		//this.objMaximize = objMax;
 		return PARAMS_OK;
 	}
+	
+	/**
+	 * Sets the current lower bounds (e.g. -uptake rates) for the exchange reactions
+	 * in the model. Also sets it for the min. abs. sum. flux model, which should probably be changed
+	 * to be set only if doing max/min (i.e. right now it sets the exch reaction even if we're just 
+	 * doing max obj)
+	 * @param exch
+	 * @param lb
+	 * @return PARAMS_OK if the lb and exch array are of the same length; 
+	 * PARAMS_ERROR if not.
+	 */
+
 	public int setExchLowerBounds(int[] exch, double[] lb)
 	{
+		if (lb.length != exch.length)
+			return PARAMS_ERROR;
+
+		for (int i=0; i<exch.length; i++) rxnFluxes[exch[i]-1].setLb(lb[i]); //Attention, the annoying 1-n to 0-n-1 conversion again!
+		
+		//setExchLowerBoundsModelMin(exch, lb);
 		return PARAMS_OK;
 	}
+
 	public int setExchUpperBounds(int[] exch, double[] ub)
 	{	
+		if (ub.length != exch.length)
+			return PARAMS_ERROR;
+
+		for (int i=0; i<exch.length; i++) rxnFluxes[exch[i]-1].setUb(ub[i]); //Attention, the annoying 1-n to 0-n-1 conversion again!
+		
+		//setExchLowerBoundsModelMin(exch, lb);
 		return PARAMS_OK;
 	}
+	
+	
 	public double[] getExchangeFluxes(int[] exch)
 	{	
-		return PARAMS_OK;
+		double[] v_exch = new double[exch.length];
+		//if (runSuccess)
+		//{
+			for (int i = 0; i < exch.length; i++)
+			{
+				v_exch[i]=rxnFluxes[exch[i]-1].solutionValue();
+			}
+		//}
+		return v_exch;
 	}
 	
 	/* 

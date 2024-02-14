@@ -1973,7 +1973,7 @@ public class Utility implements CometsConstants
 					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
 					
 					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i+1][j]-biomassModel[i][j])/(dX*dX);
-					System.out.println("Hill  "+ hill);
+					//System.out.println("Hill  "+ hill);
 				}
 				else if((numCols==2 && i==1 && i!=0) || (i!=0 && i==numCols-1 && barrier[i-2][j]) || (i!=0 && i!=1 && i!=numCols-1 && barrier[i-2][j] && barrier[i+1][j]))
 				{
@@ -3047,7 +3047,7 @@ public class Utility implements CometsConstants
 		int numCols=biomassDensity.length;
 		int numRows=biomassDensity[0].length;
 		double[][] diffusion=new double[numCols][numRows];
-		System.out.println("HERE");
+		//System.out.println("HERE");
 		for(int i=0;i<numCols;i++)
 		{
 			for(int j=0;j<numRows;j++)
@@ -3496,7 +3496,7 @@ public class Utility implements CometsConstants
 		int numSteps = 1;
 		if (dT > dTmax)
 		{
-			System.out.println("Unstable diffusion constants. Try setting the time step below " + dTmax + "seconds");
+			//System.out.println("Unstable diffusion constants. Try setting the time step below " + dTmax + "seconds");
 //			numSteps = (int)Math.ceil(dT/dTmax);
 //			dT /= numSteps;
 		}
