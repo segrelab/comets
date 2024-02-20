@@ -1932,14 +1932,13 @@ public class Utility implements CometsConstants
 		{
 			for(int j=0;j<numRows;j++)
 			{
-				//System.out.println(i+" "+j+"\n" );
 				diffusion[i][j]=0.0;
 				//Do x direction first Hill*D1*(nablaRho)^2+Hill*(D0+D1rho)*LaplacianRho+D1NablaHill*NablaRho
 				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
 				{
 					diffusion[i][j]+=0.0;
 				}
-				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && barrier[i-1][j] && barrier[i+2][j]))
+				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i==numCols-2 && barrier[i-1][j]) || (i!=0 && barrier[i-1][j] && barrier[i+2][j]))
 				{
 					if(hillK==0.0)
 					{
@@ -2009,7 +2008,6 @@ public class Utility implements CometsConstants
 					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
 					
 					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i-1][j])/(dX*dX);
-					//System.out.println("2  "+ diffusion[i][j]);
 				}
 				else if(i==0 || barrier[i-1][j])
 				{
@@ -2046,7 +2044,6 @@ public class Utility implements CometsConstants
 					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
 					
 					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i+1][j]-biomassModel[i][j])/(dX*dX);
-					//System.out.println("3  "+ diffusion[i][j]);
 				}
 				else if(i==(numCols-1) || barrier[i+1][j])
 				{
@@ -2130,19 +2127,17 @@ public class Utility implements CometsConstants
 					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
 					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
 					
-					//System.out.println("5a  "+ diffusion[i][j]+"  "+biomass[i][j]+"   "+Math.pow(biomass[i][j],nonLinDiffExponent));
-					
 					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i+1][j]-biomassModel[i][j])/(dX*dX)-avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i-1][j])/(dX*dX);
-					//System.out.println("Hill  "+ hill);
-					//System.out.println("5b  "+ diffusion[i][j]+"  "+biomass[i][j]+"   "+Math.pow(biomass[i][j],nonLinDiffExponent));
+
 				}
+				
 				
 				//Then do y direction 
 				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) || (j!=0 && j!=(numRows-1) && barrier[i][j-1] && barrier[i][j+1]))
 				{
 					diffusion[i][j]+=0.0;
 				}
-				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && barrier[i][j-1] && barrier[i][j+2]))
+				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j==numRows-2 && barrier[i][j-1]) || (j!=0 && barrier[i][j-1] && barrier[i][j+2]))
 				{
 					if(hillK==0.0)
 					{
@@ -2177,7 +2172,6 @@ public class Utility implements CometsConstants
 					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
 					
 					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i][j+1]-biomassModel[i][j])/(dX*dX);
-					//System.out.println("6  "+ diffusion[i][j]);
 				}
 				else if((numRows==2 && j==1 && j!=0) || (j!=0 && j==numRows-1 && barrier[i][j-2]) || (j!=0 && j!=1 && j!=numRows-1 && barrier[i][j-2] && barrier[i][j+1]))
 				{
@@ -2214,7 +2208,6 @@ public class Utility implements CometsConstants
 					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
 					
 					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i][j-1])/(dX*dX);
-					//System.out.println("7  "+ diffusion[i][j]);
 				}
 				else if(j==0 || barrier[i][j-1])
 				{
@@ -2250,7 +2243,7 @@ public class Utility implements CometsConstants
 					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
 					
 					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i][j+1]-biomassModel[i][j])/(dX*dX);
-					//System.out.println("8  "+ diffusion[i][j]);
+
 				}
 				else if(j==(numRows-1) || barrier[i][j+1])
 				{
@@ -2286,7 +2279,7 @@ public class Utility implements CometsConstants
 					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
 					
 					diffusion[i][j]+=-1.0*avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i][j-1])/(dX*dX);
-					//System.out.println("9  "+ diffusion[i][j]);
+
 				}
 				else
 				{
@@ -2332,21 +2325,12 @@ public class Utility implements CometsConstants
 					
 					avrgDiffConstRhoNHillRight=0.5*(hillRight*diffConsRhoNRight+hill*diffConsRhoN);
 					avrgDiffConstRhoNHillLeft=0.5*(hillLeft*diffConsRhoNLeft+hill*diffConsRhoN);
-					
-					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
-					
+										
 					diffusion[i][j]+=avrgDiffConstRhoNHillRight*(biomassModel[i][j+1]-biomassModel[i][j])/(dX*dX)-avrgDiffConstRhoNHillLeft*(biomassModel[i][j]-biomassModel[i][j-1])/(dX*dX);
-					//System.out.println("10a  "+ diffusion[i][j]+"  "+biomass[i][j]+"  "+biomass[i][j-1]+"  "+biomass[i][j+1]);
-					
-					//System.out.println("10b  "+avrgDiffConstRhoNHillRight+"  "+avrgDiffConstRhoNHillLeft+"  "+ biomass[i][j+1]+"  "+biomass[i][j]+"  "+biomass[i][j-1]);
-					//System.out.println("10c  "+hill+"  "+hillLeft+"  "+diffConsRhoNLeft+"  "+diffConsRhoN+"  "+diffConsRhoNRight);
 					
 				}
 			}
 		}
-		//System.out.println("Diff "+avrgDiffConstRhoNHillRight+" "+avrgDiffConstRhoNHillLeft);
-		
-		//System.out.println("Method "+diffusion[50][50]);
 		return diffusion;
 	}
 
