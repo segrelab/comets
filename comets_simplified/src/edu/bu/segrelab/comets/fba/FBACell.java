@@ -697,7 +697,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		{
 			// i = the current model index to run.
 			int i = a;
-
+			
 			// if no biomass, or the total biomass has overflowed, skip to the next.
 			if (biomass[i] == 0 || Utility.sum(biomass) >= cParams.getMaxSpaceBiomass())
 			{
@@ -879,6 +879,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			
 			/*************************** RUN THE FBA! ****************************/
 			int stat = models[i].run();
+			
 			fluxes[i] = ((FBAModel)models[i]).getFluxes();
 			//for(int j=0;j<fluxes[i].length;j++) System.out.println(i+" "+j+" "+fluxes[i][j]);
 
@@ -898,6 +899,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				Arrays.fill(mediaDelta, 0);
 				deltaMedia[i] = mediaDelta;
 				old_biomass[i]=biomass[i];
+				
 			} else {
 				
 				// We have a valid solution, so update this cell and the world.
@@ -933,7 +935,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						mediaDelta[j] = (double)exchFlux[j] * old_biomass[i] * cParams.getTimeStep();
 				}
 				deltaMedia[i] = mediaDelta;				
-				
 				
 				//Neutral drift block. Only if the death rate is zero. Get the sigmas from the model and 
 				// calculate biomass=(sigma^2*timestep/2)*Gamm(Poiss(2*biomass/sigma^2*timesteo))
@@ -1040,6 +1041,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			}
 		}
 		
+		
 		//stationaryStatus = false;
 		if (stationaryStatus == false)
 	    {		
@@ -1054,9 +1056,11 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			//boolean contReOptimize = false;
 			double[] thisCellMedia = world.getMediaAt(x, y); // all media in cell
 			double[] totalUptakes = new double[thisCellMedia.length];
+			
 		while(reOptimizeFlag)
 		{
 //System.out.println("while");
+			
 			reOptimizeFlag = false;
 			// loop over all external metabolites (media components) present in the current cell
 			for (int k=0; k<thisCellMedia.length; k++) 
@@ -1079,9 +1083,10 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					}
 				}
 
-				if (totUptake<0 && totUptake<(-thisCellMedia[k]-1e-10)) // if current metabolite isrunning out
+				if (totUptake<0 && totUptake<(-thisCellMedia[k]-1e-10) && thisCellMedia[k]>0.0) // if current metabolite isrunning out
 				{
-					//System.out.println("AL "+k+"  "+thisCellMedia[k]);
+					
+					//System.out.println("OK "+thisCellMedia[k]);
 					//contReOptimize = true;
 					reOptimizeFlag = true;
 			        for (Integer l : uptakingModels) // for all models uptaking it 
@@ -1094,7 +1099,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						int kIndexInModel = ArrayUtils.indexOf(modelMediaIndexes, k);
 	
 						// update the lb 
-						lb[l][kIndexInModel] = -newUptake / (old_biomass[l] * cParams.getTimeStep());			
+						lb[l][kIndexInModel] = -1*newUptake / (old_biomass[l] * cParams.getTimeStep());
+						
 					}
 				}
 					
@@ -1108,6 +1114,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			if (reOptimizeFlag == true)
 			{
 //System.out.println("Here");
+				
 				for (int a=0; a<models.length; a++)
 				{
 					
@@ -1165,7 +1172,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					/*************************** RUN THE FBA! ****************************/
 					int stat = models[i].run();
 					fluxes[i] = ((FBAModel)models[i]).getFluxes();
-	
+					
 					if (stat != 5 && stat != 180)
 					{
 						// failure! don't do anything right now.
@@ -1217,7 +1224,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						allModelsGrowthRates[i]=biomassGrowthRate;
 						deltaBiomass[i] *= (1-(double)(((FBAModel)models[i]).getGenomeCost()));
 						biomass[i]=old_biomass[i]+deltaBiomass[i];
-						
+						//System.out.println("Here OK "+deltaBiomass[i]);
 						// if no biomass change don't change media //JEAN 
 //						if (!pParams.getAllowFluxWithoutGrowth()) 
 //						{
@@ -1260,7 +1267,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				}
 			}
 		}
-	    
+	 	
 	
 		// Now update media 
 		for (int a=0; a<deltaMedia.length; a++)
@@ -1275,7 +1282,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				world3D.changeModelMedia(x, y, z, a, deltaMedia[a]);
 	
 		}
-	    
+		
 
 		
 		if (cParams.showGraphics())

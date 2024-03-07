@@ -3697,13 +3697,14 @@ public class FBAWorld extends World2D
 			for (int i = 0; i < c.getCells().size(); i++)
 			{
 				// print("running cell " + i + "...");
+				
 				Cell cell = (Cell) c.getCells().get(randomCellOrder[i]);
 				int alive = cell.run();
 				if (alive == Cell.CELL_DEAD)
 					deadCells.add(cell);
 				// println(" done!");
 			}
-			//System.out.println("total fba time = " + (System.currentTimeMillis() - t));
+			//System.out.println("total fba time = " + (System.currentTimeMillis()));
 
 			// remove dead cells.
 			switch(pParams.getBiomassMotionStyle())
