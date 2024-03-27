@@ -1,3 +1,0 @@
-LayoutFileName: C:\Users\ilija\git\comets\Ecoli_core\Ecoli_batch_layout.txt
-ModelFileName: C:\Users\ilija\git\comets\Ecoli_core\e_coli_core.txt
-TotalBiomassFileName: ./total_biomass.txt
