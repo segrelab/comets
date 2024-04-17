@@ -1,4 +1,0 @@
-biomass_0_0 = sparse(1, 10);
-biomass_0_0(1, 1) = 1E-2;
-biomass_0_1 = sparse(1, 10);
-biomass_0_1(1, 1) = 1E-2;
