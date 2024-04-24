@@ -936,13 +936,42 @@ public class Utility implements CometsConstants
 	}
 	
 	/**
+	 * Returns the right hand side of the 2D convection equation with multi-species pressure and friction model. Includes only advective term.
+	 * @param biomass
+	 * @return
+	 */
+	public static double[][] getRHSconvMultiModel(double[][][] biomassOfModelsInCell, double[][][][] oldFlux,double[] modelsFriction,double[][] interModelPairsFriction, double[] pressureKappa, double[] packBiomass, boolean[][] barrier, double dX)
+	{
+		int numModels=biomassOfModelsInCell.length;
+		int numCols=biomassOfModelsInCell[0].length;
+		int numRows=biomassOfModelsInCell[0][0].length;
+		double[][] advection=new double[numCols][numRows];
+		double[][][][] newFlux=new double[numModels][numCols][numRows][2]; //The flux is biomass*velocity 
+		double[][] pressureField = new double [numCols][numRows];
+		double[][][] pressureGradient = new double[2][numCols][numRows];
+		
+		//First calculate the pressure in each point
+		pressureField=pressure2DLinearMultiModel(biomassOfModelsInCell, pressureKappa, packBiomass);
+		//Then calculate the pressure gradient
+		pressureGradient=upwindDifferenceNablaScalar(pressureField, dX, barrier);
+		//Now calculate the new fluxes
+		for(int k=0;k<numModels;k++)
+		{
+			NewFlux=0;
+			//Get the upwind difference of the flux divergence
+			advection[k] = upwindDifferenceNablaVector(newFlux[k], dX, barrier);
+		}
+		return advection;
+	}
+	
+	/**
 	 * Returns the right hand side of the 2D convection equation; includes both advective and diffusive terms.
 	 * @param biomass
 	 * @return
 	 */
 	public static double[][] getConvectionRHSc(double[][] totalBiomassDensity, double[][] biomassDensity,double[][] convDiffConstField,double packedDensity,boolean[][] barrier,double dX,double elasticModulusConstant,double[][] frictionConstant)
 	{   
-				//TODO stuff here
+		//TODO stuff here
 		//System.out.println("ok1");
         double[][] convectionRHS=new double[biomassDensity.length][biomassDensity[0].length];
         double[][] advection=advection2Da(totalBiomassDensity, biomassDensity,barrier,dX,elasticModulusConstant,frictionConstant,packedDensity);
@@ -1545,6 +1574,166 @@ public class Utility implements CometsConstants
 		return diffusion;
 	}
 	
+	/**
+	 * Calculates the upwind divergence of a vector field in 2D. If the vector component V in the direction 
+	 * of the derivative is positive, does V_j-V_(j-1). If the component of V is negative, V_(j+1)-V_j.   
+	 */
+	public static double[][] upwindDifferenceNablaVector(double[][][] vector, double dX, boolean[][] barrier)
+	{
+		int numCols=vector[0].length;
+		int numRows=vector[0][0].length;
+		double[][] difference=new double [numCols][numRows];
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				//System.out.println(i+" "+j+"\n" );
+				difference[i][j]=0.0;
+				//Do x direction first.
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+			        //If the point/cell is a single one with edge or barriers on both sides.
+					difference[i][j]+=0.0;
+				}
+				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && barrier[i-1][j] && barrier[i+2][j]))
+				{
+					difference[i][j]+=(vector[i+1][j][0]-vector[i][j][0])/dX;
+				}
+				else if((numCols==2 && i==1 && i!=0) || (i!=0 && i==numCols-1 && barrier[i-2][j]) || (i!=0 && i!=1 && i!=numCols-1 && barrier[i-2][j] && barrier[i+1][j]))
+				{
+					difference[i][j]+=(vector[i][j][0]-vector[i-1][j][0])/dX;
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					difference[i][j]+=(vector[i+1][j][0]-vector[i][j][0])/dX;
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					difference[i][j]+=(vector[i][j][0]-vector[i-1][j][0])/dX;
+				}
+				else
+				{
+					if(vector[i][j][0]>0.0)
+					{
+						difference[i][j]+=(vector[i][j][0]-vector[i-1][j][0])/dX;
+					}
+					else
+					{
+						difference[i][j]+=(vector[i+1][j][0]-vector[i][j][0])/dX;
+					}
+				}
+				
+				//Then do y direction 
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) || (j!=0 && j!=(numRows-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					difference[i][j]+=0.0;
+				}
+				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && barrier[i][j-1] && barrier[i][j+2]))
+				{
+					difference[i][j]+=(vector[i][j+1][1]-vector[i][j][1])/dX;
+				}
+				else if((numRows==2 && j==1 && j!=0) || (j!=0 && j==numRows-1 && barrier[i][j-2]) || (j!=0 && j!=1 && j!=numRows-1 && barrier[i][j-2] && barrier[i][j+1]))
+				{
+					difference[i][j]+=(vector[i][j][1]-vector[i][j-1][1])/dX;
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					difference[i][j]+=(vector[i][j+1][1]-vector[i][j][1])/dX;
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					difference[i][j]+=(vector[i][j][1]-vector[i][j-1][1])/dX;
+				}
+				else
+				{
+					if(vector[i][j][1]>0.0)
+					{
+						difference[i][j]+=(vector[i][j][1]-vector[i][j-1][1])/dX;
+					}
+					else
+					{
+						difference[i][j]+=(vector[i][j+1][1]-vector[i][j][1])/dX;
+					}
+				}
+			}
+		}
+		return difference;
+	}
+	
+	/**
+	 * Calculates the upwind divergence of a vector field in 2D. If the vector component V in the direction 
+	 * of the derivative is positive, does V_j-V_(j-1). If the component of V is negative, V_(j+1)-V_j.   
+	 */
+	public static double[][][] upwindDifferenceNablaScalar(double[][] scalar, double dX, boolean[][] barrier)
+	{
+		int numCols=scalar.length;
+		int numRows=scalar[0].length;
+		double[][][] difference=new double[2][numCols][numRows];
+		
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				//System.out.println(i+" "+j+"\n" );
+				difference[0][i][j]=0.0;
+				difference[1][i][j]=0.0;
+				//Do x direction first.
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+			        //If the point/cell is a single one with edge or barriers on both sides.
+					difference[0][i][j]+=0.0;
+				}
+				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && barrier[i-1][j] && barrier[i+2][j]))
+				{
+					difference[0][i][j]+=(scalar[i+1][j]-scalar[i][j])/dX;
+				}
+				else if((numCols==2 && i==1 && i!=0) || (i!=0 && i==numCols-1 && barrier[i-2][j]) || (i!=0 && i!=1 && i!=numCols-1 && barrier[i-2][j] && barrier[i+1][j]))
+				{
+					difference[0][i][j]+=(scalar[i][j]-scalar[i-1][j])/dX;
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					difference[0][i][j]+=(scalar[i+1][j]-scalar[i][j])/dX;
+				}
+				else if(i==(numCols-1) || barrier[i+1][j])
+				{
+					difference[0][i][j]+=(scalar[i][j]-scalar[i-1][j])/dX;
+				}
+				else
+				{
+						difference[0][i][j]+=(scalar[i+1][j]-scalar[i-1][j])/(2.0*dX);
+				}
+				
+				//Then do y direction 
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) || (j!=0 && j!=(numRows-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					difference[1][i][j]+=0.0;
+				}
+				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && barrier[i][j-1] && barrier[i][j+2]))
+				{
+					difference[1][i][j]+=(scalar[i][j+1]-scalar[i][j])/dX;
+				}
+				else if((numRows==2 && j==1 && j!=0) || (j!=0 && j==numRows-1 && barrier[i][j-2]) || (j!=0 && j!=1 && j!=numRows-1 && barrier[i][j-2] && barrier[i][j+1]))
+				{
+					difference[1][i][j]+=(scalar[i][j]-scalar[i][j-1])/dX;
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					difference[1][i][j]+=(scalar[i][j+1]-scalar[i][j])/dX;
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					difference[1][i][j]+=(scalar[i][j]-scalar[i][j-1])/dX;
+				}
+				else
+				{
+						difference[1][i][j]+=(scalar[i][j+1]-scalar[i][j-1])/(2.0*dX);
+				}
+			}
+		}
+		return difference;
+	}
 	
 	/**
 	 * Approximates the diffusive term in the 2D convection model. It calculates the 
@@ -4471,7 +4660,37 @@ public class Utility implements CometsConstants
 		System.out.println("diff: " + totalDiff);
 		
 	}
-
+	
+	/**
+	 * Calculates the pressure according to the linear dependence on total density, with a cut-off.
+	 * P=\sum_i (k_i*(\rho_i-\rho^zero_i), where k_i (kappas) are coeffs. of proportionality.
+	 * \rho^zero are the packed density. For density below it, the pressure is zero.  
+	 * @param biomass
+	 * @return
+	 */
+	public static double[][] pressure2DLinearMultiModel(double[][][] biomass,double pressureKappa[],double[] packBiomass)
+	{
+		double[][] pressure=new double[biomass.length][biomass[0].length];
+		for(int i=0;i<biomass.length;i++)
+		{
+			for(int j=0;j<biomass[0].length;j++)
+			{
+				pressure[i][j]=0.0;
+				for(int k=0;k<biomass[0][0].length;k++)
+				{
+					//pressure[i][j]=\Sum_i Kappa_i(\rho_i-\rho^0_i);
+					if(biomass[i][j][k]>packBiomass[k])
+					{
+						pressure[i][j]+=pressureKappa[k]*(biomass[i][j][k]-packBiomass[k]);
+					}
+				}
+			}
+		}		
+		return pressure;
+	}
+	
+	
+	
 	/**
 	 * Calculates the pressure according to the Farrel et. al. model: PRL 111, 168101(2013).
 	 * @param biomass

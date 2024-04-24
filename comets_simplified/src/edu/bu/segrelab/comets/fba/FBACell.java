@@ -50,6 +50,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private double[] old_biomass;
 	private double[] convectionRHS1;
 	private double[] convectionRHS2;
+	private double[] convectionMultiRHS1;
+	private double[] convectionMultiRHS2;
 	private double jointRHS1;
 	private double jointRHS2;
 	private double[] deltaBiomass; // this would more accurately be "bornBiomass" but keeping it as it was
@@ -129,6 +131,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		setBiomass(biomass);
 		this.convectionRHS1=new double[biomass.length];
 		this.convectionRHS2=new double[biomass.length];
+		this.convectionMultiRHS1=new double[biomass.length];
+		this.convectionMultiRHS2=new double[biomass.length];
 
 		if (cParams.showGraphics())
 			cellColor = calculateColor();
@@ -188,6 +192,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		setBiomass3D(biomass);
 		this.convectionRHS1=new double[biomass.length];
 		this.convectionRHS2=new double[biomass.length];
+		this.convectionMultiRHS1=new double[biomass.length];
+		this.convectionMultiRHS2=new double[biomass.length];
 		
 		if (cParams.showGraphics())
 			cellColor = calculateColor();
@@ -280,7 +286,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	}
 	
 	/**
-	 * Sets the previous step convectionRHS2.
+	 * Sets the previous two steps away convectionRHS2.
 	 * @param values
 	 */
 	public void setConvectionRHS2(double[] values)
@@ -291,6 +297,29 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		}
 	}
 	
+	/**
+	 * Sets the previous step convectionRHS1.
+	 * @param values
+	 */
+	public void setConvectionMultiRHS1(double[] values)
+	{
+		for (int i = 0; i < convectionMultiRHS1.length; i++)
+		{
+				convectionMultiRHS1[i] = values[i];
+		}
+	}
+	
+	/**
+	 * Sets the previous two steps away convectionMultiRHS2.
+	 * @param values
+	 */
+	public void setConvectionMultiRHS2(double[] values)
+	{
+		for (int i = 0; i < convectionMultiRHS2.length; i++)
+		{
+				convectionMultiRHS2[i] = values[i];
+		}
+	}
 	
 	/**
 	 * Sets the previous step jointRHS1.
@@ -560,6 +589,26 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	{
 		return convectionRHS2;
 	}
+	
+	/**
+	 * Returns the convectionMultiRHS1 from the previous step in the <code>FBACell</code>
+	 * @return a double[] containing the calculated ConvectionMultiRHS1 from a previous step in the <code>FBACell</code>.
+	 */
+	public synchronized double[] getConvectionMultiRHS1()
+	{
+		return convectionMultiRHS1;
+	}
+	
+	/**
+	 * Returns the convectionMultiRHS1 from 2 steps away in the <code>FBACell</code>
+	 * @return a double[] containing the total convectionMultiRHS2 from two steps away in the <code>FBACell</code>.
+	 */
+	public synchronized double[] getConvectionMultiRHS2()
+	{
+		return convectionMultiRHS2;
+	}
+	
+	
 	
 	/**
 	 * Returns the jointRHS1 from 2 steps away in the <code>FBACell</code>
