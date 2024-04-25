@@ -64,6 +64,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
   
 	private double[][] fluxes;
 	private int[] FBAstatus;
+	
+	private double[][] convModelFluxes;
 	  
 	private CometsParameters cParams;
 	private FBAParameters pParams;
@@ -139,6 +141,11 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		else
 			cellColor = 0;
 		fluxes = new double[fbaModels.length][];
+		convModelFluxes=new double[fbaModels.length][2];
+		
+		//Temporary init ofr the convModelFluxes, remove this from final version.
+		for(int i=0;i<fbaModels.length;i++)for(int j=0;j<2;j++)convModelFluxes[i][j]=0.0;
+		
 		world.putCellAt(x, y, this);
 		
 		updateDiffusibility();
@@ -627,6 +634,24 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	public synchronized double getJointRHS1()
 	{
 		return jointRHS1;
+	}
+	
+	/**
+	 * Returns the Convective Model Fluxes for each metabolic model in <code>FBACell</code>
+	 * @return an array of Convective Model Fluxes for each metabolic model.
+	 */
+	public synchronized double[][] getConvModelFluxes()
+	{
+		return convModelFluxes;
+	}
+	
+	/**
+	 * Returns the Convective Model Fluxes for each metabolic model in <code>FBACell</code>
+	 * @return an array of Convective Model Fluxes for each metabolic model.
+	 */
+	public synchronized void setConvModelFluxes(double[][] fluxes)
+	{
+		convModelFluxes=fluxes;
 	}
 	
 	

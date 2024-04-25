@@ -3548,7 +3548,8 @@ public class FBAWorld extends World2D
 		
 		double[][][] deltaBiomassOfModelInCell = new double[numModels][numCols][numRows];
 		double[][][] biomassOfModelInCell = new double[numModels][numCols][numRows];
-		double[][][][] fluxOfModelInCell = new double[2][numModels][numCols][numRows];
+		double[][][][] fluxOfModelInCell = new double[numModels][numCols][numRows][2];
+		double[][][][] fluxOfModelInCellIntermediate = new double[2][numModels][numCols][numRows];
 		double[][] totalBiomassInCell = new double[numCols][numRows];
 		double[][] totalBiomassInCellIntermediate = new double[numCols][numRows];
 		double[][][] biomassOfModelInCellIntermediate = new double[numModels][numCols][numRows];
@@ -3571,7 +3572,7 @@ public class FBAWorld extends World2D
 		{
 			FBACell cell = (FBACell)it.next();
 			double[] biomass = cell.getBiomass();  // total local biomass from all models
-			double[][] flux = cell.getFlux();
+			double[][] flux = cell.getConvModelFluxes();
 			double[] deltaBiomass = cell.getDeltaBiomass(); // local biomass produced in this step
 			
 			int x = cell.getX();  //the spatial coordiantes of the cell
@@ -3593,20 +3594,30 @@ public class FBAWorld extends World2D
 		if (cParams.allowCellOverlap())
 		{
 			double[] modelFriction=new double[numModels];
-			double[][] interModelPairsFriction=new double[numModels][numModels];
+			double[] pressureKappa=new double[numModels];
+			double[] packBiomass=new double[numModels]
+;			double[][] interModelPairsFriction=new double[numModels][numModels];
 			for (int k=0; k<numModels; k++)
 			{
-				modelFriction[k]=((FBAModel)models[k]).getModelFriction();
+				//Temporary, change in final version
+				//modelFriction[k]=((FBAModel)models[k]).getModelFriction();
+				//pressureKappa[k]=((FBAModel)models[k]).getModelKappa();
+				//packBiomass[k]=((FBAModel)models[k]).packBiomass();
+				//for (int l=0; l<numModels; l++)
+				//{
+					//interModelPairsFriction[k][l]=((FBAModel)models[k]).getModelPairsFriction();
+				//}
+				modelFriction[k]=0.1;
+				pressureKappa[k]=1.0;
+				packBiomass[k]=0.0;
 				for (int l=0; l<numModels; l++)
 				{
-					interModelPairsFriction[k][l]=((FBAModel)models[k]).getModelPairsFriction();
+					interModelPairsFriction[k][l]=0.05;
 				}
 			}	
 				
-			for (int k=0; k<numModels; k++)
-			{	
-				convectionRHS[k]=Utility.getRHSconvMultiModel(deltaBiomassOfModelInCell[k],fluxOfModelInCell, totalBiomassInCell,biomassOfModelInCell[k],modelFriction[k],interModelPairsFriction[k], barrier,dX); 	 
-			}	
+			convectionRHS=Utility.getRHSconvMultiModel(biomassOfModelInCell,fluxOfModelInCell, modelFriction,interModelPairsFriction, pressureKappa, packBiomass, barrier,dX); 	 
+				
 			//This is the first step of the Adams-Bashforth-Moulton 3rd order time propagation scheme.
 			//First do the predictor
 			for(int i=0;i<numCols;i++)
@@ -3625,10 +3636,13 @@ public class FBAWorld extends World2D
 							biomassOfModelInCellIntermediate[k][i][j]=0.0;
 							System.out.println("Warning: Negative biomass at " + i +","+j+ " , reduce the time step.");
 						}	
-						totalBiomassInCellIntermediate[i][j]+=biomassOfModelInCellIntermediate[k][i][j];
+						//totalBiomassInCellIntermediate[i][j]+=biomassOfModelInCellIntermediate[k][i][j];
 					}
 				}
 			}
+			//Get the intermediate fluxes
+			fluxOfModelInCellIntermediate=Utility.getFluxesconvMultiModel(biomassOfModelInCellIntermediate,fluxOfModelInCell, modelFriction,interModelPairsFriction, pressureKappa, packBiomass, barrier,dX);
+			
 			//This is the second step of the Adams-Bashforth-Moulton 3rd order time propagation scheme.
 			//Now do the corrector
 			//First evaluate the right-hand side derivatives 
@@ -3645,11 +3659,7 @@ public class FBAWorld extends World2D
 				}
 			}
 			//Here we will use the predicted value biomassOfModelInCellIntermediate.
-			for (int k=0; k<numModels; k++)
-			{
-				convectionRHS[k]=Utility.getRHSconvMultiModel(deltaBiomassOfModelInCell[k], totalBiomassInCellIntermediate, biomassOfModelInCellIntermediate[k],modelFriction[k],interModelPairsFriction[k],barrier,dX); 	
-			}
-				
+			convectionRHS=Utility.getRHSconvMultiModel(biomassOfModelInCellIntermediate,fluxOfModelInCellIntermediate, modelFriction,interModelPairsFriction, pressureKappa, packBiomass, barrier,dX); 	 		
 			for(int i=0;i<numCols;i++)
 			{
 				for(int j=0;j<numRows;j++)
@@ -3668,10 +3678,8 @@ public class FBAWorld extends World2D
 			}
 			
 			//Typically we want to finish with an evaluation step (not necessary).
-			for (int k=0; k<numModels; k++)
-			{
-				convectionRHS[k]=Utility.getRHSconvMultiModel(deltaBiomassOfModelInCell[k], totalBiomassInCellIntermediate, biomassOfModelInCellIntermediate[k],modelFriction[k],interModelPairsFriction[k],barrier,dX); 	
-			}
+			fluxOfModelInCell=Utility.getFluxesconvMultiModel(biomassOfModelInCell,fluxOfModelInCellIntermediate, modelFriction,interModelPairsFriction, pressureKappa, packBiomass, barrier,dX);
+			convectionRHS=Utility.getRHSconvMultiModel(biomassOfModelInCell,fluxOfModelInCell, modelFriction,interModelPairsFriction, pressureKappa, packBiomass, barrier,dX); 	 
 			for(int i=0;i<numCols;i++)
 			{
 				for(int j=0;j<numRows;j++)
@@ -3688,7 +3696,7 @@ public class FBAWorld extends World2D
 					}
 				}
 			}
-			
+			fluxOfModelInCell=Utility.getFluxesconvMultiModel(biomassOfModelInCell,fluxOfModelInCell, modelFriction,interModelPairsFriction, pressureKappa, packBiomass, barrier,dX);
 			
 			// Update the world with the results.
 			for (int j=0; j<numRows; j++)
@@ -3714,14 +3722,17 @@ public class FBAWorld extends World2D
 						{
 							Cell cell = (Cell)getCellAt(i,j);
 							cell.setBiomass(newBiomass);
+							cell.setConvModelFluxes(fluxOfModelInCell);
 							cell.setConvectionMultiRHS1(newConvectionRHS1);
 							cell.setConvectionMultiRHS2(newConvectionRHS2);
 						}
 						else // make a new Cell here
 						{   
 							Cell cell = new FBACell(i, j, newBiomass, this, (FBAModel[])models, cParams, pParams);
+							cell.setFluxes(fluxOfModelInCell);
 							cell.setConvectionMultiRHS1(newConvectionRHS1);
 							cell.setConvectionMultiRHS2(newConvectionRHS2);
+	
 							c.getCells().add(cell);
 						}
 					}
@@ -3985,6 +3996,7 @@ public class FBAWorld extends World2D
 				//	convectMedia(pParams.getDefaultVelocityVector());
 				//System.out.println("Fick");
 			}
+			/*
 			switch (pParams.getBiomassMotionStyle())
 			{
 				case DIFFUSION_CN :
@@ -4003,6 +4015,8 @@ public class FBAWorld extends World2D
 					System.out.println("No biomass diffusion! Set the diffusion parameter to 'Diffusion 2D(Crank-Nicolson)', 'Diffusion 2D(Eight Point)' or 'Convection 2D'");
 					break;
 			}
+			*/
+			convMultiModels2DBiomass();
 		//}
 
 		// 5. set static media
