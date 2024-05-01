@@ -93,7 +93,7 @@ public class Comets implements CometsConstants,
 {
 
 
-	private String versionString = "2.11.3, 10 April 2024";
+	private String versionString = "2.11.4, 1 May 2024";
 
 
 	
