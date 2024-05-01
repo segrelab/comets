@@ -147,6 +147,9 @@ public abstract class Cell implements CometsConstants
 	public abstract void setJointRHS1(double value);
 	public abstract void setJointRHS2(double value);
 	
+	public abstract void setConvModelFluxes(double[][] value);
+	
+	
 	/**
 	 * 
 	 * @param oldModels

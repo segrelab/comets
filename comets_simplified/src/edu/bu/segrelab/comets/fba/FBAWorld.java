@@ -3581,7 +3581,7 @@ public class FBAWorld extends World2D
 			for (int k=0; k<numModels; k++)
 			{
 				biomassOfModelInCell[k][x][y]=biomass[k]; //Global for all x and y filled up here
-				fluxOfModelInCell[k][x][y]=flux[k];
+				for(int l=0;l<2;l++)fluxOfModelInCell[k][x][y][l]=flux[k][l];
 				totalBiomassInCell[x][y]+=biomassOfModelInCell[k][x][y];
 				deltaBiomassOfModelInCell[k][x][y]=deltaBiomass[k];
 				convectionRHS1[k][x][y]=cell.getConvectionMultiRHS1()[k];
@@ -3607,12 +3607,12 @@ public class FBAWorld extends World2D
 				//{
 					//interModelPairsFriction[k][l]=((FBAModel)models[k]).getModelPairsFriction();
 				//}
-				modelFriction[k]=0.1;
-				pressureKappa[k]=1.0;
-				packBiomass[k]=0.0;
+				modelFriction[k]=0.00000001;
+				pressureKappa[k]=0.0000000001;
+				packBiomass[k]=0.00001;
 				for (int l=0; l<numModels; l++)
 				{
-					interModelPairsFriction[k][l]=0.05;
+					interModelPairsFriction[k][l]=0.01;
 				}
 			}	
 				
@@ -3706,12 +3706,14 @@ public class FBAWorld extends World2D
 					double[] newBiomass = new double[numModels];
 					double[] newConvectionRHS1=new double[numModels];
 					double[] newConvectionRHS2=new double[numModels];
+					double[][] newFluxOfModelInCell=new double[numModels][2];
 					
 					for (int k=0; k<numModels; k++)
 					{
 						newBiomass[k] = biomassOfModelInCell[k][i][j];
 						newConvectionRHS1[k]=convectionRHS1[k][i][j];
 						newConvectionRHS2[k]=convectionRHS2[k][i][j];
+						for(int l=0;l<2;l++)newFluxOfModelInCell[k][l]=fluxOfModelInCell[k][i][j][l];
 					}
 					
 					if (Utility.hasNonzeroValue(newBiomass) || Utility.hasNonzeroValue(newConvectionRHS1) || Utility.hasNonzeroValue(newConvectionRHS2))
@@ -3722,14 +3724,14 @@ public class FBAWorld extends World2D
 						{
 							Cell cell = (Cell)getCellAt(i,j);
 							cell.setBiomass(newBiomass);
-							cell.setConvModelFluxes(fluxOfModelInCell);
+							cell.setConvModelFluxes(newFluxOfModelInCell);
 							cell.setConvectionMultiRHS1(newConvectionRHS1);
 							cell.setConvectionMultiRHS2(newConvectionRHS2);
 						}
 						else // make a new Cell here
 						{   
 							Cell cell = new FBACell(i, j, newBiomass, this, (FBAModel[])models, cParams, pParams);
-							cell.setFluxes(fluxOfModelInCell);
+							cell.setConvModelFluxes(newFluxOfModelInCell);
 							cell.setConvectionMultiRHS1(newConvectionRHS1);
 							cell.setConvectionMultiRHS2(newConvectionRHS2);
 	
@@ -3752,6 +3754,145 @@ public class FBAWorld extends World2D
 	}
 	
 	
+	
+	/**
+	 * The convection model for joint biomass transport, with friction between populations
+	 * of different models. Model created by Louis Brezin, Kirill Korolev and Ilija Dukovski. 
+	 * April 2024
+	 */
+	
+	private void convMultiModels2DBiomassEuler()
+	{
+
+		/* This model will be active only in cell overlap mode. 
+		 * The user will not be able to choose no overlap in the spatial cells.
+		 */
+		
+		double[][][] biomassOfModelInCell = new double[numModels][numCols][numRows];
+		double[][][][] fluxOfModelInCell = new double[numModels][numCols][numRows][2];
+		double[][][] convectionRHS  = new double[numModels][numCols][numRows];
+		Iterator<Cell> it = c.getCells().iterator();
+		
+		
+		double dT = cParams.getTimeStep() * 3600; // time step is in hours, diffusion is in seconds
+		double dX = cParams.getSpaceWidth();
+		
+		// capture the current biomass state
+		// The iterator goes over all spatial pixels 
+		// (unfortunately named cells, not biological, spatial cells)
+		// and checks if any biomass is present in them. 
+		// This way we don't waste time on empty cells.
+		
+		while (it.hasNext())
+		{
+			FBACell cell = (FBACell)it.next();
+			double[] biomass = cell.getBiomass();  // total local biomass from all models
+			double[][] flux = cell.getConvModelFluxes();
+			
+			int x = cell.getX();  //the spatial coordinates of the cell
+			int y = cell.getY();
+			
+			for (int k=0; k<numModels; k++)
+			{
+				biomassOfModelInCell[k][x][y]=biomass[k]; //Global for all x and y filled up here
+				for(int l=0;l<2;l++)fluxOfModelInCell[k][x][y][l]=flux[k][l];
+			}
+		}
+		
+		//Here we will allow only cell overlap for now. April 2024 ID
+		
+		if (cParams.allowCellOverlap())
+		{
+			double[] modelFriction=new double[numModels];
+			double[] pressureKappa=new double[numModels];
+			double[] packBiomass=new double[numModels];			
+			double[][] interModelPairsFriction=new double[numModels][numModels];
+			for (int k=0; k<numModels; k++)
+			{
+				//Temporary, change in final version
+				//modelFriction[k]=((FBAModel)models[k]).getModelFriction();
+				//pressureKappa[k]=((FBAModel)models[k]).getModelKappa();
+				//packBiomass[k]=((FBAModel)models[k]).packBiomass();
+				//for (int l=0; l<numModels; l++)
+				//{
+					//interModelPairsFriction[k][l]=((FBAModel)models[k]).getModelPairsFriction();
+				//}
+				modelFriction[k]=0.00000001;
+				pressureKappa[k]=0.0000000001;
+				packBiomass[k]=0.00001;
+				for (int l=0; l<numModels; l++)
+				{
+					interModelPairsFriction[k][l]=0.01;
+				}
+			}	
+				
+			convectionRHS=Utility.getRHSconvMultiModel(biomassOfModelInCell,fluxOfModelInCell, modelFriction,interModelPairsFriction, pressureKappa, packBiomass, barrier,dX); 	 
+				
+			//This is the Euler integration scheme
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{
+					for (int k=0; k<numModels; k++)
+					{ 
+						biomassOfModelInCell[k][i][j]=biomassOfModelInCell[k][i][j]+dT*convectionRHS[k][i][j];
+						if(biomassOfModelInCell[k][i][j]<0.0)
+						{
+							biomassOfModelInCell[k][i][j]=0.0;
+							System.out.println("Warning: Negative biomass at " + i +","+j+ " , reduce the time step.");
+						}	
+						//totalBiomassInCellIntermediate[i][j]+=biomassOfModelInCellIntermediate[k][i][j];
+					}
+				}
+			}
+			
+					
+			// Update the world with the results.
+			for (int j=0; j<numRows; j++)
+			{
+				for (int i=0; i<numCols; i++)
+				{
+					double[] newBiomass = new double[numModels];
+					double[][] newFluxOfModelInCell=new double[numModels][2];
+					
+					for (int k=0; k<numModels; k++)
+					{
+						newBiomass[k] = biomassOfModelInCell[k][i][j];
+						for(int l=0;l<2;l++)newFluxOfModelInCell[k][l]=fluxOfModelInCell[k][i][j][l];
+					}
+					
+					if (Utility.hasNonzeroValue(newBiomass) || Utility.hasNonzeroValue(newFluxOfModelInCell))
+					{
+						//Here we check if the cell in the grid has been created yet. 
+						//We don't create a cell until biomass or media gets into it. 
+						if (isOccupied(i,j))
+						{
+							Cell cell = (Cell)getCellAt(i,j);
+							cell.setBiomass(newBiomass);
+							cell.setConvModelFluxes(newFluxOfModelInCell);
+						}
+						else // make a new Cell here
+						{   
+							Cell cell = new FBACell(i, j, newBiomass, this, (FBAModel[])models, cParams, pParams);
+							cell.setConvModelFluxes(newFluxOfModelInCell);
+							c.getCells().add(cell);
+						}
+					}
+				}
+			}
+		}
+		else // If the user input is no cell overlap in the parameters
+		{
+			System.out.println("The multi-population convection biomass propagation model\n");
+			System.out.println("is not implemented for no cell overlap case.");
+			System.out.println("Please switch to allowed cell overlap in the parameters file: allowCellOverlap = true");
+			System.err.println("The multi-population convection biomass propagation model\n");
+			System.err.println("is not implemented for no cell overlap case.");
+			System.err.println("Please switch to allowed cell overlap in the parameters file: allowCellOverlap = true");
+			System.exit(0);
+		}
+	}
+
 	
 	
 /************** OLD DIFFUSION METHODS ************************/

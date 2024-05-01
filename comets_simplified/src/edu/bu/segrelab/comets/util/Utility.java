@@ -9,6 +9,8 @@ import java.util.Set;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.CometsParameters;
 
+import org.apache.commons.math3.linear;
+
 /**
  * Implements a number of static utility functions. For example, this includes a 
  * random number generator, an array summation method, methods for searching arrays
@@ -940,7 +942,7 @@ public class Utility implements CometsConstants
 	 * @param biomass
 	 * @return
 	 */
-	public static double[][][][] getFluxesconvMultiModel(double[][][] biomassOfModelsInCell, double[][][][] oldFlux,double[] modelsFriction,double[][] interModelPairsFriction, double[] pressureKappa, double[] packBiomass, boolean[][] barrier, double dX)
+	public static double[][][][] getFluxesconvMultiModel_old(double[][][] biomassOfModelsInCell, double[][][][] oldFlux,double[] modelsFriction,double[][] interModelPairsFriction, double[] pressureKappa, double[] packBiomass, boolean[][] barrier, double dX)
 	{
 		int numModels=biomassOfModelsInCell.length;
 		int numCols=biomassOfModelsInCell[0].length;
@@ -1001,6 +1003,88 @@ public class Utility implements CometsConstants
 		return newFlux;
 	}
 	
+	/**
+	 * Returns the flux \rho*V from the right hand side of the 2D convection equation with multi-species pressure and friction model. Includes only advective term.
+	 * @param biomass
+	 * @return
+	 */
+	public static double[][][][] getFluxesconvMultiModel(double[][][] biomassOfModelsInCell, double[][][][] oldFlux,double[] modelsFriction,double[][] interModelPairsFriction, double[] pressureKappa, double[] packBiomass, boolean[][] barrier, double dX)
+	{
+		int numModels=biomassOfModelsInCell.length;
+		int numCols=biomassOfModelsInCell[0].length;
+		int numRows=biomassOfModelsInCell[0][0].length;
+		double[][][] advection=new double[numModels][numCols][numRows];
+		double[][][][] newFlux=new double[numModels][numCols][numRows][2]; //The flux is biomass*velocity 
+		double[][] pressureField = new double [numCols][numRows];
+		double[][][] pressureGradient = new double[numCols][numRows][2];
+		double[] sumRhoXiV = new double[2];
+		double sumRhoXi;
+		
+		//First calculate the pressure in each point
+		pressureField=pressure2DLinearMultiModel(biomassOfModelsInCell, pressureKappa, packBiomass);
+		//Then calculate the pressure gradient
+		pressureGradient=upwindDifferenceNablaScalar(pressureField, dX, barrier);
+
+
+RealMatrix coefficients =
+    new Array2DRowRealMatrix(new double[][] { { 2, 3, -2 }, { -1, 7, 6 }, { 4, -3, -5 } },
+                       false);
+DecompositionSolver solver = new LUDecomposition(coefficients).getSolver();
+          
+
+Next create a RealVector array to represent the constant vector B and use solve(RealVector) to solve the system
+
+RealVector constants = new ArrayRealVector(new double[] { 1, -2, 1 }, false);
+RealVector solution = solver.solve(constants);
+          
+
+The solution vector will contain values for x (solution.getEntry(0)
+		//Now calculate the new fluxes
+		
+		for(int k=0;k<numModels;k++)
+		{
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{
+					//newFlux[k][i][j][0]=0.0;
+					//newFlux[k][i][j][1]=0.0;
+					//Sum over models \rho_j*xi_ij*V(0)_j
+					for(int dim=0;dim<2;dim++)
+					{
+						sumRhoXiV[dim]=0.0;
+					}
+					sumRhoXi=0.0;
+					for(int l=0;l<numModels;l++)
+					{
+						if(l!=k)
+						{
+							sumRhoXi+=biomassOfModelsInCell[l][i][j]*interModelPairsFriction[k][l];
+							for(int dim=0;dim<2;dim++)
+							{
+								sumRhoXiV[dim]+=oldFlux[l][i][j][dim]*interModelPairsFriction[k][l];
+							}
+						}
+					}
+					for(int dim=0;dim<2;dim++)
+					{
+						try
+						{
+							
+							newFlux[k][i][j][dim]=(biomassOfModelsInCell[k][i][j]*sumRhoXiV[dim]-pressureGradient[i][j][dim])/(modelsFriction[k]+sumRhoXi);
+					
+						}
+						catch(Exception e)
+						{
+							System.out.println("Division with zero when calculating flux in Multi-species Convective Model. Make sure the firction coefficients are not zero. ");
+						}
+					}
+				}
+			}
+		}
+		return newFlux;
+	}
+	
 	
 	/**
 	 * Returns the right hand side of the 2D convection equation with multi-species pressure and friction model. Includes only advective term.
@@ -1016,7 +1100,7 @@ public class Utility implements CometsConstants
 		double[][][][] newFlux=new double[numModels][numCols][numRows][2]; //The flux is biomass*velocity 
 		
 		//Calculate the new flux
-		newFlux=getFluxesconvMultiModel( biomassOfModelsInCell, oldFlux, modelsFriction, interModelPairsFriction, pressureKappa, packBiomass, barrier,dX);
+		newFlux=getFluxesconvMultiModel(biomassOfModelsInCell, oldFlux, modelsFriction, interModelPairsFriction, pressureKappa, packBiomass, barrier,dX);
 		//Get the upwind difference of the flux divergence
 		for(int k=0;k<numModels;k++)advection[k] = upwindDifferenceNablaVector(newFlux[k], dX, barrier);
 		
@@ -1639,8 +1723,8 @@ public class Utility implements CometsConstants
 	 */
 	public static double[][] upwindDifferenceNablaVector(double[][][] vector, double dX, boolean[][] barrier)
 	{
-		int numCols=vector[0].length;
-		int numRows=vector[0][0].length;
+		int numCols=vector.length;
+		int numRows=vector[0].length;
 		double[][] difference=new double [numCols][numRows];
 		
 		for(int i=0;i<numCols;i++)
@@ -1648,6 +1732,7 @@ public class Utility implements CometsConstants
 			for(int j=0;j<numRows;j++)
 			{
 				//System.out.println(i+" "+j+"\n" );
+				//System.out.println(numCols+" "+numRows+"\n" );
 				difference[i][j]=0.0;
 				//Do x direction first.
 				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
@@ -1667,7 +1752,7 @@ public class Utility implements CometsConstants
 				{
 					difference[i][j]+=(vector[i+1][j][0]-vector[i][j][0])/dX;
 				}
-				else if(i==(numCols-1) || barrier[i+1][j])
+				else if(i==numCols-1 || barrier[i+1][j])
 				{
 					difference[i][j]+=(vector[i][j][0]-vector[i-1][j][0])/dX;
 				}
@@ -1728,7 +1813,7 @@ public class Utility implements CometsConstants
 	{
 		int numCols=scalar.length;
 		int numRows=scalar[0].length;
-		double[][][] difference=new double[2][numCols][numRows];
+		double[][][] difference=new double[numCols][numRows][2];
 		
 		for(int i=0;i<numCols;i++)
 		{
@@ -4729,18 +4814,19 @@ public class Utility implements CometsConstants
 	 */
 	public static double[][] pressure2DLinearMultiModel(double[][][] biomass,double pressureKappa[],double[] packBiomass)
 	{
-		double[][] pressure=new double[biomass.length][biomass[0].length];
-		for(int i=0;i<biomass.length;i++)
+		double[][] pressure=new double[biomass[0].length][biomass[0][0].length];
+		System.out.println(biomass.length+" "+biomass[0].length+" "+biomass[0][0].length);
+		for(int i=0;i<biomass[0].length;i++)
 		{
-			for(int j=0;j<biomass[0].length;j++)
+			for(int j=0;j<biomass[0][0].length;j++)
 			{
 				pressure[i][j]=0.0;
-				for(int k=0;k<biomass[0][0].length;k++)
+				for(int k=0;k<biomass.length;k++)
 				{
 					//pressure[i][j]=\Sum_i Kappa_i(\rho_i-\rho^0_i);
-					if(biomass[i][j][k]>packBiomass[k])
+					if(biomass[k][i][j]>packBiomass[k])
 					{
-						pressure[i][j]+=pressureKappa[k]*(biomass[i][j][k]-packBiomass[k]);
+						pressure[i][j]+=pressureKappa[k]*(biomass[k][i][j]-packBiomass[k]);
 					}
 				}
 			}
