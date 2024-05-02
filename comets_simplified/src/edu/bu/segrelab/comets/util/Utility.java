@@ -9,7 +9,8 @@ import java.util.Set;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.CometsParameters;
 
-import org.apache.commons.math3.linear;
+import org.apache.commons.math3.linear.*;
+import java.lang.Math;
 
 /**
  * Implements a number of static utility functions. For example, this includes a 
@@ -1011,74 +1012,79 @@ public class Utility implements CometsConstants
 	public static double[][][][] getFluxesconvMultiModel(double[][][] biomassOfModelsInCell, double[][][][] oldFlux,double[] modelsFriction,double[][] interModelPairsFriction, double[] pressureKappa, double[] packBiomass, boolean[][] barrier, double dX)
 	{
 		int numModels=biomassOfModelsInCell.length;
-		int numCols=biomassOfModelsInCell[0].length;
-		int numRows=biomassOfModelsInCell[0][0].length;
-		double[][][] advection=new double[numModels][numCols][numRows];
-		double[][][][] newFlux=new double[numModels][numCols][numRows][2]; //The flux is biomass*velocity 
-		double[][] pressureField = new double [numCols][numRows];
-		double[][][] pressureGradient = new double[numCols][numRows][2];
-		double[] sumRhoXiV = new double[2];
-		double sumRhoXi;
+		int numRows=biomassOfModelsInCell[0].length;
+		int numCols=biomassOfModelsInCell[0][0].length;
+		double[][][] advection=new double[numModels][numRows][numCols];
+		double[][][][] newFlux=new double[numModels][numRows][numCols][2]; //The flux is biomass*velocity 
+		double[][] pressureField = new double [numRows][numCols];
+		double[][][] pressureGradient = new double[numRows][numCols][2];
+		double[][][] matrixCoeffs = new double[2][numModels][numModels];
+		double[][] constants = new double[2][numModels];
 		
 		//First calculate the pressure in each point
 		pressureField=pressure2DLinearMultiModel(biomassOfModelsInCell, pressureKappa, packBiomass);
-		//Then calculate the pressure gradient
-		pressureGradient=upwindDifferenceNablaScalar(pressureField, dX, barrier);
-
-
-RealMatrix coefficients =
-    new Array2DRowRealMatrix(new double[][] { { 2, 3, -2 }, { -1, 7, 6 }, { 4, -3, -5 } },
-                       false);
-DecompositionSolver solver = new LUDecomposition(coefficients).getSolver();
-          
-
-Next create a RealVector array to represent the constant vector B and use solve(RealVector) to solve the system
-
-RealVector constants = new ArrayRealVector(new double[] { 1, -2, 1 }, false);
-RealVector solution = solver.solve(constants);
-          
-
-The solution vector will contain values for x (solution.getEntry(0)
-		//Now calculate the new fluxes
 		
-		for(int k=0;k<numModels;k++)
+		//for(int i=0;i<numRows;i++)
+		//	for(int j=0;j<numCols;j++)
+		//	{
+		//		System.out.println(i+" "+j+" "+biomassOfModelsInCell[0][i][j]);
+		//		System.out.println(i+" "+j+" "+pressureField[i][j]);
+		//	}
+		
+		
+		//Then calculate the pressure gradient
+		pressureGradient=forwardDifferenceNablaScalar(pressureField, dX, barrier);
+		
+		//for(int i=0;i<numRows;i++)
+		//	for(int j=0;j<numCols;j++)
+		//	{
+		//		System.out.println(i+" "+j+" "+pressureGradient[i][j][0]+" "+pressureGradient[i][j][1]);
+		//	}
+		
+		//Calculate the coefficients of the matrix
+		//First set the matrices to zero
+		
+		for(int x=0;x<numRows;x++)
 		{
-			for(int i=0;i<numCols;i++)
+			for(int y=0;y<numCols;y++)
+
 			{
-				for(int j=0;j<numRows;j++)
+				for(int i=0;i<numModels;i++)
 				{
-					//newFlux[k][i][j][0]=0.0;
-					//newFlux[k][i][j][1]=0.0;
-					//Sum over models \rho_j*xi_ij*V(0)_j
-					for(int dim=0;dim<2;dim++)
+					for(int k=0;k<2;k++)constants[k][i]=0.0;
+					for(int j=0;j<numModels;j++)
 					{
-						sumRhoXiV[dim]=0.0;
+						for(int k=0;k<2;k++)matrixCoeffs[k][i][j]=0.0;
 					}
-					sumRhoXi=0.0;
-					for(int l=0;l<numModels;l++)
+				}
+				for(int k=0;k<2;k++)
+				{
+					for(int i=0;i<numModels;i++)
 					{
-						if(l!=k)
+						for(int j=0;j<numModels;j++)
 						{
-							sumRhoXi+=biomassOfModelsInCell[l][i][j]*interModelPairsFriction[k][l];
-							for(int dim=0;dim<2;dim++)
+							if(i==j)
 							{
-								sumRhoXiV[dim]+=oldFlux[l][i][j][dim]*interModelPairsFriction[k][l];
+								matrixCoeffs[k][i][j]-=modelsFriction[i];
+								for(int l=0;l<numModels;l++)
+								{
+									if(l!=i)matrixCoeffs[k][i][l]-=biomassOfModelsInCell[l][x][y]*interModelPairsFriction[i][l];
+								}
+							}
+							else
+							{
+								matrixCoeffs[k][i][j]=biomassOfModelsInCell[i][x][y]*interModelPairsFriction[i][j];
 							}
 						}
+						constants[k][i]=pressureGradient[x][y][k];
+						
 					}
-					for(int dim=0;dim<2;dim++)
-					{
-						try
-						{
-							
-							newFlux[k][i][j][dim]=(biomassOfModelsInCell[k][i][j]*sumRhoXiV[dim]-pressureGradient[i][j][dim])/(modelsFriction[k]+sumRhoXi);
-					
-						}
-						catch(Exception e)
-						{
-							System.out.println("Division with zero when calculating flux in Multi-species Convective Model. Make sure the firction coefficients are not zero. ");
-						}
-					}
+					RealVector rhsConstants= new ArrayRealVector(constants[k], false);
+					RealMatrix coefficients = new Array2DRowRealMatrix(matrixCoeffs[k],false);
+					DecompositionSolver solver = new LUDecomposition(coefficients).getSolver();
+					//Next solve the system with the rhs vector.
+					RealVector solution = solver.solve(rhsConstants);
+					for(int i=0;i<numModels;i++)newFlux[i][x][y][k]=solution.getEntry(i);
 				}
 			}
 		}
@@ -1094,17 +1100,150 @@ The solution vector will contain values for x (solution.getEntry(0)
 	public static double[][][] getRHSconvMultiModel(double[][][] biomassOfModelsInCell, double[][][][] oldFlux,double[] modelsFriction,double[][] interModelPairsFriction, double[] pressureKappa, double[] packBiomass, boolean[][] barrier, double dX)
 	{
 		int numModels=biomassOfModelsInCell.length;
-		int numCols=biomassOfModelsInCell[0].length;
-		int numRows=biomassOfModelsInCell[0][0].length;
-		double[][][] advection=new double[numModels][numCols][numRows];
-		double[][][][] newFlux=new double[numModels][numCols][numRows][2]; //The flux is biomass*velocity 
+		int numRows=biomassOfModelsInCell[0].length;
+		int numCols=biomassOfModelsInCell[0][0].length;
+		double[][][] advection=new double[numModels][numRows][numCols];
+		double[][][][] newFlux=new double[numModels][numRows][numCols][2]; //The flux is biomass*velocity 
 		
 		//Calculate the new flux
 		newFlux=getFluxesconvMultiModel(biomassOfModelsInCell, oldFlux, modelsFriction, interModelPairsFriction, pressureKappa, packBiomass, barrier,dX);
-		//Get the upwind difference of the flux divergence
-		for(int k=0;k<numModels;k++)advection[k] = upwindDifferenceNablaVector(newFlux[k], dX, barrier);
 		
+		//Get the upwind difference of the flux divergence
+		//for(int i=0;i<numRows;i++)
+		//	for(int j=0;j<numCols;j++)
+		//	{
+		//		System.out.println("0 "+i+" "+j+" "+newFlux[0][i][j][0]+" "+newFlux[0][i][j][1]);
+				//System.out.println("1 "+i+" "+j+" "+newFlux[1][i][j][0]+" "+newFlux[1][i][j][1]);
+		//	}
+		for(int k=0;k<numModels;k++)advection[k] = upwindDifferenceNablaVector(newFlux[k], biomassOfModelsInCell[k], dX, barrier);
+		//for(int i=0;i<numRows;i++)
+		//	for(int j=0;j<numCols;j++)
+		//		for(int k=0;k<numModels;k++)
+		//		{
+		//			System.out.println(k+" "+i+" "+j+" "+advection[k][i][j]);
+		//		}
 		return advection;
+	}
+	
+	/**
+	 * Returns the right hand side of the 2D convection equation with multi-species pressure and friction model. Includes only advective term.
+	 * @param biomass
+	 * @return
+	 */
+	public static double[][][] TestgetRHSconvMultiModel(double[][][] biomassOfModelsInCell, double[][][][] oldFlux,double[] modelsFriction,double[][] interModelPairsFriction, double[] pressureKappa, double[] packBiomass, boolean[][] barrier, double dX)
+	{
+		int numModels=biomassOfModelsInCell.length;
+		int numCols=biomassOfModelsInCell[0].length;
+		int numRows=biomassOfModelsInCell[0][0].length;
+		//double[][][] advection=new double[numModels][numRows][numCols];
+		//double[][][][] newFlux=new double[numModels][numRows][numCols][2]; //The flux is biomass*velocity 
+		double[][] pressure=new double[numCols][numRows];
+		//Calculate the new flux
+		//newFlux=getFluxesconvMultiModel(biomassOfModelsInCell, oldFlux, modelsFriction, interModelPairsFriction, pressureKappa, packBiomass, barrier,dX);
+		
+		//Get the upwind difference of the flux divergence
+		//for(int i=0;i<numRows;i++)
+		//	for(int j=0;j<numCols;j++)
+		//	{
+		//		System.out.println("0 "+i+" "+j+" "+newFlux[0][i][j][0]+" "+newFlux[0][i][j][1]);
+		//		//System.out.println("1 "+i+" "+j+" "+newFlux[1][i][j][0]+" "+newFlux[1][i][j][1]);
+		//	}
+		//for(int k=0;k<numModels;k++)advection[k] = upwindDifferenceNablaVector(newFlux[k], biomassOfModelsInCell[k], dX, barrier);
+		//for(int i=0;i<numRows;i++)
+		//	for(int j=0;j<numCols;j++)
+		//		for(int k=0;k<numModels;k++)
+		//		{
+		//			System.out.println(k+" "+i+" "+j+" "+advection[k][i][j]);
+		//		}
+		double[] pressKappa= new double[1];
+		double[] packBio=new double[1];
+		
+		pressKappa[0]=1.0;
+		packBio[0]=0.0;
+		pressure=pressure2DLinearMultiModel(biomassOfModelsInCell,pressKappa,packBio);
+		
+		
+		
+		double[][][] difference=new double [numModels][numCols][numRows];
+	
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				System.out.println(i+" "+j+" "+pressure[i][j]);
+				difference[0][i][j]=0.0;
+				//Do x direction first.
+				if(numCols==1 || (i==0 && barrier[i+1][j]) || (i==(numCols-1) && barrier[numCols-2][j]) || (i!=0 && i!=(numCols-1) && barrier[i-1][j] && barrier[i+1][j]))
+				{
+			        //If the point/cell is a single one with edge or barriers on both sides.
+					//difference[i][j]+=0.0;
+				}
+				else if((numCols==2 && i==0) || (i==0 && barrier[i+2][j]) || (i!=0 && barrier[i-1][j] && barrier[i+2][j]))
+				{
+					//difference[i][j]+=(vector[i+1][j][0]-vector[i][j][0])/dX;
+				}
+				else if((numCols==2 && i==1 && i!=0) || (i!=0 && i==numCols-1 && barrier[i-2][j]) || (i!=0 && i!=1 && i!=numCols-1 && barrier[i-2][j] && barrier[i+1][j]))
+				{
+					//difference[i][j]+=(vector[i][j][0]-vector[i-1][j][0])/dX;
+				}
+				else if(i==0 || barrier[i-1][j])
+				{
+					//difference[i][j]+=(vector[i+1][j][0]-vector[i][j][0])/dX;
+				}
+				else if(i==numCols-1 || barrier[i+1][j])
+				{
+					//difference[i][j]+=(vector[i][j][0]-vector[i-1][j][0])/dX;
+				}
+				else
+				{ 
+					difference[0][i][j]+=(pressure[i+1][j]-2.0*pressure[i][j]+pressure[i-1][j])/(dX*dX);
+				}
+				
+				//Then do y direction 
+				if(numRows==1 || (j==0 && barrier[i][j+1]) || (j==(numRows-1) && barrier[i][numRows-2]) || (j!=0 && j!=(numRows-1) && barrier[i][j-1] && barrier[i][j+1]))
+				{
+					//difference[i][j]+=0.0;
+				}
+				else if((numRows==2 && j==0) || (j==0 && barrier[i][j+2]) || (j!=0 && barrier[i][j-1] && barrier[i][j+2]))
+				{
+					//difference[i][j]+=(vector[i][j+1][1]-vector[i][j][1])/dX;
+				}
+				else if((numRows==2 && j==1 && j!=0) || (j!=0 && j==numRows-1 && barrier[i][j-2]) || (j!=0 && j!=1 && j!=numRows-1 && barrier[i][j-2] && barrier[i][j+1]))
+				{
+					//difference[i][j]+=(vector[i][j][1]-vector[i][j-1][1])/dX;
+				}
+				else if(j==0 || barrier[i][j-1])
+				{
+					//difference[i][j]+=(vector[i][j+1][1]-vector[i][j][1])/dX;
+				}
+				else if(j==(numRows-1) || barrier[i][j+1])
+				{
+					//difference[i][j]+=(vector[i][j][1]-vector[i][j-1][1])/dX;
+				}
+				else
+				{
+					difference[0][i][j]+=(pressure[i][j+1]-2.0*pressure[i][j]+pressure[i][j-1])/(dX*dX);
+					//if(vector[i][j][1]>0.0)
+					//{
+					//	difference[i][j]+=(vector[i][j][1]-vector[i][j-1][1])/dX;
+					//}
+					//else if(vector[i][j][1]<0.0)
+					//{
+					//	difference[i][j]+=(vector[i][j+1][1]-vector[i][j][1])/dX;
+					//}
+					//else if(vector[i][j][1]==0.0 && scalar[i][j]>0.0)
+					//{
+					//	difference[i][j]-=(vector[i][j+1][1]-vector[i][j-1][1])/dX;
+					//}
+					//else if(vector[i][j][1]==0.0 && scalar[i][j]>0.0)
+					//{
+					//	difference[i][j]+=0.0;
+					//}
+				}
+			}
+		}
+		return difference;
+	
 	}
 	
 	/**
@@ -1721,16 +1860,29 @@ The solution vector will contain values for x (solution.getEntry(0)
 	 * Calculates the upwind divergence of a vector field in 2D. If the vector component V in the direction 
 	 * of the derivative is positive, does V_j-V_(j-1). If the component of V is negative, V_(j+1)-V_j.   
 	 */
-	public static double[][] upwindDifferenceNablaVector(double[][][] vector, double dX, boolean[][] barrier)
+	public static double[][] upwindDifferenceNablaVector(double[][][] vector, double[][] scalar, double dX, boolean[][] barrier)
 	{
 		int numCols=vector.length;
 		int numRows=vector[0].length;
 		double[][] difference=new double [numCols][numRows];
+		//double[][][] velocity=new double [numCols][numRows][2];
 		
 		for(int i=0;i<numCols;i++)
 		{
 			for(int j=0;j<numRows;j++)
 			{
+				//Calculate the velocities first
+				//for(int k=0;k<2;k++)
+				//{	
+				//	if(scalar[i][j]>0.0)
+				//	{
+				//		velocity[i][j][k]=vector[i][j][k]/scalar[i][j];
+				//	}
+				//	else if(scalar[i][j]==0.0)
+				//	{
+				//		velocity[i][j][k]=0.0;
+				//	}
+				//}
 				//System.out.println(i+" "+j+"\n" );
 				//System.out.println(numCols+" "+numRows+"\n" );
 				difference[i][j]=0.0;
@@ -1756,16 +1908,26 @@ The solution vector will contain values for x (solution.getEntry(0)
 				{
 					difference[i][j]+=(vector[i][j][0]-vector[i-1][j][0])/dX;
 				}
-				else
+				else //if(scalar[i][j]>0.0 || scalar[i-1][j]>0)
 				{
-					if(vector[i][j][0]>0.0)
-					{
-						difference[i][j]+=(vector[i][j][0]-vector[i-1][j][0])/dX;
-					}
-					else
-					{
-						difference[i][j]+=(vector[i+1][j][0]-vector[i][j][0])/dX;
-					}
+					difference[i][j]+=(vector[i][j][0]-vector[i-1][j][0])/dX;
+					//if(vector[i][j][0]>0.0)
+					//{
+					//	difference[i][j]+=(vector[i][j][0]-vector[i-1][j][0])/dX;
+					//}
+					//else if(vector[i][j][0]<0.0)
+					//{
+					//	difference[i][j]+=(vector[i+1][j][0]-vector[i][j][0])/dX;
+					//}
+					//else if(vector[i][j][0]==0.0 && scalar[i][j]>0.0)
+					//{
+					//	difference[i][j]-=(vector[i+1][j][0]-vector[i-1][j][0])/dX;
+					//	//difference[i][j]+=0.0;
+					//}
+					//else if(vector[i][j][0]==0.0 && scalar[i][j]==0.0)
+					//{
+					//	difference[i][j]+=0.0;
+					//}
 				}
 				
 				//Then do y direction 
@@ -1789,16 +1951,25 @@ The solution vector will contain values for x (solution.getEntry(0)
 				{
 					difference[i][j]+=(vector[i][j][1]-vector[i][j-1][1])/dX;
 				}
-				else
+				else //if(scalar[i][j]>0 || scalar[i][j-1]>0)
 				{
-					if(vector[i][j][1]>0.0)
-					{
-						difference[i][j]+=(vector[i][j][1]-vector[i][j-1][1])/dX;
-					}
-					else
-					{
-						difference[i][j]+=(vector[i][j+1][1]-vector[i][j][1])/dX;
-					}
+					difference[i][j]+=(vector[i][j][1]-vector[i][j-1][1])/dX;
+					//if(vector[i][j][1]>0.0)
+					//{
+					//	difference[i][j]+=(vector[i][j][1]-vector[i][j-1][1])/dX;
+					//}
+					//else if(vector[i][j][1]<0.0)
+					//{
+					//	difference[i][j]+=(vector[i][j+1][1]-vector[i][j][1])/dX;
+					//}
+					//else if(vector[i][j][1]==0.0 && scalar[i][j]>0.0)
+					//{
+					//	difference[i][j]-=(vector[i][j+1][1]-vector[i][j-1][1])/dX;
+					//}
+					//else if(vector[i][j][1]==0.0 && scalar[i][j]>0.0)
+					//{
+					//	difference[i][j]+=0.0;
+					//}
 				}
 			}
 		}
@@ -1809,7 +1980,7 @@ The solution vector will contain values for x (solution.getEntry(0)
 	 * Calculates the upwind divergence of a vector field in 2D. If the vector component V in the direction 
 	 * of the derivative is positive, does V_j-V_(j-1). If the component of V is negative, V_(j+1)-V_j.   
 	 */
-	public static double[][][] upwindDifferenceNablaScalar(double[][] scalar, double dX, boolean[][] barrier)
+	public static double[][][] forwardDifferenceNablaScalar(double[][] scalar, double dX, boolean[][] barrier)
 	{
 		int numCols=scalar.length;
 		int numRows=scalar[0].length;
@@ -1846,7 +2017,8 @@ The solution vector will contain values for x (solution.getEntry(0)
 				}
 				else
 				{
-						difference[i][j][0]+=(scalar[i+1][j]-scalar[i-1][j])/(2.0*dX);
+						//difference[i][j][0]+=(scalar[i+1][j]-scalar[i-1][j])/(2.0*dX);
+					difference[i][j][0]+=(scalar[i+1][j]-scalar[i][j])/(dX);
 				}
 				
 				//Then do y direction 
@@ -1872,7 +2044,8 @@ The solution vector will contain values for x (solution.getEntry(0)
 				}
 				else
 				{
-						difference[i][j][1]+=(scalar[i][j+1]-scalar[i][j-1])/(2.0*dX);
+						//difference[i][j][1]+=(scalar[i][j+1]-scalar[i][j-1])/(2.0*dX);
+					difference[i][j][1]+=(scalar[i][j+1]-scalar[i][j])/(dX);
 				}
 			}
 		}
@@ -4815,18 +4988,22 @@ The solution vector will contain values for x (solution.getEntry(0)
 	public static double[][] pressure2DLinearMultiModel(double[][][] biomass,double pressureKappa[],double[] packBiomass)
 	{
 		double[][] pressure=new double[biomass[0].length][biomass[0][0].length];
-		System.out.println(biomass.length+" "+biomass[0].length+" "+biomass[0][0].length);
+		//System.out.println(biomass.length+" "+biomass[0].length+" "+biomass[0][0].length);
 		for(int i=0;i<biomass[0].length;i++)
 		{
 			for(int j=0;j<biomass[0][0].length;j++)
 			{
+				//System.out.println(i+" "+j+" "+biomass[0][i][j]);
 				pressure[i][j]=0.0;
 				for(int k=0;k<biomass.length;k++)
 				{
 					//pressure[i][j]=\Sum_i Kappa_i(\rho_i-\rho^0_i);
+					//System.out.println(i+" "+j+" "+biomass[k][i][j]+" "+packBiomass[k]);
+					//System.out.println(biomass[k][i][j]>packBiomass[k]);
 					if(biomass[k][i][j]>packBiomass[k])
 					{
 						pressure[i][j]+=pressureKappa[k]*(biomass[k][i][j]-packBiomass[k]);
+						//System.out.println("Here"+i+" "+j+" "+pressure[i][j]+" "+packBiomass[k]);
 					}
 				}
 			}

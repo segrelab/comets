@@ -3582,10 +3582,10 @@ public class FBAWorld extends World2D
 			{
 				biomassOfModelInCell[k][x][y]=biomass[k]; //Global for all x and y filled up here
 				for(int l=0;l<2;l++)fluxOfModelInCell[k][x][y][l]=flux[k][l];
-				totalBiomassInCell[x][y]+=biomassOfModelInCell[k][x][y];
-				deltaBiomassOfModelInCell[k][x][y]=deltaBiomass[k];
-				convectionRHS1[k][x][y]=cell.getConvectionMultiRHS1()[k];
-				convectionRHS2[k][x][y]=cell.getConvectionMultiRHS2()[k];
+				//totalBiomassInCell[x][y]+=biomassOfModelInCell[k][x][y];
+				//deltaBiomassOfModelInCell[k][x][y]=deltaBiomass[k];
+				//convectionRHS1[k][x][y]=cell.getConvectionMultiRHS1()[k];
+				//convectionRHS2[k][x][y]=cell.getConvectionMultiRHS2()[k];
 			}
 		}
 		
@@ -3817,13 +3817,15 @@ public class FBAWorld extends World2D
 				//{
 					//interModelPairsFriction[k][l]=((FBAModel)models[k]).getModelPairsFriction();
 				//}
-				modelFriction[k]=0.00000001;
-				pressureKappa[k]=0.0000000001;
-				packBiomass[k]=0.00001;
+				modelFriction[k]=1.0;
+				pressureKappa[k]=0.0001;
+				packBiomass[k]=0.0;
 				for (int l=0; l<numModels; l++)
 				{
-					interModelPairsFriction[k][l]=0.01;
+					interModelPairsFriction[k][l]=10.0;
 				}
+				interModelPairsFriction[0][1]=0.0;
+				
 			}	
 				
 			convectionRHS=Utility.getRHSconvMultiModel(biomassOfModelInCell,fluxOfModelInCell, modelFriction,interModelPairsFriction, pressureKappa, packBiomass, barrier,dX); 	 
@@ -3835,12 +3837,31 @@ public class FBAWorld extends World2D
 				{
 					for (int k=0; k<numModels; k++)
 					{ 
-						biomassOfModelInCell[k][i][j]=biomassOfModelInCell[k][i][j]+dT*convectionRHS[k][i][j];
+						//System.out.println(i+" "+j+" "+convectionRHS[k][i][j]);
+						//double oldBiomass=biomassOfModelInCell[k][i][j];
+						biomassOfModelInCell[k][i][j]=biomassOfModelInCell[k][i][j]-dT*convectionRHS[k][i][j];
 						if(biomassOfModelInCell[k][i][j]<0.0)
 						{
+							//biomassOfModelInCell[k][i][j]=0.0;
+							System.out.println("Warning: Negative biomass of model "+k+ " at " + i +","+j+ " , reduce the time step.");
+							
+							//System.out.println(convectionRHS[k][i][j]);
+							//System.out.println(oldBiomass);
+							//System.out.println(biomassOfModelInCell[k][i][j]);
 							biomassOfModelInCell[k][i][j]=0.0;
-							System.out.println("Warning: Negative biomass at " + i +","+j+ " , reduce the time step.");
-						}	
+						}
+						
+						//if(biomassOfModelInCell[k][i][j]>0.0)
+						//{
+							//biomassOfModelInCell[k][i][j]=0.0;
+						//	System.out.println("Biomass of model "+k+" at "+i+" "+j+" "+biomassOfModelInCell[k][i][j]);
+							
+						//	System.out.println(convectionRHS[k][i][j]);
+						//	System.out.println(oldBiomass);
+						//	System.out.println(biomassOfModelInCell[k][i][j]);
+							//biomassOfModelInCell[k][i][j]=0.0;
+						//}
+							
 						//totalBiomassInCellIntermediate[i][j]+=biomassOfModelInCellIntermediate[k][i][j];
 					}
 				}
@@ -3848,9 +3869,9 @@ public class FBAWorld extends World2D
 			
 					
 			// Update the world with the results.
-			for (int j=0; j<numRows; j++)
+			for (int i=0; i<numCols; i++)
 			{
-				for (int i=0; i<numCols; i++)
+				for (int j=0; j<numRows; j++)
 				{
 					double[] newBiomass = new double[numModels];
 					double[][] newFluxOfModelInCell=new double[numModels][2];
@@ -4157,7 +4178,7 @@ public class FBAWorld extends World2D
 					break;
 			}
 			*/
-			convMultiModels2DBiomass();
+			convMultiModels2DBiomassEuler();
 		//}
 
 		// 5. set static media
