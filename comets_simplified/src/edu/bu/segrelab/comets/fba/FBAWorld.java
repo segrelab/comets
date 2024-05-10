@@ -3817,17 +3817,18 @@ public class FBAWorld extends World2D
 				//{
 					//interModelPairsFriction[k][l]=((FBAModel)models[k]).getModelPairsFriction();
 				//}
-				modelFriction[k]=1.0;
-				pressureKappa[k]=0.0001;
+				modelFriction[k]=0.01;
+				pressureKappa[k]=10.0;
 				packBiomass[k]=0.0;
 				for (int l=0; l<numModels; l++)
 				{
-					interModelPairsFriction[k][l]=10.0;
+					interModelPairsFriction[k][l]=0.0;
 				}
 				interModelPairsFriction[0][1]=0.0;
 				
 			}	
-				
+			//modelFriction[1]=1.0;
+			
 			convectionRHS=Utility.getRHSconvMultiModel(biomassOfModelInCell,fluxOfModelInCell, modelFriction,interModelPairsFriction, pressureKappa, packBiomass, barrier,dX); 	 
 				
 			//This is the Euler integration scheme

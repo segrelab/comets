@@ -1112,15 +1112,16 @@ public class Utility implements CometsConstants
 		//for(int i=0;i<numRows;i++)
 		//	for(int j=0;j<numCols;j++)
 		//	{
-		//		System.out.println("0 "+i+" "+j+" "+newFlux[0][i][j][0]+" "+newFlux[0][i][j][1]);
-				//System.out.println("1 "+i+" "+j+" "+newFlux[1][i][j][0]+" "+newFlux[1][i][j][1]);
+				//System.out.println("0 "+newFlux[0][50][50][0]+" "+newFlux[0][50][50][1]);
+				//System.out.println("1 "+newFlux[1][50][50][0]+" "+newFlux[1][50][50][1]);
 		//	}
 		for(int k=0;k<numModels;k++)advection[k] = upwindDifferenceNablaVector(newFlux[k], biomassOfModelsInCell[k], dX, barrier);
 		//for(int i=0;i<numRows;i++)
 		//	for(int j=0;j<numCols;j++)
 		//		for(int k=0;k<numModels;k++)
 		//		{
-		//			System.out.println(k+" "+i+" "+j+" "+advection[k][i][j]);
+					//System.out.println(0+"adv "+advection[0][50][50]);
+					//System.out.println(1+"adv "+advection[1][50][50]);
 		//		}
 		return advection;
 	}
