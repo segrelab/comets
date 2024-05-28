@@ -21,7 +21,7 @@ COMETS can be downloaded from [https://www.runcomets.org/get-started](https://ww
 # Toolboxes
 We have developed both a Matlab and a python toolbox to interface the Comets software. How to use these toolboxes are described in the [documentation](https://segrelab.github.io/comets-manual/).
  - Matlab toolbox: [github.com/segrelab/comets-toolbox](https://github.com/segrelab/comets-toolbox)
- - Python toolbox: [github.com/djbajic/COMETS-Python-Toolbox](https://github.com/djbajic/COMETS-Python-Toolbox)
+ - Python toolbox: [github.com/segrelab/cometspy](https://github.com/segrelab/cometspy)
 
 # Cite us
 If you use COMETS in you scientific work, please cite:
