@@ -44,6 +44,7 @@ public abstract class World2D implements CometsConstants, IWorld
 	protected double[][][] media;		 	  // (x, y, z) refers to the level of medium component
 											  // z in position (x,y)
 	protected boolean[][] barrier;			  // true if that space is a barrier
+	protected boolean[][] sink;               // sink only of biomass, used in multi-model convection for now 05/29/2024
 	protected Model[] models;				  // reference to the list of Models
 	protected String[] mediaNames;			  // list of names of all media, in order
 	protected String[] initialMediaNames;	  // list of names in the order given in the input file
@@ -55,6 +56,9 @@ public abstract class World2D implements CometsConstants, IWorld
 	protected boolean[] isStatic;			  // each true element i refers to a medium component
 											  // that is to remain static, at a value given
 											  // by staticMedia[i]
+	
+	protected double[] modelsFriction;        // Block with convective multi model propagation parameters
+	protected double[][] interModelPairsFriction;
 	
 	protected DRand randomGenerator; //djordje
 
@@ -75,6 +79,7 @@ public abstract class World2D implements CometsConstants, IWorld
 		cellGrid = new Cell[numCols][numRows];
 		media = new double[numCols][numRows][numMedia];
 		barrier = new boolean[numCols][numRows];
+		sink = new boolean[numCols][numRows];
 		models = c.getModels();
 		mediaNames = new String[numMedia];
 		reactionModel.setWorld(this);
@@ -407,6 +412,47 @@ public abstract class World2D implements CometsConstants, IWorld
 	}
 	
 	/**
+	 * This sets the space at (x, y) to either be a sink or not, according to the
+	 * barrier variable.
+	 * @param x
+	 * @param y
+	 * @param sink - true if the space at (x, y) should be a sink
+	 * @return <code>CometsConstants.PARAMS_OK</code> if successful 
+	 * and <code>CometsConstants.BOUNDS_ERROR</code> if the location is out of bounds.
+	 */
+	public int setSink(int x, int y, boolean b)
+	{
+		if (isOnGrid(x, y))
+		{
+			sink[x][y] = b;
+			return PARAMS_OK;			
+		}
+		else
+			return BOUNDS_ERROR;
+	}
+	
+	/**
+	 * Sets the modelsFriction parameters
+	 */
+	public void setModelsFriction(double[] values)
+	{
+		modelsFriction=new double[numModels];
+		for(int k=0;k<values.length;k++) modelsFriction[k]=values[k];
+	}
+	
+	/**
+	 * Sets the modelsFriction parameters
+	 */
+	public void setInterModelPairsFriction(double[][] values)
+	{
+		interModelPairsFriction= new double[numModels][numModels];
+		for(int k=0;k<values.length;k++)
+		{
+			for(int l=0;l<values[0].length;l++)interModelPairsFriction[k][l]=values[k][l];
+		}
+	}
+	
+	/**
 	 * Sets the biomass value to values given by biomassDelta. Note that this <b>sets</b> the
 	 * values, it doesn't add or subtract them. If biomassDelta is the wrong length, nothing
 	 * is done.
@@ -478,6 +524,7 @@ public abstract class World2D implements CometsConstants, IWorld
 			Cell[][] newCellGrid = new Cell[newNumCols][newNumRows];
 			double[][][] newMedia = new double[newNumCols][newNumRows][numMedia];
 			boolean[][] newBarrier = new boolean[newNumCols][newNumRows];
+			boolean[][] newSink = new boolean[newNumCols][newNumRows];
 			RefreshPoint[][] newRefreshPoints = new RefreshPoint[newNumCols][newNumRows];
 			StaticPoint[][] newStaticPoints = new StaticPoint[newNumCols][newNumRows];
 			
@@ -489,6 +536,7 @@ public abstract class World2D implements CometsConstants, IWorld
 				{
 					newCellGrid[i][j] = cellGrid[i][j];
 					newBarrier[i][j] = barrier[i][j];
+					newSink[i][j] = sink[i][j];
 					newRefreshPoints[i][j] = refreshPoints[i][j];
 					newStaticPoints[i][j] = staticPoints[i][j];
 					for (int k=0; k<numMedia; k++)
@@ -527,6 +575,7 @@ public abstract class World2D implements CometsConstants, IWorld
 			
 			cellGrid = newCellGrid;
 			barrier = newBarrier;
+			sink = newSink;
 			refreshPoints = newRefreshPoints;
 			staticPoints = newStaticPoints;
 			media = newMedia;

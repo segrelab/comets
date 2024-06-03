@@ -134,6 +134,9 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double convNonlinDiffExponent;
 	private double convNonlinDiffHillK;
 	private double convNonlinDiffHillN;
+	private double pressureKappa;
+	private double pressureExponent;
+	private double packBiomass;
 	private double noiseVariance;
 	private int[] objReactions; //index of reactions, in order of priority
 	private boolean[] objMaximize; //is corresponding objective maximized? If not, it's minimized
@@ -1327,7 +1330,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   convNonlinDiffHillK=0.9,
 				   packDensity=1,
 				   noiseVariance=0.0,
-				   neutralDriftSigma=0.0;
+				   neutralDriftSigma=0.0,
+				   pressureKappa=1.0,
+				   pressureExponent=1.0,
+				   packBiomass=0.0;
 			
 			boolean blockOpen = false;
 
@@ -1896,6 +1902,63 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						reader.close();
 						throw new ModelFileException("The convNonlinDiffHillN value given at line " + lineNum + "should be => 0");
 					}
+				}
+				
+				/**************************************************************
+				 *******LOAD Pressure Kappa (CONVECTION MULTI MODEL)***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("pressureKappa"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The pressureKappa should be followed only by its value at line " + lineNum);
+					}
+					pressureKappa = Double.parseDouble(tokens[1]);
+					if (pressureKappa < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The pressureKappa value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
+				
+				/**************************************************************
+				 *******LOAD Pack Biomass (CONVECTION MULTI MODEL)***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("packBiomass"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The packBiomass should be followed only by its value at line " + lineNum);
+					}
+					packBiomass = Double.parseDouble(tokens[1]);
+					if (packBiomass < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The packBiomass value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
+				
+				/**************************************************************
+				 *******LOAD Pressure Exponent (CONVECTION MULTI MODEL)***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("pressureExponent"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The pressureExponent should be followed only by its value at line " + lineNum);
+					}
+					pressureExponent = Double.parseDouble(tokens[1]);
+					if (pressureExponent < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The pressureExponent value given at line " + lineNum + "should be => 0");
+					}
+					
 				}
 				
 				/**************************************************************
@@ -2708,6 +2771,9 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setSignals(signals);
 			model.setNeutralDrift(neutralDrift);
 			model.setNeutralDriftSigma(neutralDriftSigma);
+			model.setPressureKappa(pressureKappa);
+			model.setPressureExponent(pressureExponent);
+			model.setPackBiomass(packBiomass);
 			
 			model.setFileName(filename);
 			return model;
@@ -2919,9 +2985,38 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	 */
 	public void setConvNonlinDiffHillN(double val)
 	{
-		convNonlinDiffHillN=val;;
+		convNonlinDiffHillN=val;
 	}
 	
+	public double getPressureKappa()
+	{
+		return pressureKappa;
+	}
+	
+	public void setPressureKappa(double val)
+	{
+		pressureKappa=val;
+	}
+	
+	public double getPressureExponent()
+	{
+		return pressureExponent;
+	}
+	
+	public void setPressureExponent(double val)
+	{
+		pressureExponent=val;
+	}
+	
+	public double getPackBiomass()
+	{
+		return packBiomass;
+	}
+	
+	public void setPackBiomass(double val)
+	{
+		packBiomass=val;
+	}
 	
 	public double getNoiseVariance()
 	{

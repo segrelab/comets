@@ -342,6 +342,8 @@ public abstract class World implements CometsConstants
 			return BOUNDS_ERROR;
 	}
 	
+	
+	
 	/**
 	 * Sets the biomass value to values given by biomassDelta. Note that this <b>sets</b> the
 	 * values, it doesn't add or subtract them. If biomassDelta is the wrong length, nothing
