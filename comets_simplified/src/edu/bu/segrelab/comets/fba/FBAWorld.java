@@ -3190,7 +3190,7 @@ public class FBAWorld extends World2D
 						//System.out.println(i+","+j+" "+k+"     "+biomassDensity[k][i][j]);
 					}
 				
-					if (Utility.hasNonzeroValue(newBiomass) || Utility.hasNonzeroValue(newConvectionRHS1) || Utility.hasNonzeroValue(newConvectionRHS1))
+					if (Utility.hasNonzeroValue(newBiomass) || Utility.hasNonzeroValue(newConvectionRHS1) || Utility.hasNonzeroValue(newConvectionRHS2))
 					{
 						//System.out.println(i+"  "+j);
 						//System.out.println("OK");
@@ -3532,8 +3532,175 @@ public class FBAWorld extends World2D
 		}
 	}
 	
+
 	
+	/**
+	 * The convection model for joint biomass transport, with friction between populations
+	 * of different models. Model created by Louis Brezin, Kirill Korolev and Ilija Dukovski. 
+	 * April 2024
+	 */
 	
+	private void convMultiModels2DBiomassEuler()
+	{
+
+		/* This model will be active only in cell overlap mode. 
+		 * The user will not be able to choose no overlap in the spatial cells.
+		 */
+		
+		double[][][] biomassOfModelsInCell = new double[numModels][numCols][numRows];
+		double[][][][] fluxOfModelsInCell = new double[numModels][numCols][numRows][2];
+		double[][][] convectionRHS  = new double[numModels][numCols][numRows];
+		Iterator<Cell> it = c.getCells().iterator();
+		
+		
+		double dT = cParams.getTimeStep() * 3600; // time step is in hours, diffusion is in seconds
+		double dX = cParams.getSpaceWidth();
+		
+		// capture the current biomass state
+		// The iterator goes over all spatial pixels 
+		// (unfortunately named cells, not biological, spatial cells)
+		// and checks if any biomass is present in them. 
+		// This way we don't waste time on empty cells.
+		
+		while (it.hasNext())
+		{
+			FBACell cell = (FBACell)it.next();
+			double[] biomass = cell.getBiomass();  // total local biomass from all models
+			double[][] flux = cell.getConvModelFluxes();
+			
+			int x = cell.getX();  //the spatial coordinates of the cell
+			int y = cell.getY();
+			
+			for (int k=0; k<numModels; k++)
+			{
+				biomassOfModelsInCell[k][x][y]=biomass[k]; //Global for all x and y filled up here
+				for(int l=0;l<2;l++)fluxOfModelsInCell[k][x][y][l]=flux[k][l];				
+			}
+		}
+		
+		//Here we will allow only cell overlap for now. April 2024 ID
+		
+		if (cParams.allowCellOverlap())
+		{
+			
+			//double[] modelsFriction=new double[numModels];
+			double[] pressureKappa=new double[numModels];
+			double[] packBiomass=new double[numModels];
+			double[] pressureExponent=new double[numModels];
+			/*
+			for (int k=0; k<numModels; k++)
+			{	
+				pressureKappa[k]=((FBAModel)models[k]).getPressureKappa();
+				System.out.println(k+" PK "+pressureKappa[k]);
+				packBiomass[k]=((FBAModel)models[k]).getPackBiomass();
+				System.out.println(k+" PB "+packBiomass[k]);
+				pressureExponent[k]=((FBAModel)models[k]).getPressureExponent();
+				System.out.println(k+" PE "+pressureExponent[k]);
+				System.out.println(k+" MF "+modelsFriction[k]);
+				//for (int l=0; l<numModels; l++)
+				//{
+				//	System.out.println(k+" "+ l+ " MF "+interModelPairsFriction[k][l]);
+				//}
+			}
+			*/
+			/*
+			double[][] interModelPairsFriction=new double[numModels][numModels];
+			for (int k=0; k<numModels; k++)
+			{	
+				//Temporary, change in final version
+				//modelFriction[k]=((FBAModel)models[k]).getModelFriction();
+				//pressureKappa[k]=((FBAModel)models[k]).getModelKappa();
+				//packBiomass[k]=((FBAModel)models[k]).packBiomass();
+				//for (int l=0; l<numModels; l++)
+				//{
+					//interModelPairsFriction[k][l]=((FBAModel)models[k]).getModelPairsFriction();
+				//}
+				
+				pressureKappa[k]=((FBAModel)models[k]).getPressureKappa();
+				pressureExponent[k]=((FBAModel)models[k]).getPressureExponent();
+				packBiomass[k]=((FBAModel)models[k]).getPackBiomass();
+				
+				modelsFriction[k]=0.01;
+				for (int l=0; l<numModels; l++)
+				{
+					interModelPairsFriction[k][l]=500.0;
+				}
+				//interModelPairsFriction[0][1]=0.0;
+			}
+			modelsFriction[1]=0.005;
+			*/
+			for (int k=0; k<numModels; k++)
+			{	
+				pressureKappa[k]=((FBAModel)models[k]).getPressureKappa();
+				pressureExponent[k]=((FBAModel)models[k]).getPressureExponent();
+				packBiomass[k]=((FBAModel)models[k]).getPackBiomass();
+			}
+			//Get the right hand side of the differential equation.
+			convectionRHS=Utility.getRHSconvMultiModel(biomassOfModelsInCell, fluxOfModelsInCell, modelsFriction, interModelPairsFriction, pressureKappa, packBiomass,pressureExponent, barrier, sink, dX); 	 
+			
+			//This is the Euler's integration scheme
+			for(int i=0;i<numCols;i++)
+			{
+				for(int j=0;j<numRows;j++)
+				{
+					for (int k=0; k<numModels; k++)
+					{ 
+						biomassOfModelsInCell[k][i][j]=biomassOfModelsInCell[k][i][j]-dT*convectionRHS[k][i][j];
+						if(biomassOfModelsInCell[k][i][j]<0.0)
+						{
+							System.out.println("Warning: Negative biomass of model "+k+ " at " + i +","+j+ " , reduce the time step.");
+							biomassOfModelsInCell[k][i][j]=0.0;
+						}
+					}
+				}
+			}
+			
+			// Update the world with the results.
+			for (int i=0; i<numCols; i++)
+			{
+				for (int j=0; j<numRows; j++)
+				{
+					double[] newBiomass = new double[numModels];
+					double[][] newFluxOfModelsInCell=new double[numModels][2];
+					
+					for (int k=0; k<numModels; k++)
+					{
+						newBiomass[k] = biomassOfModelsInCell[k][i][j];
+						for(int l=0;l<2;l++)newFluxOfModelsInCell[k][l]=fluxOfModelsInCell[k][i][j][l];
+					}
+					
+					if (Utility.hasNonzeroValue(newBiomass) || Utility.hasNonzeroValue(newFluxOfModelsInCell))
+					{
+						//Here we check if the cell in the grid has been created yet. 
+						//We don't create a cell until biomass or media gets into it. 
+						if (isOccupied(i,j))
+						{
+							Cell cell = (Cell)getCellAt(i,j);
+							cell.setBiomass(newBiomass);
+							cell.setConvModelFluxes(newFluxOfModelsInCell);
+						}
+						else // make a new Cell here
+						{   
+							Cell cell = new FBACell(i, j, newBiomass, this, (FBAModel[])models, cParams, pParams);
+							cell.setConvModelFluxes(newFluxOfModelsInCell);
+							c.getCells().add(cell);
+						}
+					}
+				}
+			}
+		}
+		else // If the user input is no cell overlap in the parameters
+		{
+			System.out.println("The multi-population convection biomass propagation model\n");
+			System.out.println("is not implemented for no cell overlap case.");
+			System.out.println("Please switch to allowed cell overlap in the parameters file: allowCellOverlap = true");
+			System.err.println("The multi-population convection biomass propagation model\n");
+			System.err.println("is not implemented for no cell overlap case.");
+			System.err.println("Please switch to allowed cell overlap in the parameters file: allowCellOverlap = true");
+			System.exit(0);
+		}
+	}
+
 	
 	
 /************** OLD DIFFUSION METHODS ************************/
@@ -3696,12 +3863,13 @@ public class FBAWorld extends World2D
 			randomCellOrder=Utility.randomOrder(c.getCells().size());
 			for (int i = 0; i < c.getCells().size(); i++)
 			{
-				// print("running cell " + i + "...");
+				// System.out.println("running cell " + i + "...");
 				
 				Cell cell = (Cell) c.getCells().get(randomCellOrder[i]);
 				int alive = cell.run();
 				if (alive == Cell.CELL_DEAD)
 					deadCells.add(cell);
+				//System.out.println("running cell " + i + "...");
 				// println(" done!");
 			}
 			//System.out.println("total fba time = " + (System.currentTimeMillis()));
@@ -3778,6 +3946,7 @@ public class FBAWorld extends World2D
 				//	convectMedia(pParams.getDefaultVelocityVector());
 				//System.out.println("Fick");
 			}
+			
 			switch (pParams.getBiomassMotionStyle())
 			{
 				case DIFFUSION_CN :
@@ -3792,10 +3961,15 @@ public class FBAWorld extends World2D
 				case CONV_NONLINDIFF_2D :
 					convNonlinDiff2DBiomass();
 					break; 
+				case CONV_MULTIMODELS_2D :
+					convMultiModels2DBiomassEuler();
+					break; 
 				default :
 					System.out.println("No biomass diffusion! Set the diffusion parameter to 'Diffusion 2D(Crank-Nicolson)', 'Diffusion 2D(Eight Point)' or 'Convection 2D'");
 					break;
 			}
+			
+			
 		//}
 
 		// 5. set static media

@@ -141,8 +141,14 @@ public abstract class Cell implements CometsConstants
 	public abstract void setConvectionRHS1(double[] values);
 	public abstract void setConvectionRHS2(double[] values);
 	
+	public abstract void setConvectionMultiRHS1(double[] values);
+	public abstract void setConvectionMultiRHS2(double[] values);
+	
 	public abstract void setJointRHS1(double value);
 	public abstract void setJointRHS2(double value);
+	
+	public abstract void setConvModelFluxes(double[][] value);
+	
 	
 	/**
 	 * 

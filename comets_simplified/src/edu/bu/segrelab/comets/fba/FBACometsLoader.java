@@ -123,6 +123,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			//								FILLED_RECT_POP = "filled_rect",
 			REACTIONS = "reactions",
 			BARRIER = "barrier",
+			SINK = "sink",
 			MEDIA = "media",
 			PARAMETERS = "parameters",
 			DIFFUSION_CONST = "diffusion_constants",
@@ -131,7 +132,9 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			MODEL_DIFFUSIVITY = "model_diffusivity",
 			SUBSTRATE_LAYOUT = "substrate_layout",
 			SPECIFIC_MEDIA = "specific_media",
-			VELOCITY_VECTORS = "velocity_vectors";;
+			VELOCITY_VECTORS = "velocity_vectors",
+			MODELS_FRICTION = "modelsfriction",
+			INTER_MODELS_FRICTION = "intermodelpairsfriction";
 	/**
 	 * Returns the recently loaded World2D.
 	 */
@@ -254,21 +257,29 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			String line;
 
 			int numMedia;
+			int numModels=0;
 			double[] mediaRefresh = null,
 					staticMedia = null;
 			boolean[] globalStatic = null;
+			
+			double[] modelsFriction = null;
+			double[][] interModelPairsFriction = null;
+			
 
 			Set<Point> barrier = new HashSet<Point>();
 			Set<Point3d> barrier3D = new HashSet<Point3d>();
+			Set<Point> sink = new HashSet<Point>();
+			Set<Point3d> sink3D = new HashSet<Point3d>();
 			Map<Point, double[]> specMedia = new HashMap<Point, double[]>();
 			Map<Integer, Double> diffConsts = new HashMap<Integer, Double>();
-
+			
 			List<int[]> noBiomassOut = new ArrayList<int[]>();
 			List<int[]> noBiomassIn = new ArrayList<int[]>();
 			List<int[]> noMediaOut = new ArrayList<int[]>();
 			List<int[]> noMediaIn = new ArrayList<int[]>();
 			Set<StaticPoint> staticPoints = new HashSet<StaticPoint>();
 			Set<RefreshPoint> refreshPoints = new HashSet<RefreshPoint>();
+			
 
 			while ((line = reader.readLine()) != null)
 			{
@@ -290,6 +301,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 				 * 	media_refresh []
 				 * 	grid_size
 				 * 	barrier []
+				 *  sink []
 				 * 	media []
 				 * 	prevent_biomass_out []
 				 * 	prevent_biomass_in []
@@ -311,6 +323,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 					 * eh, later.
 					 */
 
+					numModels=parsed.length-1;
 					models = new FBAModel[parsed.length-1];
 
 					LoaderState state = parseModelFileLine(path, parsed, models);
@@ -431,6 +444,40 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							}
 						}
 
+						/****************** BIOMASS SINK *************************/
+
+						else if (worldParsed[0].equalsIgnoreCase(SINK))
+						{
+							List<String> lines = collectLayoutFileBlock(reader);
+							if(c.getParameters().getNumLayers()==1)
+							{
+								state = parseSinkBlock(lines, sink);
+							}
+							else if(c.getParameters().getNumLayers()>1)
+							{
+								state = parseSinkBlock3D(lines, sink3D);
+							}
+						}
+
+						/****************** MODELS FRICTIONS *************************/
+
+						else if (worldParsed[0].equalsIgnoreCase(MODELS_FRICTION))
+						{
+							modelsFriction=new double[numModels];
+							List<String> lines = collectLayoutFileBlock(reader);
+							state = parseModelsFrictionBlock(lines, modelsFriction);
+						}
+						
+						/****************** INTER MODEL PAIRS FRICTIONS *************************/
+
+						else if (worldParsed[0].equalsIgnoreCase(INTER_MODELS_FRICTION))
+						{
+							interModelPairsFriction=new double[numModels][numModels];
+							List<String> lines = collectLayoutFileBlock(reader);
+							state = parseInterModelPairsFrictionBlock(lines,interModelPairsFriction);
+						}
+
+						
 						/****************** DIFFUSION CONSTANTS ********************/
 
 						else if (worldParsed[0].equalsIgnoreCase(DIFFUSION_CONST))
@@ -681,6 +728,12 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							world.setBarrier((int)p.getX(), (int)p.getY(), true);
 						}
 
+						// set sink spaces.
+						for (Point p : sink)
+						{
+							world.setSink((int)p.getX(), (int)p.getY(), true);
+						}
+						
 						// set specifically determined media in given spaces
 						for (Point p : specMedia.keySet())
 						{
@@ -805,6 +858,12 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							world.setPeriodicMedia(periodicMedia);
 						}
 
+						for(int k=0;k<numModels;k++)System.out.println("Fric "+k+" "+modelsFriction[k]);
+						world.setModelsFriction(modelsFriction);
+						world.setInterModelPairsFriction(interModelPairsFriction);
+						
+						
+						
 						IWorld.reactionModel.setWorld(world);
 						
 						System.out.println("Done!");
@@ -840,6 +899,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 						{
 							world3D.setBarrier((int)p.getX(), (int)p.getY(), (int)p.getZ(), true);
 						}
+						
 
 						// set specifically determined media in given spaces
 						for (Point p : specMedia.keySet())
@@ -1333,7 +1393,64 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		return LoaderState.OK;
 
 	}
+	
+	private LoaderState parseModelsFrictionBlock(List<String> lines,double[] modelsFriction) throws LayoutFileException,
+	NumberFormatException
+	{
+		/* the 'modelsFriction' block looks like this:
+		 * 
+		 * models_friction 
+		 * 		<model number> <model_friction>
+		 * 		<model number> <model_friction>
+		 * //
+		 */
+		System.out.println("Friction 1");
+		for (String line : lines)
+		{
+			lineCount++;
+			if (line.length() == 0)
+				continue;
 
+			String[] modelsFrictionParsed = line.split("\\s+");
+			if (modelsFrictionParsed.length != 2)
+				throw new LayoutFileException("Each line of the 'models_frictions' block should have two tokens.\n The first should be the index of the model number, followed by its friction constant.", lineCount);
+			else
+			{
+				modelsFriction[Integer.parseInt(modelsFrictionParsed[0])]= Double.parseDouble(modelsFrictionParsed[1]);
+				//System.out.println("Friction "+Integer.parseInt(modelsFrictionParsed[0])+" "+Double.parseDouble(modelsFrictionParsed[1]));
+			}
+		}
+		return LoaderState.OK;
+	}
+
+	private LoaderState parseInterModelPairsFrictionBlock(List<String> lines,double[][] interModelPairsFriction) throws LayoutFileException,
+	NumberFormatException
+	{
+		/* the 'modelsFriction' block looks like this:
+		 * 
+		 * inter_model_pairs_friction 
+		 * 		<model number> <model_friction>
+		 * 		<model number> <model_friction>
+		 * //
+		 */
+		for (String line : lines)
+		{
+			lineCount++;
+			if (line.length() == 0)
+				continue;
+
+			String[] interModelPairsFrictionParsed = line.split("\\s+");
+			if (interModelPairsFrictionParsed.length != 3)
+				throw new LayoutFileException("Each line of the 'models_frictions' block should have two tokens.\n The first should be the index of the model number, followed by its friction constant.", lineCount);
+			else
+			{
+				interModelPairsFriction[Integer.parseInt(interModelPairsFrictionParsed[0])][Integer.parseInt(interModelPairsFrictionParsed[1])]= Double.parseDouble(interModelPairsFrictionParsed[2]);
+				//System.out.println("FrictionPairs "+Integer.parseInt(interModelPairsFrictionParsed[0])+" "+Integer.parseInt(interModelPairsFrictionParsed[1])+" "+Double.parseDouble(interModelPairsFrictionParsed[2]));
+			}
+		}
+		return LoaderState.OK;
+	}
+	
 	private LoaderState parseSubstrateDiffusionConstantsBlock(List<String> lines, int numMedia) throws LayoutFileException,
 	NumberFormatException
 	{
@@ -2097,6 +2214,45 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 	}
 
 
+	private LoaderState parseSinkBlock(List<String> lines, Set<Point> sink) throws LayoutFileException, 
+	NumberFormatException
+	{
+		for (String line : lines)
+		{
+			lineCount++;
+			// ignore empty lines.
+			if (line.length() == 0)
+				continue;
+
+			String[] sinkParsed = line.split("\\s+");
+			if (sinkParsed.length != 2)
+			{
+				throw(new LayoutFileException("each line after 'sink' must be two integers >= 0", lineCount));
+			}
+			sink.add(new Point(Integer.valueOf(sinkParsed[0]), Integer.valueOf(sinkParsed[1])));
+		}
+		return LoaderState.OK;
+	}
+
+	private LoaderState parseSinkBlock3D(List<String> lines, Set<Point3d> sink3D) throws LayoutFileException, NumberFormatException
+	{
+		for (String line : lines)
+		{
+			lineCount++;
+			// ignore empty lines.
+			if (line.length() == 0)
+				continue;
+
+			String[] sinkParsed = line.split("\\s+");
+			if (sinkParsed.length != 3)
+			{
+				throw(new LayoutFileException("each line after 'barrier' must be three integers >= 0", lineCount));
+			}
+			sink3D.add(new Point3d(Integer.valueOf(sinkParsed[0]), Integer.valueOf(sinkParsed[1]),Integer.valueOf(sinkParsed[2])));
+		}
+		return LoaderState.OK;
+	}
+	
 	private String initializeBiomassPointsBatch(String[] parsed, int numModels, CometsParameters cParams)
 	{
 		/*
