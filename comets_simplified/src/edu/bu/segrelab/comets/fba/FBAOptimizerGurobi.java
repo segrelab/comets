@@ -950,7 +950,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 				//GRBLinExpr objective=new GRBLinExpr();
 				//objective.addTerm(1.0, rxnFluxes[objReaction-1]);
 				//model.setObjective(objective, GRB.MAXIMIZE);
-				env.start();
+				//env.start();
 				setObjectiveReaction(numRxns,objReactions,objMaximize);
 				model.update();
 				model.optimize();
@@ -971,7 +971,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 						fluxesModel[i]=0;
 					}
 				}
-				env.release();
+				//env.release();
 			}
 			catch(GRBException e){
 				System.out.println("Error in FBAOptimizerGurobi.run, case MAXIMIZE_OBJECTIVE_FLUX");
@@ -982,7 +982,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		case FBAModel.MAX_OBJECTIVE_MIN_TOTAL:
 			try{
 
-				env.start();
+				//env.start();
 				// first find the maximized objective with vanilla FBA (e.g. biomass)
 				//GRBLinExpr objective=new GRBLinExpr();
 				//objective.addTerm(1.0, rxnFluxes[objReaction-1]);
@@ -1025,7 +1025,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 					//	fluxesModel[i]=0;
 					//}
 				}	
-				env.release();
+				//env.release();
 			}
 			catch(GRBException e){
 				System.out.println("Error in FBAOptimizerGurobi.run, case MAX_OBJECTIVE_MIN_TOTAL ");

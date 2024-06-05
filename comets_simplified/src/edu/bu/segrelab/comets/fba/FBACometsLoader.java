@@ -858,7 +858,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 							world.setPeriodicMedia(periodicMedia);
 						}
 
-						for(int k=0;k<numModels;k++)System.out.println("Fric "+k+" "+modelsFriction[k]);
+						//for(int k=0;k<numModels;k++)System.out.println("Fric "+k+" "+modelsFriction[k]);
 						world.setModelsFriction(modelsFriction);
 						world.setInterModelPairsFriction(interModelPairsFriction);
 						

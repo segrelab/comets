@@ -221,7 +221,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	public FBAModel(double[][] m, double[] l, double[] u, int[] objs, boolean[] objsMax, int b, int optim)
 	{
 		runSuccess = false;
-		objStyle = MAX_OBJECTIVE_MIN_TOTAL;
+		objStyle = MAX_OBJECTIVE_MIN_TOTAL; //This is not a good place to do it. need to revisit this line ID 06/04/2024
 	
 		//System.out.println("here "+optim);
 		//System.out.println("here1 "+GUROBI);
