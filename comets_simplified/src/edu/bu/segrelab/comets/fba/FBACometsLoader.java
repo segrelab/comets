@@ -95,6 +95,8 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 	private boolean modelDiffusion = false;
 	private boolean specific = false;
 	private boolean friction = false;
+	private boolean modelsFrictionFlag = false;
+	private boolean modelPairsFrictionFlag = false;
 	private double[][] substrateDiffConsts;
 	private double[][] modelDiffConsts;
 	private int[][] substrateLayout;
@@ -463,6 +465,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 
 						else if (worldParsed[0].equalsIgnoreCase(MODELS_FRICTION))
 						{
+							modelsFrictionFlag=true;
 							modelsFriction=new double[numModels];
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseModelsFrictionBlock(lines, modelsFriction);
@@ -472,6 +475,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 
 						else if (worldParsed[0].equalsIgnoreCase(INTER_MODELS_FRICTION))
 						{
+							modelPairsFrictionFlag=true;
 							interModelPairsFriction=new double[numModels][numModels];
 							List<String> lines = collectLayoutFileBlock(reader);
 							state = parseInterModelPairsFrictionBlock(lines,interModelPairsFriction);
@@ -859,9 +863,12 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 						}
 
 						//for(int k=0;k<numModels;k++)System.out.println("Fric "+k+" "+modelsFriction[k]);
-						world.setModelsFriction(modelsFriction);
-						world.setInterModelPairsFriction(interModelPairsFriction);
-						
+						if(modelsFrictionFlag) {
+							world.setModelsFriction(modelsFriction);
+						}
+						if(modelPairsFrictionFlag) {
+							world.setInterModelPairsFriction(interModelPairsFriction);
+						}
 						
 						
 						IWorld.reactionModel.setWorld(world);
