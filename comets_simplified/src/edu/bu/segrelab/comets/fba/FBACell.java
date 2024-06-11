@@ -9,6 +9,7 @@ import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.PackageParameters;
 import edu.bu.segrelab.comets.World2D;
 import edu.bu.segrelab.comets.World3D;
+import edu.bu.segrelab.comets.fba.FBAParameters.BiomassMotionStyle;
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Utility;
 
@@ -19,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Arrays; 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.distribution.*;
+
+import com.google.ortools.glop.Parameters;
 
 import jdistlib.*;
 import jdistlib.rng.MersenneTwister;
@@ -1010,6 +1013,21 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				}
 				deltaMedia[i] = mediaDelta;				
 				
+				
+				//System.out.println(pParams.getBiomassMotionStyle());
+				//System.out.println(BiomassMotionStyle.CONV_MULTIMODELS_2D);
+				//System.out.println(models[i].getPressureKappa()*Math.pow((biomass[i]-models[i].getPackBiomass()),models[i].getPressureExponent())+" "+models[i].getMaxPressure());
+				
+				if(pParams.getBiomassMotionStyle()==BiomassMotionStyle.CONV_MULTIMODELS_2D && models[i].getPressureKappa()*Math.pow((biomass[i]-models[i].getPackBiomass()),models[i].getPressureExponent())>models[i].getMaxPressure())
+				{
+					biomass[i]=old_biomass[i];
+					for (int j=0; j<mediaDelta.length; j++)
+					{
+							mediaDelta[j] = 0.0;
+					}
+					deltaMedia[i] = mediaDelta;	
+				}
+				
 				//Neutral drift block. Only if the death rate is zero. Get the sigmas from the model and 
 				// calculate biomass=(sigma^2*timestep/2)*Gamm(Poiss(2*biomass/sigma^2*timesteo))
 				//System.out.println("Here"+fbaModels[i].getNeutralDrift());
@@ -1091,6 +1109,21 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						}
 						deltaMedia[i] = mediaDelta;	
 					}
+					
+					//System.out.println(pParams.getBiomassMotionStyle());
+					//System.out.println(BiomassMotionStyle.CONV_MULTIMODELS_2D);
+					
+					if(pParams.getBiomassMotionStyle()==BiomassMotionStyle.CONV_MULTIMODELS_2D && models[i].getPressureKappa()*Math.pow((biomass[i]-models[i].getPackBiomass()),models[i].getPressureExponent())>models[i].getMaxPressure())
+					{
+						//System.out.println("here");
+						biomass[i]=old_biomass[i];
+						for (int j=0; j<mediaDelta.length; j++)
+						{
+								mediaDelta[j] = 0.0;
+						}
+						deltaMedia[i] = mediaDelta;	
+					}
+					
 					/*
 					else 
 					{
@@ -1309,6 +1342,17 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 							allModelsGrowthRates[i]=biomassGrowthRate;
 							deltaBiomass[i] *= (1-(double)(((FBAModel)models[i]).getGenomeCost()));
 							biomass[i]=old_biomass[i]+deltaBiomass[i];
+							
+							if(pParams.getBiomassMotionStyle()==BiomassMotionStyle.CONV_MULTIMODELS_2D && models[i].getPressureKappa()*Math.pow((biomass[i]-models[i].getPackBiomass()),models[i].getPressureExponent())>models[i].getMaxPressure())
+							{
+								biomass[i]=old_biomass[i];
+								for (int j=0; j<mediaDelta.length; j++)
+								{
+										mediaDelta[j] = 0.0;
+								}
+								deltaMedia[i] = mediaDelta;	
+							}
+							
 							//System.out.println("Here OK "+deltaBiomass[i]);
 							// if no biomass change don't change media //JEAN 
 	//						if (!pParams.getAllowFluxWithoutGrowth()) 

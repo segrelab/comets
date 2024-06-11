@@ -137,6 +137,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double pressureKappa;
 	private double pressureExponent;
 	private double packBiomass;
+	private double maxPressure;
 	private double noiseVariance;
 	private int[] objReactions; //index of reactions, in order of priority
 	private boolean[] objMaximize; //is corresponding objective maximized? If not, it's minimized
@@ -1333,7 +1334,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   neutralDriftSigma=0.0,
 				   pressureKappa=1.0,
 				   pressureExponent=1.0,
-				   packBiomass=0.0;
+				   packBiomass=0.0,
+				   maxPressure=1000.0;
 			
 			boolean blockOpen = false;
 
@@ -1943,6 +1945,25 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				}
 				
 				/**************************************************************
+				 *******LOAD Maximum Pressure (CONVECTION MULTI MODEL)***
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("maxPressure"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The maxPressure should be followed only by its value at line " + lineNum);
+					}
+					maxPressure = Double.parseDouble(tokens[1]);
+					if (maxPressure < 0)
+					{
+						reader.close();
+						throw new ModelFileException("The maxPressure value given at line " + lineNum + "should be => 0");
+					}
+					
+				}
+				
+				/**************************************************************
 				 *******LOAD Pressure Exponent (CONVECTION MULTI MODEL)***
 				 **************************************************************/
 				else if (tokens[0].equalsIgnoreCase("pressureExponent"))
@@ -1960,6 +1981,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					}
 					
 				}
+				
 				
 				/**************************************************************
 				 ********************* LOAD METABOLITE NAMES ******************
@@ -2774,6 +2796,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setPressureKappa(pressureKappa);
 			model.setPressureExponent(pressureExponent);
 			model.setPackBiomass(packBiomass);
+			model.setMaxPressure(maxPressure);
 			
 			model.setFileName(filename);
 			return model;
@@ -3006,6 +3029,16 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	public void setPressureExponent(double val)
 	{
 		pressureExponent=val;
+	}
+	
+	public double getMaxPressure()
+	{
+		return maxPressure;
+	}
+	
+	public void setMaxPressure(double val)
+	{
+		maxPressure=val;
 	}
 	
 	public double getPackBiomass()
