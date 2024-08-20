@@ -108,6 +108,7 @@ public class FBAWorld extends World2D
 						biomassLogWriter,
 						evolutionLogWriter,
 						velocityLogWriter,
+						velocityMultiConvLogWriter,
 						totalBiomassLogWriter,
 						specificMediaLogWriter;
 	
@@ -537,7 +538,20 @@ public class FBAWorld extends World2D
 				velocityLogWriter = null;
 			}
 		}
-
+        
+		// Init the velocity file write for the multimidel convection case
+		if (pParams.writeVelocityMultiConvLog()) {
+		      String name = adjustLogFileName(pParams.getVelocityMultiConvLogName(), timeStamp);
+		      try {
+		        velocityMultiConvLogWriter = new PrintWriter(new FileWriter(new File(name)));
+		        writeMultiModelConvVelocityLog();
+		        } 
+		      catch (IOException e) {
+		        System.out.println("Unable to initialize velocity log file '" + name + "'\nContinuing without saving log.");
+		        this.velocityMultiConvLogWriter = null;
+		      } 
+		    } 
+		
 		// Init the total biomass log and write the first line
 		if (pParams.writeTotalBiomassLog())
 		{
@@ -4037,6 +4051,8 @@ public class FBAWorld extends World2D
 			writeBiomassLog();
 		if (pParams.writeVelocityLog() && currentTimePoint % pParams.getVelocityLogRate() == 0)
 			writeVelocityLog();
+		if (pParams.writeVelocityMultiConvLog() && currentTimePoint % pParams.getVelocityMultiConvLogRate() == 0.0)
+		    writeMultiModelConvVelocityLog(); 
 		if (pParams.writeTotalBiomassLog() && currentTimePoint % pParams.getTotalBiomassLogRate() == 0)
 			writeTotalBiomassLog();
 		if (pParams.writeSpecificMediaLog() && currentTimePoint % pParams.getSpecificMediaLogRate() == 0)
@@ -4493,6 +4509,76 @@ public class FBAWorld extends World2D
 			velocityLogWriter.flush();
 		}
 	}
+	
+	private void writeMultiModelConvVelocityLog() {
+	    if (this.velocityMultiConvLogWriter != null && (this.currentTimePoint == 1L || this.currentTimePoint % this.pParams.getVelocityMultiConvLogRate() == 0)) {
+	      double[][][][] velocities = new double[this.numModels][this.numCols][this.numRows][2];
+	      double[][][] biomassDensity = new double[this.numModels][this.numCols][this.numRows];
+	      double[][] totalBiomassDensity = new double[this.numCols][this.numRows];
+	      double[][][][] allFluxes = new double[this.numModels][this.numCols][this.numRows][2];
+	      double[][][] pressureField = new double[this.numModels][this.numCols][this.numRows];
+	      double[] pressureKappa = new double[this.numModels];
+	      double[] pressureExponent = new double[this.numModels];
+	      double[] packBiomass = new double[this.numModels];
+	      NumberFormat nf = new DecimalFormat("0.##########E0");
+	      Iterator<Cell> it = this.c.getCells().iterator();
+	      double dX = this.cParams.getSpaceWidth();
+	      while (it.hasNext()) {
+	        FBACell cell = (FBACell)it.next();
+	        double[] biomass = cell.getBiomass();
+	        double[][] flux = cell.getConvModelFluxes();
+	        int x = cell.getX();
+	        int y = cell.getY();
+	        totalBiomassDensity[x][y] = 0.0;
+	        for (int i = 0; i < this.numModels; i++) {
+	          biomassDensity[i][x][y] = biomass[i];
+	          allFluxes[i][x][y] = flux[i];
+	          totalBiomassDensity[x][y] = totalBiomassDensity[x][y] + biomassDensity[i][x][y];
+	        } 
+	      } 
+	      int k;
+	      for (k = 0; k < this.numModels; k++) {
+	        pressureKappa[k] = this.models[k].getPressureKappa();
+	        pressureExponent[k] = this.models[k].getPressureExponent();
+	        packBiomass[k] = this.models[k].getPackBiomass();
+	      } 
+	      for (k = 0; k < this.numModels; k++)
+	        velocities = Utility.getVelocitiesConvMultiModel(biomassDensity, allFluxes, this.modelsFriction, this.interModelPairsFriction, pressureKappa, packBiomass, pressureExponent, this.barrier, dX); 
+	      switch (this.pParams.getVelocityMultiConvLogFormat()) {
+	        case MATLAB:
+	          for (k = 0; k < this.numModels; k++) {
+	            for (int i = 0; i < this.numCols; i++) {
+	              for (int j = 0; j < this.numRows; j++) {
+	                if (velocities[k] != null && totalBiomassDensity[i][j] != 0.0D) {
+	                  this.velocityMultiConvLogWriter.write("velocities{" + this.currentTimePoint + "}{" + (k + 1) + "}{" + (i + 1) + "}{" + (j + 1) + "} = [");
+	                  for (int l = 0; l < 2; l++)
+	                    this.velocityMultiConvLogWriter.write(String.valueOf(nf.format(velocities[k][i][j][l])) + " "); 
+	                  this.velocityMultiConvLogWriter.write("];\n");
+	                } 
+	              } 
+	            } 
+	          } 
+	          break;
+	        default:
+	          for (k = 0; k < this.numModels; k++) {
+	            for (int i = 0; i < this.numCols; i++) {
+	              for (int j = 0; j < this.numRows; j++) {
+	                if (velocities[k] != null && totalBiomassDensity[i][j] != 0.0D) {
+	                  this.velocityMultiConvLogWriter.write(String.valueOf(this.currentTimePoint) + " " + (k + 1) + " " + (i + 1) + " " + (j + 1) + " ");
+	                  for (int l = 0; l < 2; l++)
+	                    this.velocityMultiConvLogWriter.write(String.valueOf(nf.format(velocities[k][i][j][l])) + " "); 
+	                  this.velocityMultiConvLogWriter.write("\n");
+	                } 
+	              } 
+	            } 
+	          } 
+	          break;
+	      } 
+	      this.velocityMultiConvLogWriter.flush();
+	    } 
+	  }
+	
+	
 	
 	/**
 	 * Writes to the total biomass log if it's at the correct time point. See documentation

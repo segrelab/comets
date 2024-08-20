@@ -143,6 +143,7 @@ public class FBAParameters implements PackageParameters
 	writeMediaLog,
 	writeBiomassLog,
 	writeVelocityLog,
+	writeVelocityMultiConvLog,
 	writeTotalBiomassLog,
 	writeSpecificMediaLog,
 	writeMatFile,
@@ -171,6 +172,7 @@ public class FBAParameters implements PackageParameters
 			mediaLogRate = 1,
 			biomassLogRate = 1,
 			velocityLogRate = 1,
+            velocityMultiConvLogRate = 1,
 			totalBiomassLogRate = 1,
 			specificMediaLogRate = 1,
 			numExRxnSubsteps = 12, //12 chosen as default so if timestep is 1h, minimum substep is < 1sec
@@ -185,6 +187,7 @@ public class FBAParameters implements PackageParameters
 	private LogFormat biomassLogFormat = LogFormat.MATLAB,
 			mediaLogFormat = LogFormat.MATLAB,
 			fluxLogFormat = LogFormat.MATLAB,
+			velocityMultiConvLogFormat = LogFormat.MATLAB,
 			velocityLogFormat = LogFormat.MATLAB;
 
 	private static double growthDiffRate = 1e-7,
@@ -219,6 +222,7 @@ public class FBAParameters implements PackageParameters
 		writeMediaLog = false;
 		writeBiomassLog = false;
 		writeVelocityLog = false;
+		writeVelocityMultiConvLog = false;
 		writeTotalBiomassLog = false;
 		writeSpecificMediaLog = false;
 		writeMatFile = false;
@@ -262,6 +266,9 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("writevelocitylog", new Boolean(writeVelocityLog));
 		paramTypes.put("writevelocitylog", ParameterType.BOOLEAN);
+		
+		paramValues.put("writevelocitymulticonvlog", new Boolean(this.writeVelocityMultiConvLog));
+		paramTypes.put("writevelocitymulticonvlog", ParameterType.BOOLEAN);
 		
 		paramValues.put("writetotalbiomasslog", new Boolean(writeTotalBiomassLog));
 		paramTypes.put("writetotalbiomasslog", ParameterType.BOOLEAN);
@@ -394,6 +401,7 @@ public class FBAParameters implements PackageParameters
 		writeMediaLog(((Boolean)paramValues.get("writemedialog")).booleanValue());
 		writeBiomassLog(((Boolean)paramValues.get("writebiomasslog")).booleanValue());
 		writeVelocityLog(((Boolean)paramValues.get("writevelocitylog")).booleanValue());
+		writeVelocityMultiConvLog(((Boolean)this.paramValues.get("writevelocitymulticonvlog")).booleanValue());
 		writeTotalBiomassLog(((Boolean)paramValues.get("writetotalbiomasslog")).booleanValue());
 		writeSpecificMediaLog(((Boolean)paramValues.get("writespecificmedialog")).booleanValue());
 		writeMatFile(((Boolean)paramValues.get("writematfile")).booleanValue());
@@ -671,6 +679,15 @@ public class FBAParameters implements PackageParameters
 		if (i > 0)
 			velocityLogRate = i;
 	}
+	
+	public int getVelocityMultiConvLogRate() {
+	    return this.velocityMultiConvLogRate;
+	  }
+	
+	public void setVelocityMultiConvLogRate(int i) {
+	    if (i > 0)
+	      this.velocityMultiConvLogRate = i; 
+	  }
 	
 	/**
 	 * @return the number of simulation steps that occur between every total 
@@ -1123,6 +1140,14 @@ public class FBAParameters implements PackageParameters
 		writeVelocityLog = b; 
 	}
 	
+	public boolean writeVelocityMultiConvLog() {
+	    return this.writeVelocityMultiConvLog;
+	  }
+	  
+	  public void writeVelocityMultiConvLog(boolean b) {
+	    this.writeVelocityMultiConvLog = b;
+	  }
+	
 	/**
 	 * Sets the name of the flux log file, if one is going to be written.
 	 * <br>
@@ -1161,6 +1186,13 @@ public class FBAParameters implements PackageParameters
 		return velocityLogFormat; 
 	}
 
+	public LogFormat getVelocityMultiConvLogFormat() {
+	    return this.velocityMultiConvLogFormat;
+	  }
+	
+	public void setVelocityMultiConvLogFormat(LogFormat format) {
+	    this.velocityMultiConvLogFormat = format;
+	  }
 	
 	/** Gets the name of the manifest file
 	 *  without the path prepended.
