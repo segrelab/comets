@@ -158,6 +158,7 @@ public class FBAParameters implements PackageParameters
 	mediaLogName,
 	biomassLogName,
 	velocityLogName,
+	velocityMultiConvLogName,
 	totalBiomassLogName,
 	specificMediaLogName,
 	specificMedia, // different fron specificMediaLogName.  This string stores the names of the extracelluar mets t log
@@ -232,6 +233,7 @@ public class FBAParameters implements PackageParameters
 		mediaLogName = "media_log.txt";
 		biomassLogName = "biomass_log.txt";
 		velocityLogName = "velocity_log.txt";
+		velocityMultiConvLogName = "velocity_multiconv_log.txt";
 		matFileName = "comets_log.mat";
 		totalBiomassLogName = "total_biomass_log.txt";
 		specificMediaLogName = "specific_media_log.txt";
@@ -365,7 +367,16 @@ public class FBAParameters implements PackageParameters
 
 		paramValues.put("velocitylograte", new Integer(velocityLogRate));
 		paramTypes.put("velocitylograte", ParameterType.INT);
-
+		
+		paramValues.put("velocitymulticonvlogname", this.velocityMultiConvLogName);
+	    paramTypes.put("velocitymulticonvlogname", ParameterType.STRING);
+	    
+	    paramValues.put("velocitymulticonvlograte", this.velocityMultiConvLogRate);
+	    paramTypes.put("velocitymulticonvlograte", ParameterType.INT);
+	    
+	    paramValues.put("velocitymulticonvlogformat", velocityMultiConvLogFormat);
+		paramTypes.put("velocitymulticonvlogformat", ParameterType.STRING);
+	    
 		paramValues.put("totalbiomasslograte", new Integer(totalBiomassLogRate));
 		paramTypes.put("totalbiomasslograte", ParameterType.INT);
 
@@ -1192,6 +1203,10 @@ public class FBAParameters implements PackageParameters
 	
 	public void setVelocityMultiConvLogFormat(LogFormat format) {
 	    this.velocityMultiConvLogFormat = format;
+	  }
+	
+	public String getVelocityMultiConvLogName() {
+	    return this.velocityMultiConvLogName;
 	  }
 	
 	/** Gets the name of the manifest file

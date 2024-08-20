@@ -62,6 +62,7 @@ public class CometsSimRunner extends Thread
 	 */
 	public void run()
 	{
+		//System.out.println("MAX CYCLES = " + c.getParameters().getMaxCycles());
 		finished = false;
 		c.fireSimulationStateChangeEvent(new SimulationStateChangeEvent(SimulationStateChangeEvent.State.START));
 		if (c.getParameters().getNumLayers()==1)

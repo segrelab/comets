@@ -543,6 +543,7 @@ public class Comets implements CometsConstants,
 				loadParametersFile(targetFile);
 				cParams.setCommandLineOnly(true);
 				cParams.showGraphics(false);
+				System.out.println("MAX CYCLES = " + cParams.getMaxCycles());
 			}
 			else if (command.equalsIgnoreCase("load_layout"))
 			{
