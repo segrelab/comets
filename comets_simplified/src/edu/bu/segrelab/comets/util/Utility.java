@@ -4968,7 +4968,7 @@ public class Utility implements CometsConstants
 	
 	/**
 	 * Calculates the pressure according to the linear dependence on total density, with a cut-off.
-	 * P=\sum_i (k_i*(\rho_i-\rho^zero_i), where k_i (kappas) are coeffs. of proportionality.
+	 * P=\sum_i (k_i*(\rho_i-\rho^zero_i)^n, where k_i (kappas) are coeffs. of proportionality.
 	 * \rho^zero are the packed density. For density below it, the pressure is zero.  
 	 * @param biomass
 	 * @return
