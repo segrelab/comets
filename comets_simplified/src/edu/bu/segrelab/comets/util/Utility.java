@@ -9,7 +9,7 @@ import java.util.Set;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.CometsParameters;
 
-import org.apache.commons.math3.linear.*;
+//import org.apache.commons.math3.linear.*;
 import java.lang.Math;
 
 /**
@@ -1968,6 +1968,7 @@ public class Utility implements CometsConstants
 	 * Calculates the upwind divergence of a vector field in 2D. If the vector component V in the direction 
 	 * of the derivative is positive, does V_j-V_(j-1). If the component of V is negative, V_(j+1)-V_j.   
 	 */
+	
 	public static double[][][] forwardDifferenceNablaScalar(double[][] scalar, double dX, boolean[][] barrier)
 	{
 		int numCols=scalar.length;

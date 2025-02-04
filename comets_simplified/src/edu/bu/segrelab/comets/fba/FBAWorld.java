@@ -3872,9 +3872,11 @@ public class FBAWorld extends World2D
 			
 			// 2. tell all the cells to run			
 			List<Cell> deadCells = new ArrayList<Cell>();
-			//long t = System.currentTimeMillis();
 			int[] randomCellOrder=new int[c.getCells().size()];
 			randomCellOrder=Utility.randomOrder(c.getCells().size());
+			
+			//Time the execution of the FBA algorithm
+			long t = System.currentTimeMillis();
 			for (int i = 0; i < c.getCells().size(); i++)
 			{
 				// System.out.println("running cell " + i + "...");
@@ -3886,7 +3888,7 @@ public class FBAWorld extends World2D
 				//System.out.println("running cell " + i + "...");
 				// println(" done!");
 			}
-			//System.out.println("total fba time = " + (System.currentTimeMillis()));
+			System.out.println("total_fba_time  " + (System.currentTimeMillis()-t));
 
 			// remove dead cells.
 			switch(pParams.getBiomassMotionStyle())
@@ -3924,6 +3926,8 @@ public class FBAWorld extends World2D
 		// 4. diffuse media and biomass
 		//for (int i = 0; i < pParams.getNumDiffusionsPerStep(); i++)
 		//{
+		//Time the execution of the diffusion algorithms (biomass and media)
+		long time = System.currentTimeMillis();
 			if (diffuseContext)
 			{
 				if(pParams.getDefaultVelocityVector()[0]==0.0 && pParams.getDefaultVelocityVector()[1]==0.0)
@@ -3954,8 +3958,10 @@ public class FBAWorld extends World2D
 			}
 			else
 			{
+				//long time = System.currentTimeMillis();
 				//if(pParams.getDefaultVelocityVector()[0]==0.0 && pParams.getDefaultVelocityVector()[0]==0.0)	
 					diffuseMediaFick();
+				//System.out.println("total_media_diff_time  " + (System.currentTimeMillis()-time));
 				//else
 				//	convectMedia(pParams.getDefaultVelocityVector());
 				//System.out.println("Fick");
@@ -3982,7 +3988,7 @@ public class FBAWorld extends World2D
 					System.out.println("No biomass diffusion! Set the diffusion parameter to 'Diffusion 2D(Crank-Nicolson)', 'Diffusion 2D(Eight Point)' or 'Convection 2D'");
 					break;
 			}
-			
+		System.out.println("total_diff_time  " + (System.currentTimeMillis()-time));	
 			
 		//}
 
