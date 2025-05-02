@@ -50,7 +50,9 @@ implements edu.bu.segrelab.comets.CometsConstants
 	//Create the solver for parsimonious FBA,i.e. for minimizing the sum of the absolute values of the fluxes.
 	private MPSolver solverMinSumAbs;  //= MPSolver.createSolver("GLOP");
 	private MPVariable[] rxnFluxesMinSumAbs;  
+	private MPVariable[] rxnAbsFluxesMinSumAbs;  
 	private MPConstraint[] rxnExpressionsMinSumAbs;
+	private MPConstraint biomassConstraintExpressionsMinSumAbs;
 	private MPObjective objectiveMinSumAbs;//= solver.objective();
 	private MPSolver.ResultStatus resultStatusMinSumAbs;
 	
@@ -140,112 +142,63 @@ implements edu.bu.segrelab.comets.CometsConstants
 		//Here we set only the first coefficient in the list of reactions that go into the objective. 
 		//TODO NEED TO WORK TO GENERALIZE THIS Ilija 10.17.2023
 		objective.setCoefficient(rxnFluxes[objIdxs[0]-1], 1);
-		objIndex=objIdxs[0]; //Not sure why I needed this?
-		
-		
-		
-		
+		objIndex=objIdxs[0]; //Not sure why I needed this? Ilija
 		
 		/*
 		/***************************************pFBA**************************************************************
 		 ********************************************************************************************************* 
-		*/
-		/*
-		rxnFluxesMinSumAbs = new MPVariable[numRxns];			//glop variables
-		rxnExpressionsMinSumAbs = new MPConstraint[numMetabs];   //glop constraints 
+		*/	
 		
-		// all our variables (fluxes) are always continuous. Here we set the lower and upper bounds, and name them.
-		for(int i=0;i<numRxns;i++){
-			rxnFluxesMinSumAbs[i] = solverMinSumAbs.makeNumVar(l[i], u[i], "Flux_"+String.valueOf(i));
+		// Step 2: pFBA (minimize total flux subject to fixed biomass)
+		rxnFluxesMinSumAbs = new MPVariable[numRxns];
+		rxnAbsFluxesMinSumAbs = new MPVariable[numRxns];
+		rxnExpressionsMinSumAbs = new MPConstraint[numMetabs+2*numRxns];
+		
+		//We create two sets of fluxes, and their absolute values
+		for (int i = 0; i < numRxns; i++) {
+			rxnFluxesMinSumAbs[i] = solverMinSumAbs.makeNumVar(l[i], u[i], "v" + i);
+			rxnAbsFluxesMinSumAbs[i] = solverMinSumAbs.makeNumVar(0, Double.POSITIVE_INFINITY, "z" + i);
 		}
+
+		// z[i] ≥ v[i] and z[i] ≥ -v[i]
+		//These are the constraints that define absolute values
+		for (int i = 0; i < numRxns; i++) {
+		     rxnExpressionsMinSumAbs[i+numMetabs] = solverMinSumAbs.makeConstraint(-Double.POSITIVE_INFINITY, 0);
+		     rxnExpressionsMinSumAbs[i+numMetabs].setCoefficient(rxnAbsFluxesMinSumAbs[i], -1);
+		     rxnExpressionsMinSumAbs[i+numMetabs].setCoefficient(rxnFluxesMinSumAbs[i], 1);
+		     
+		     rxnExpressionsMinSumAbs[i+numRxns+numMetabs] = solverMinSumAbs.makeConstraint(-Double.POSITIVE_INFINITY, 0);
+		     rxnExpressionsMinSumAbs[i+numRxns+numMetabs].setCoefficient(rxnAbsFluxesMinSumAbs[i], -1);
+		     rxnExpressionsMinSumAbs[i+numRxns+numMetabs].setCoefficient(rxnFluxesMinSumAbs[i], -1);
+		}
+
+		// Steady-state constraints
 		
 		//Here we create the constrains and name them. The first two arguments are lower and upper bound. Here we have 0<rxnEx<0 so rxnEx==0.
 		for(int j=0; j<numMetabs; j++) {
-			rxnExpressionsMinSumAbs[j] = solverMinSumAbs.makeConstraint(0.0, 0.0, "c_"+String.valueOf(j));   //V1+V2+...=0
+			rxnExpressionsMinSumAbs[j] = solverMinSumAbs.makeConstraint(0.0, 0.0, "cAbs_"+String.valueOf(j));   //V1+V2+...=0
 			for(int i=0; i<numRxns; i++)rxnExpressionsMinSumAbs[j].setCoefficient(rxnFluxesMinSumAbs[i], 0); //First reset all coeffs. to zero. 
 		}
-		
+		//Here we input the S matrix into the constraints
 		for(int j=0; j<m.length; j++) {
 			Double m_local_zero=m[j][0];  //This is the metabolite index, i.e. glop constraint index, but from 1 to N. 
 			Double m_local_one=m[j][1];   //This is the reaction index, i.e. glop variable index, also 1-M.
-			Double m_local_two=m[j][2];   //This is the stoichiometric coefficient. 
+			Double m_local_two=m[j][2];   //This is the stoichiometric coefficient.
 			rxnExpressionsMinSumAbs[m_local_zero.intValue()-1].setCoefficient(rxnFluxesMinSumAbs[m_local_one.intValue()-1], m_local_two); //Here we set the soichiometric coeffs. Also map from 1-N to 0-N-1 for the indices. 
 		}
 		
-		//The objective is a linear combination of the reaction fluxes. Here we reset all coeffs. to zero. 
-		for(int i=0;i<numRxns;i++){
-			objectiveMinSumAbs.setCoefficient(rxnFluxesMinSumAbs[i], 0);
+		
+		// Biomass fixed at optimal value
+		//Initial bounds are arbitrary, they are dynamically changed
+		biomassConstraintExpressionsMinSumAbs=solverMinSumAbs.makeConstraint(0.8244150086000599, 0.8244150086000599);
+		biomassConstraintExpressionsMinSumAbs.setCoefficient(rxnFluxesMinSumAbs[objIndex-1], 1);
+		
+		// Objective: Minimize sum of z[i]
+		objectiveMinSumAbs = solverMinSumAbs.objective();
+		for (int i = 0; i < numRxns; i++) {
+		     objectiveMinSumAbs.setCoefficient(rxnAbsFluxesMinSumAbs[i], 1);
 		}
-		
-		//Here we set only the first coefficient in the list of reactions that go into the objective. 
-		//TODO NEED TO WORK TO GENERALIZE THIS Ilija 10.17.2023
-		objectiveMinSumAbs.setCoefficient(rxnFluxesMinSumAbs[objIdxs[0]-1], 1);
-		//objIndex=objIdxs[0]; //Not sure why I needed this?
-		*/
-		
-		//Now initialize the solver for parsimonious FBA. All the names are suffixed with MinSumAbs for the pFBA solver.
-		rxnFluxesMinSumAbs = new MPVariable[2*numRxns];			//glop variables
-		rxnExpressionsMinSumAbs = new MPConstraint[numMetabs+2*numRxns];   //glop constraints 
-		//rxnFluxesMinSumAbs = new MPVariable[numRxns];			//glop variables
-		//rxnExpressionsMinSumAbs = new MPConstraint[numMetabs];   //glop constraints 
-		
-		
-		
-		// all our variables (fluxes) are always continuous. Here we set the lower and upper bounds, and name them.
-		for(int i=0;i<numRxns;i++){
-			rxnFluxesMinSumAbs[i] = solverMinSumAbs.makeNumVar(l[i], u[i], "Flux_"+String.valueOf(i));
-		}
-		
-		for(int i=numRxns;i<2*numRxns;i++){
-			rxnFluxesMinSumAbs[i] = solverMinSumAbs.makeNumVar(0.0, 10000.0 , "Flux2_"+String.valueOf(i));
-		}
-		
-		//Here we create the constrains and name them. The first two arguments are lower and upper bound. Here we have 0<rxnEx<0 so rxnEx==0.
-		for(int j=0; j<numMetabs; j++) {
-			rxnExpressionsMinSumAbs[j] = solverMinSumAbs.makeConstraint(0.0, 0.0, "c_"+String.valueOf(j));   //V1+V2+...=0
-			for(int i=0; i<numRxns; i++)rxnExpressionsMinSumAbs[j].setCoefficient(rxnFluxesMinSumAbs[i], 0); //First reset all coeffs. to zero. 
-		}
-		
-		for(int j=numMetabs; j<(numMetabs+numRxns); j++) {
-			rxnExpressionsMinSumAbs[j] = solverMinSumAbs.makeConstraint(-10000,0.0, "c2_"+String.valueOf(j));   //V1+V2+...=0
-			for(int i=0; i<2*numRxns; i++)rxnExpressionsMinSumAbs[j].setCoefficient(rxnFluxesMinSumAbs[i], 0); //First reset all coeffs. to zero. 
-		}
-		for(int j=(numMetabs+numRxns); j<(numMetabs+2*numRxns); j++) {
-			rxnExpressionsMinSumAbs[j] = solverMinSumAbs.makeConstraint(-10000,0.0, "c3_"+String.valueOf(j));   //V1+V2+...=0
-			for(int i=0; i<2*numRxns; i++)rxnExpressionsMinSumAbs[j].setCoefficient(rxnFluxesMinSumAbs[i], 0); //First reset all coeffs. to zero. 
-		}
-		
-		for(int j=0; j<m.length; j++) {
-			Double m_local_zero=m[j][0];  //This is the metabolite index, i.e. glop constraint index, but from 1 to N. 
-			Double m_local_one=m[j][1];   //This is the reaction index, i.e. glop variable index, also 1-M.
-			Double m_local_two=m[j][2];   //This is the stoichiometric coefficient. 
-			rxnExpressionsMinSumAbs[m_local_zero.intValue()-1].setCoefficient(rxnFluxesMinSumAbs[m_local_one.intValue()-1], m_local_two); //Here we set the soichiometric coeffs. Also map from 1-N to 0-N-1 for the indices. 
-		}
-		
-		for(int j=0; j<(numRxns); j++) {
-			rxnExpressionsMinSumAbs[j+numMetabs].setCoefficient(rxnFluxesMinSumAbs[j],1.0);
-			rxnExpressionsMinSumAbs[j+numMetabs].setCoefficient(rxnFluxesMinSumAbs[j+numRxns],-1.0);
-		}
-		for(int j=0; j<(numRxns); j++) {
-			rxnExpressionsMinSumAbs[j+numMetabs+numRxns].setCoefficient(rxnFluxesMinSumAbs[j],-1.0);
-			rxnExpressionsMinSumAbs[j+numMetabs+numRxns].setCoefficient(rxnFluxesMinSumAbs[j+numRxns],-1.0);
-		}
-		
-		//The objective is a linear combination of the reaction fluxes. Here we reset all coeffs. to zero. 
-		for(int i=0;i<2*numRxns;i++){
-			objectiveMinSumAbs.setCoefficient(rxnFluxesMinSumAbs[i], 0.0);
-		}
-		for(int i=numRxns;i<2*numRxns;i++){
-			//for(int i=0;i<numRxns;i++){
-			objectiveMinSumAbs.setCoefficient(rxnFluxesMinSumAbs[i], 1.0);
-		//objectiveMinSumAbs.setCoefficient(rxnFluxesMinSumAbs[objIdxs[0]-1], 1.0);		
-			//}
-		}
-		
-		//Here we set only the first coefficient in the list of reactions that go into the objective. 
-		//TODO NEED TO WORK TO GENERALIZE THIS Ilija 10.17.2023
-		//objective.setCoefficient(rxnFluxes[objIdxs[0]-1], 1);
-		//objIndex=objIdxs[0]; //Not sure why I needed this?
+		objectiveMinSumAbs.setMinimization();
 		
 	}
 
@@ -266,28 +219,6 @@ implements edu.bu.segrelab.comets.CometsConstants
 			return MODEL_NOT_INITIALIZED;
 		}
 		
-		// Optimization status values returned by solver.solve():
-		// enum ResultStatus {
-	    /// optimal.
-	    //OPTIMAL,
-	    /// feasible, or stopped by limit.
-	    //FEASIBLE,
-	    /// proven infeasible.
-	    //INFEASIBLE,
-	    /// proven unbounded.
-	    //UNBOUNDED,
-	    /// abnormal, i.e., error of some kind.
-	    //ABNORMAL,
-	    /// the model is trivially invalid (NaN coefficients, etc).
-	    //MODEL_INVALID,
-	    /// not been solved yet.
-	    //NOT_SOLVED = 6
-	    //};
-		// to parallel the GLPK implementation, if glop returns OPTIMAL, then
-		// run() returns 5 (which is GLPK's optimal status)
-		// otherwise it will return 4 (GLPK's infeasible status, we blanket cover all other possibilities with this)
-		// TODO change the blanket 4 to more detailed one
-		// If failed completely, eqivalent to glop's ABNORMAL
 		int status = -1; 
 		switch(objSty)
 		{
@@ -296,28 +227,22 @@ implements edu.bu.segrelab.comets.CometsConstants
 			objective.setMaximization();
 			resultStatus = solver.solve();
 			for(int i=0;i<numRxns;i++)fluxes[i]=rxnFluxes[i].solutionValue();
+			//System.out.println("Biomass flux 1 "+rxnFluxes[objIndex-1].solutionValue());
+			//System.out.println("Glucose flux MaxObj glop "+fluxes[27]);
 			break;
+		//Parsimonious FBA
 		case FBAModel.MAX_OBJECTIVE_MIN_TOTAL:
 			objective.setMaximization();
-			//System.out.println("OK so far");
 			resultStatus = solver.solve();
-			//System.out.println("OK so far");
+			
 			for(int i=0;i<numRxns;i++)fluxes[i]=rxnFluxes[i].solutionValue();
 			
 			if (resultStatus == MPSolver.ResultStatus.OPTIMAL)
 			{
-				//System.out.println("OK so far "+rxnFluxes[objIndex-1].solutionValue());
-				//rxnExpressionsMinSumAbs[objIndex-1].setBounds(rxnFluxes[objIndex-1].solutionValue(),rxnFluxes[objIndex-1].solutionValue());
-				//System.out.println("OK so far");
-				rxnFluxesMinSumAbs[objIndex-1].setBounds(rxnFluxes[objIndex-1].solutionValue(), rxnFluxes[objIndex-1].solutionValue());
+				biomassConstraintExpressionsMinSumAbs.setBounds(rxnFluxes[objIndex-1].solutionValue(),rxnFluxes[objIndex-1].solutionValue());
 				objectiveMinSumAbs.setMinimization();
-				//objectiveMinSumAbs.setMaximization();
-				//System.out.println("OK so far 1");
 				resultStatus = solverMinSumAbs.solve();
-				//System.out.println("OK so far 2 "+resultStatus);
-				//System.out.println("OK so far "+rxnFluxesMinSumAbs[objIndex-1].solutionValue());
-				//for(int i=0;i<numRxns;i++)rxnFluxes[i]=rxnFluxesMinSumAbs[i];
-				for(int i=0;i<numRxns;i++)fluxes[i]=rxnFluxesMinSumAbs[i].solutionValue();
+				if (resultStatus == MPSolver.ResultStatus.OPTIMAL)for(int i=0;i<numRxns;i++)fluxes[i]=rxnFluxesMinSumAbs[i].solutionValue();
 			}
 			break;
 		default:
@@ -519,7 +444,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			return PARAMS_ERROR;
 
 		for (int i=0; i<exch.length; i++) rxnFluxes[exch[i]-1].setLb(lb[i]); //Attention, the annoying 1-n to 0-n-1 conversion again!
-		
+		for (int i=0; i<exch.length; i++) rxnFluxesMinSumAbs[exch[i]-1].setLb(lb[i]);
 		//setExchLowerBoundsModelMin(exch, lb);
 		return PARAMS_OK;
 	}
@@ -530,7 +455,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 			return PARAMS_ERROR;
 
 		for (int i=0; i<exch.length; i++) rxnFluxes[exch[i]-1].setUb(ub[i]); //Attention, the annoying 1-n to 0-n-1 conversion again!
-		
+		for (int i=0; i<exch.length; i++) rxnFluxesMinSumAbs[exch[i]-1].setUb(ub[i]);
 		//setExchLowerBoundsModelMin(exch, lb);
 		return PARAMS_OK;
 	}
@@ -543,8 +468,10 @@ implements edu.bu.segrelab.comets.CometsConstants
 		//{
 			for (int i = 0; i < exch.length; i++)
 			{
-				v_exch[i]=rxnFluxes[exch[i]-1].solutionValue();
+				v_exch[i]=fluxes[exch[i]-1];
+				//System.out.println("Exchange flux "+exch[i]+" "+v_exch[i]);
 			}
+			//System.out.println("Glucose flux "+v_exch[8]);
 		//}
 		return v_exch;
 	}

@@ -964,6 +964,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 					for(int i=0;i<rxnFluxes.length;i++){
 						fluxesModel[i]=rxnFluxes[i].get(GRB.DoubleAttr.X);
 					}
+					System.out.println("Glucose flux MaxObj gurobi "+fluxesModel[27]);
 					ret=0;
 				} else {
 					//System.out.println("MAXIMIZE_OBJECTIVE_FLUX: Model is not feasible");
@@ -1010,6 +1011,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 						for (int k = 0; k < modelMinVars.length / 2; k++){
 							fluxesModel[k] = modelMinVars[k].get(GRB.DoubleAttr.X);
 						}
+						System.out.println("Glucose flux MinAbs gurobi "+fluxesModel[27]);
 						ret=0;
 					}else {
 						//Do nothing, the maximization is OK
