@@ -1,6 +1,7 @@
 ![COMETS](comets-logo.png)
 [![Join the chat at https://gitter.im/segrelab/comets](https://badges.gitter.im/segrelab/comets.png)](https://gitter.im/segrelab/comets?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![GitHub release](https://img.shields.io/github/release/segrelab/comets/all.svg)](https://GitHub.com/segrelab/comets/releases/)
+[![DOI](https://zenodo.org/badge/73120408.svg)](https://doi.org/10.5281/zenodo.15691573)
 
 # Computation of Microbial Ecosystems in Time and Space 
 COMETS is a software platform for performing computer simulations of spatially structured microbial communities. It is based on stoichiometric modeling of the genome-scale metabolic network of individual microbial species using dynamic flux balance analysis, and on a discrete approximation of diffusion. COMETS is built and maintained by the [Daniel Segre Lab](http://www.bu.edu/segrelab) at Boston University.
