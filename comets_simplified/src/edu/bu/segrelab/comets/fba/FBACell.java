@@ -955,8 +955,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			}
 			
 			/*************************** RUN THE FBA! ****************************/
+			//System.out.println("Debug1");
 			int stat = models[i].run();
-			
+			//System.out.println("Debug2");
 			fluxes[i] = ((FBAModel)models[i]).getFluxes();
 			//for(int j=0;j<fluxes[i].length;j++) System.out.println(i+" "+j+" "+fluxes[i][j]);
 
@@ -1151,8 +1152,9 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		
 		
 		//stationaryStatus = true;
+		//System.out.println("Debug1");
 		if (stationaryStatus == false)
-	    {		
+	    {	
 //System.out.println("if");
 		/* If there are models with positive growth (i.e. stationaryStatus=false)
 		 * get uptake for every model and media component, and compute the 
@@ -1167,6 +1169,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			double[] totalUptakes = new double[thisCellMedia.length];
 			
 			//reOptimizeFlag = false;
+			//System.out.println("Debug1");
 			while(reOptimizeFlag)
 			{
 	//System.out.println("while");
@@ -1228,7 +1231,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				 * If any compound has run out, lower bounds for all models were fixed above, and now we 
 				 * need to re-run everything and update media and biomasses. 
 				 */
-				
+				reOptimizeFlag = false;
+				//System.out.println("Debug1");
 				if (reOptimizeFlag == true)
 				{
 	//System.out.println("Here");
@@ -1371,7 +1375,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						}					
 					}						
 				}		
-	
+				//System.out.println("Debug2");
 
 			}
 	    }
