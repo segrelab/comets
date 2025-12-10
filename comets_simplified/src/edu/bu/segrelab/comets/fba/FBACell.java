@@ -1218,6 +1218,12 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				        	// Figure out the index of the metabolite in the lb vector
 				        	int[] modelMediaIndexes = world.getModelMediaIndexes(x, y, l);
 							int kIndexInModel = ArrayUtils.indexOf(modelMediaIndexes, k);
+
+							// SAFETY CHECK: skip if this metabolite is not mapped for this model
+							// or if the index is inconsistent with the LB array size
+							if (kIndexInModel < 0 || kIndexInModel >= lb[l].length) {
+    							continue;
+							}
 		
 							// update the lb 
 							lb[l][kIndexInModel] = -1*newUptake / (old_biomass[l] * cParams.getTimeStep());
