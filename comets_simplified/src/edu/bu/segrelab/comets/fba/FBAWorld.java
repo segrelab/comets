@@ -4020,6 +4020,7 @@ public class FBAWorld extends World2D
 	 */
 	public int run()
 	{
+		System.out.println("Here OK!");
 		int ret = PARAMS_OK;
 		if (pParams.getNumRunThreads() > 1)
 			ret = runThreaded();

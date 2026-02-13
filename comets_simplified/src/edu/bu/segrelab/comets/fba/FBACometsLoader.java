@@ -49,7 +49,7 @@ import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.exception.LayoutFileException;
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.exception.ParameterFileException;
-import edu.bu.segrelab.comets.fba.ui.LayoutSavePanel;
+//import edu.bu.segrelab.comets.fba.ui.LayoutSavePanel;
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
@@ -87,7 +87,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 	private String mediaFileName;
 	private String[] initialMediaNames;
 	protected FBAParameters pParams;   // 'pParams' keeps inline with PackageParameters
-	private LayoutSavePanel layoutSavePanel = null;
+	//private LayoutSavePanel layoutSavePanel = null;
 	private boolean useGui;
 	private Comets c;
 	private int lineCount;
@@ -1056,30 +1056,30 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		}
 		catch(IOException e)
 		{
-			showGuiLoadError("Unable to load layout file!\nFile error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
-					"File Error!");
+		//	showGuiLoadError("Unable to load layout file!\nFile error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
+		//			"File Error!");
 			throw new IOException("File error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(NumberFormatException e)
 		{
-			showGuiLoadError("Unable to load layout file!\nNumber format error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
-					"Numerical Error!");
+		//	showGuiLoadError("Unable to load layout file!\nNumber format error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
+		//			"Numerical Error!");
 			throw new IOException("Number format error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(ModelFileException e)
 		{
-			showGuiLoadError("Unable to load layout file!\nModel file error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
-					"Model File Loading Error!");
+		//	showGuiLoadError("Unable to load layout file!\nModel file error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
+		//			"Model File Loading Error!");
 			throw new IOException("Model file error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(LayoutFileException e)
 		{
-			showGuiLoadError("Error with layout file:\n" + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, "Layout file error!");
+		//	showGuiLoadError("Error with layout file:\n" + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, "Layout file error!");
 			throw new IOException("Layout file error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(ParameterFileException e)
 		{
-			showGuiLoadError("Error loading parameter block:\n" + e.getMessage() + "\nIn layout file: " + filename, "Layout file error!");
+		//	showGuiLoadError("Error loading parameter block:\n" + e.getMessage() + "\nIn layout file: " + filename, "Layout file error!");
 			throw new IOException("Layout file error: " + e.getMessage() + " in layout file: " + filename);
 		}
 		// at the very end, set the display layer to biomass, since now we know how many layers there are.
@@ -1088,6 +1088,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		else if(c.getParameters().getNumLayers()>1)
 			c.getParameters().setDisplayLayer(world3D.getNumMedia());
 		return PARAMS_OK;
+		
 	}
 
 	private LoaderState parsePeriodicMediaBlock(String periodicKey, List<String> lines, int numCols, int numRows) throws LayoutFileException {
@@ -1134,13 +1135,13 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		return LoaderState.OK;
 	}
 
-
+/*
 	private void showGuiLoadError(String error, String title)
 	{
 		if (useGui)
 			JOptionPane.showMessageDialog(c.getFrame(), error, title, JOptionPane.ERROR_MESSAGE);
 	}
-
+*/
 	private List<String> collectLayoutFileBlock(BufferedReader reader) throws IOException
 	{
 		List<String> lines = new ArrayList<String>();
@@ -1183,31 +1184,31 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			// if STILL not found, prompt the user
 			while (!f.isFile())
 			{
-				if (useGui)
-				{
-					int opt = JOptionPane.showConfirmDialog(c.getFrame(), "Unable to find model file '" + tokens[i+1] + "'\nPlease locate or cancel", "Invalid model file!", JOptionPane.OK_CANCEL_OPTION);
-					if (opt == JOptionPane.OK_OPTION)
-					{
+				//if (useGui)
+				//{
+				//	int opt = JOptionPane.showConfirmDialog(c.getFrame(), "Unable to find model file '" + tokens[i+1] + "'\nPlease locate or cancel", "Invalid model file!", JOptionPane.OK_CANCEL_OPTION);
+				//	if (opt == JOptionPane.OK_OPTION)
+				//	{
 						// make a JFileChooser, set response to parsed[i+1], update f
 						// or return if canceled
-						JFileChooser chooser = new JFileChooser(path);
+				//		JFileChooser chooser = new JFileChooser(path);
 						// add filters later, maybe.
-						int returnVal = chooser.showOpenDialog(c.getFrame());
-						if (returnVal == JFileChooser.APPROVE_OPTION)
-						{
-							modelFileName = chooser.getSelectedFile().getPath();
-							f = new File(modelFileName);
-						}
-						else
-							return LoaderState.CANCELED;
-					}
-					else
-						return LoaderState.CANCELED;
-				}
-				else
-				{
+				//		int returnVal = chooser.showOpenDialog(c.getFrame());
+				//		if (returnVal == JFileChooser.APPROVE_OPTION)
+				//		{
+				//			modelFileName = chooser.getSelectedFile().getPath();
+				//			f = new File(modelFileName);
+				//		}
+				//		else
+				//			return LoaderState.CANCELED;
+				//	}
+				//	else
+				//		return LoaderState.CANCELED;
+				//}
+				//else
+				//{
 					throw new LayoutFileException("Unable to load model file '" + tokens[i+1] + "' -- canceling layout file load.", 0);
-				}
+				//}
 			}
 
 			//Redundant code. Should always load through this.loadModelFromFile
@@ -1264,31 +1265,31 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			// if STILL not found, prompt the user
 			while (!f.isFile())
 			{
-				if (useGui)
-				{
-					int opt = JOptionPane.showConfirmDialog(c.getFrame(), "Unable to find nutrient file '" + tokens[1] + "'\nPlease locate or cancel", "Invalid nutrient file!", JOptionPane.OK_CANCEL_OPTION);
-					if (opt == JOptionPane.OK_OPTION)
-					{
+				//if (useGui)
+				//{
+				//	int opt = JOptionPane.showConfirmDialog(c.getFrame(), "Unable to find nutrient file '" + tokens[1] + "'\nPlease locate or cancel", "Invalid nutrient file!", JOptionPane.OK_CANCEL_OPTION);
+				//	if (opt == JOptionPane.OK_OPTION)
+				//	{
 						// make a JFileChooser, set response to parsed[i+1], update f
 						// or return if canceled
-						JFileChooser chooser = new JFileChooser(path);
+				//		JFileChooser chooser = new JFileChooser(path);
 						// add filters later, maybe.
-						int returnVal = chooser.showOpenDialog(c.getFrame());
-						if (returnVal == JFileChooser.APPROVE_OPTION)
-						{
-							mediaFileName = chooser.getSelectedFile().getPath();
-							f = new File(mediaFileName);
-						}
-						else
-							return LoaderState.CANCELED;
-					}
-					else
-						return LoaderState.CANCELED;
-				}
-				else
-				{
+				//		int returnVal = chooser.showOpenDialog(c.getFrame());
+				//		if (returnVal == JFileChooser.APPROVE_OPTION)
+				//		{
+				//			mediaFileName = chooser.getSelectedFile().getPath();
+				//			f = new File(mediaFileName);
+				//		}
+				//		else
+				//			return LoaderState.CANCELED;
+				//	}
+				//	else
+				//		return LoaderState.CANCELED;
+				//}
+				//else
+				//{
 					throw new LayoutFileException("Unable to find nutrient file '" + tokens[1] + "' -- canceling layout file load.", 0);
-				}
+				//}
 			}
 
 			// load model world, and lots of stuff enclosed in here.
@@ -2978,7 +2979,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 
 		/*************************** initial_pop block *******************************/
 		// We have lots of options, based on the layoutSavePanel. So ask it what we should do.
-
+/*
 		LayoutSavePanel.BiomassStyle style = layoutSavePanel.getBiomassStyle();
 		double[] biomass;
 		int[] spaces;
@@ -3050,7 +3051,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			}
 			break;
 		}
-
+*/
 		pw.println("\n\t//");
 		// --- aaaaaand DONE! ---
 
@@ -3169,7 +3170,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 
 		return new FBAWorld(c, names, concs, fbaModels);
 	}
-
+/*
 	public void saveLayoutFile(Comets c) throws IOException
 	{
 		// User hits "save"
@@ -3193,7 +3194,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 			saveLayoutFile(chooser.getSelectedFile().getPath(), c.getWorld(), c.getModels(), c.getCells(), CometsLoader.DO_NOT_SAVE, c.getParameters());
 		}
 	}
-
+*/
 	@Override
 	public PackageParameterBatch getParameterBatch(Comets c)
 	{
@@ -3214,6 +3215,12 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 
 	public int[] getExRxnEnzymes() {
 		return exRxnEnzymes;
+	}
+
+	@Override
+	public void saveLayoutFile(Comets c) throws IOException {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

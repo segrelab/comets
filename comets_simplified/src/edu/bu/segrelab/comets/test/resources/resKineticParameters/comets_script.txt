@@ -1,1 +1,0 @@
-load_layout comets_layout.txt

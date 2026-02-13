@@ -3,7 +3,7 @@ package edu.bu.segrelab.comets;
 import java.io.PrintWriter;
 import java.util.Map;
 
-import edu.bu.segrelab.comets.ui.ParametersPanel;
+//import edu.bu.segrelab.comets.ui.ParametersPanel;
 import edu.bu.segrelab.comets.util.ParameterState;
 
 /**
@@ -22,7 +22,7 @@ public interface PackageParameters
 	 * be a JComponent of some sort.
 	 * @return
 	 */
-	public Map<String, ParametersPanel> getParametersPanels();
+	//public Map<String, ParametersPanel> getParametersPanels();
 	
 	public ParameterState setParameter(String name, String value);
 	

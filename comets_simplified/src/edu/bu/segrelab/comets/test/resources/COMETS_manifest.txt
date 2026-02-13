@@ -1,1 +1,0 @@
-LayoutFileName: C:\workspace\comets_simplified\comets_simplified\src\edu\bu\segrelab\comets\test\resources\rk4testlayout.txt

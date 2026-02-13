@@ -60,6 +60,7 @@ public class CometsSimRunner extends Thread
 	 * hard work of running the simulation.
 	 * <li>Clean up by pausing, if required.
 	 */
+
 	public void run()
 	{
 		//System.out.println("MAX CYCLES = " + c.getParameters().getMaxCycles());
@@ -83,10 +84,10 @@ public class CometsSimRunner extends Thread
 				}
 				
 				// Take a slideshow snapshot, if we're at the right time.
-				if (curCycle % c.getParameters().getSlideshowRate() == 0 && c.getParameters().saveSlideshow())
-				{
-					c.takeSlideshowScreenshot((int)curCycle);
-				}
+				//if (curCycle % c.getParameters().getSlideshowRate() == 0 && c.getParameters().saveSlideshow())
+				//{
+				//	c.takeSlideshowScreenshot((int)curCycle);
+				//}
 	
 				// Test quit conditions, end simulation if required.
 				if (checkCompletion())
@@ -134,7 +135,7 @@ public class CometsSimRunner extends Thread
 				if (c.getParameters().showCycleTime())
 					System.out.println("Cycle complete in " + (System.currentTimeMillis() - start)/1000.0 + "s");
 				totalTime += System.currentTimeMillis() - start;
-				c.updateOnCycle();
+				//c.updateOnCycle();
 			}
 			else
 			{

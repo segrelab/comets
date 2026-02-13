@@ -46,14 +46,14 @@ import edu.bu.segrelab.comets.event.SimulationStateChangeEvent;
 import edu.bu.segrelab.comets.event.SimulationStateChangeListener;
 import edu.bu.segrelab.comets.exception.CometsArgumentException;
 import edu.bu.segrelab.comets.exception.ParameterFileException;
-import edu.bu.segrelab.comets.ui.CometsInfoFrame;
-import edu.bu.segrelab.comets.ui.CometsMenuBar;
-import edu.bu.segrelab.comets.ui.CometsParametersPanel;
-import edu.bu.segrelab.comets.ui.CometsSetupPanel;
-import edu.bu.segrelab.comets.ui.DoubleField;
-import edu.bu.segrelab.comets.ui.IntField;
-import edu.bu.segrelab.comets.ui.IntroDialog;
-import edu.bu.segrelab.comets.ui.TextAreaOutputStream;
+//import edu.bu.segrelab.comets.ui.CometsInfoFrame;
+//import edu.bu.segrelab.comets.ui.CometsMenuBar;
+//import edu.bu.segrelab.comets.ui.CometsParametersPanel;
+//import edu.bu.segrelab.comets.ui.CometsSetupPanel;
+//import edu.bu.segrelab.comets.ui.DoubleField;
+//import edu.bu.segrelab.comets.ui.IntField;
+//import edu.bu.segrelab.comets.ui.IntroDialog;
+//import edu.bu.segrelab.comets.ui.TextAreaOutputStream;
 import edu.bu.segrelab.comets.util.Utility;
 
 import java.awt.BorderLayout;
@@ -88,13 +88,13 @@ import java.util.Stack;
 import java.util.concurrent.CyclicBarrier;
 
 public class Comets implements CometsConstants,
-							   CometsLoadListener,
+							   //CometsLoadListener,
 							   CometsChangeListener
 {
 
 
 
-	private String versionString = "2.12.4 02 May 2025";
+	private String versionString = "2.12.5 13 Feb 2026";
 
 
 
@@ -142,15 +142,15 @@ public class Comets implements CometsConstants,
 	protected String scriptFileName = null;
 	
 	// UI Widgets
-	private JFrame 				cFrame;					// main Frame for the program
-	private CometsSetupPanel 	setupPane;
-	private CometsMenuBar 		cMenuBar;
-	private JScrollPane 		cScrollPane;
-	private JScrollPane			outputPane;
-	private JTextArea 			outputArea;
-	private CometsInfoFrame 	siFrame,
-								miFrame;
-	private CometsParametersPanel cParamsPanel;
+	//private JFrame 				cFrame;					// main Frame for the program
+	//private CometsSetupPanel 	setupPane;
+	//private CometsMenuBar 		cMenuBar;
+	//private JScrollPane 		cScrollPane;
+	//private JScrollPane			outputPane;
+	//private JTextArea 			outputArea;
+	//private CometsInfoFrame 	siFrame,
+	//							miFrame;
+	//private CometsParametersPanel cParamsPanel;
 	
 	private List<CometsChangeListener> cometsChangeListeners;
 	private List<CometsLoadListener> cometsLoadListeners;
@@ -243,15 +243,15 @@ public class Comets implements CometsConstants,
 			}
 		}
 
-		else 
-		{
-			initCometsUI();
-			JPopupMenu.setDefaultLightWeightPopupEnabled(false);
-			addCometsLoadListener(this);
-			addCometsChangeListener(this);
-			
-			showIntroDialog();
-		}
+		//else 
+		//{
+		//	initCometsUI();
+		//	JPopupMenu.setDefaultLightWeightPopupEnabled(false);
+		//	addCometsLoadListener(this);
+		//	addCometsChangeListener(this);
+		//	
+		//	showIntroDialog();
+		//}
 	}
 
 	public void addCometsChangeListener(CometsChangeListener listener)
@@ -294,46 +294,46 @@ public class Comets implements CometsConstants,
 		}
 	}
 	
-	private void initCometsUI()
-	{
-		// init the controlling JFrame
-		cFrame = new JFrame("COMETS");
-		cFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		cFrame.setSize(800, 800);
-		
-		//Set the frame icon to an image loaded from a file.
-		cFrame.setIconImage(new ImageIcon("comets-logo-small.png").getImage());
-
-		setupPane = new CometsSetupPanel(this);
-
-		cScrollPane = new JScrollPane();
-//		cScrollPane.setPreferredSize(new Dimension(800, 800));
-		cScrollPane.add(setupPane);
-		cScrollPane.setViewportView(setupPane);
-		
-		cFrame.getContentPane().add(cScrollPane, BorderLayout.CENTER);
-
-		cMenuBar = new CometsMenuBar(this, mode);
-		cFrame.setJMenuBar(cMenuBar);
-		cFrame.repaint();
-
-		/*
-		 * Make a log dump area. This reroutes any message to System.out and
-		 * System.err to this log pane.
-		 */
-		outputArea = new JTextArea(12,50);
-		outputPane = new JScrollPane(outputArea);
-		TextAreaOutputStream writer = new TextAreaOutputStream(outputArea, outputPane);
-		cFrame.getContentPane().add(outputPane, BorderLayout.SOUTH);
-		cFrame.setVisible(true);
-
-		System.setOut(new PrintStream(writer));
-		System.setErr(new PrintStream(writer));
-		
-		cParamsPanel = new CometsParametersPanel(this, cParams);
-		if (pParams != null)
-			cParamsPanel.setPackageParametersPanels(pParams.getParametersPanels());
-	}
+	//private void initCometsUI()
+	//{
+	//	// init the controlling JFrame
+	//	cFrame = new JFrame("COMETS");
+	//	cFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	//	cFrame.setSize(800, 800);
+	//	
+	//	//Set the frame icon to an image loaded from a file.
+	//	cFrame.setIconImage(new ImageIcon("comets-logo-small.png").getImage());
+	//
+	//	setupPane = new CometsSetupPanel(this);
+	//
+	//  cScrollPane = new JScrollPane();
+	//		cScrollPane.setPreferredSize(new Dimension(800, 800));
+	//	cScrollPane.add(setupPane);
+	//	cScrollPane.setViewportView(setupPane);
+	//	
+	//	cFrame.getContentPane().add(cScrollPane, BorderLayout.CENTER);
+	//
+	//  cMenuBar = new CometsMenuBar(this, mode);
+	//	cFrame.setJMenuBar(cMenuBar);
+	//	cFrame.repaint();
+	//
+	//	/*
+	//	 * Make a log dump area. This reroutes any message to System.out and
+	//	 * System.err to this log pane.
+	//	 */
+	//	outputArea = new JTextArea(12,50);
+	//	outputPane = new JScrollPane(outputArea);
+	//	TextAreaOutputStream writer = new TextAreaOutputStream(outputArea, outputPane);
+	//	cFrame.getContentPane().add(outputPane, BorderLayout.SOUTH);
+	//	cFrame.setVisible(true);
+	//
+	//	System.setOut(new PrintStream(writer));
+	//	System.setErr(new PrintStream(writer));
+	//	
+	//	cParamsPanel = new CometsParametersPanel(this, cParams);
+	//	if (pParams != null)
+	//		cParamsPanel.setPackageParametersPanels(pParams.getParametersPanels());
+	//}
 	
 	private void applyArgs(Map<String, String> argsMap) throws CometsArgumentException, 
 										  					   IOException
@@ -623,6 +623,7 @@ public class Comets implements CometsConstants,
 	 * given directory.
 	 * @param curCycle
 	 */
+	/*
 	public void takeSlideshowScreenshot(int curCycle)
 	{
 		BufferedImage image = takeScreenshot(cParams.getSlideshowLayer(), cParams.getSlideshowColorRelative(), cParams.getSlideshowColorValue());
@@ -638,45 +639,46 @@ public class Comets implements CometsConstants,
 			System.out.println("Error on image writing: " + e);
 		}
 	}
-	
+	*/
 	/**
 	 * Takes a screenshot as ordered by the user, and saves it into a user-chosen
 	 * file. This version only takes PNGs.
 	 * 
 	 * //TODO make a widget to allow any type of graphic (BMP, GIF, etc.) 
 	 */
-	public void takeUserScreenshot()
-	{
-		if (cParams.isCommandLineOnly())
-		{
-			System.out.println("This is only available in GUI mode");
-			return;
-		}
-		// user picks the name and so on.
-		JFileChooser chooser = new JFileChooser(cParams.getLastDirectory());
-		
-		int returnVal = chooser.showSaveDialog(cFrame);
-		if (returnVal == JFileChooser.APPROVE_OPTION)
-		{
-			File file = chooser.getSelectedFile();
-			String filename = file.getName();
-			int extIndex = filename.lastIndexOf(".");
-			String ext = filename.substring(extIndex+1, filename.length());
-			if (!ext.equalsIgnoreCase("png"))
-				file = new File(file.getPath() + ".png");
 
-			BufferedImage image = takeScreenshot(cParams.getDisplayLayer(), cParams.getColorRelative(), cParams.getSlideshowColorValue());
-			try
-			{
-				ImageIO.write(image, "png", file);
-			}
-			catch (IOException e)
-			{
-				JOptionPane.showMessageDialog(cFrame, "Unable to save image file:\n  " + e.getMessage(), "Error!", JOptionPane.ERROR_MESSAGE);
-			}
-			cParams.setLastDirectory(file.getParent());
-		}
-	}
+	//public void takeUserScreenshot()
+	//{
+	//	if (cParams.isCommandLineOnly())
+	//	{
+	//		System.out.println("This is only available in GUI mode");
+	//		return;
+	//	}
+	//	// user picks the name and so on.
+	//	JFileChooser chooser = new JFileChooser(cParams.getLastDirectory());
+	//	
+	//	int returnVal = chooser.showSaveDialog(cFrame);
+	//	if (returnVal == JFileChooser.APPROVE_OPTION)
+	//	{
+	//		File file = chooser.getSelectedFile();
+	//		String filename = file.getName();
+	//		int extIndex = filename.lastIndexOf(".");
+	//		String ext = filename.substring(extIndex+1, filename.length());
+	//		if (!ext.equalsIgnoreCase("png"))
+	//			file = new File(file.getPath() + ".png");
+	//
+	//		BufferedImage image = takeScreenshot(cParams.getDisplayLayer(), cParams.getColorRelative(), cParams.getSlideshowColorValue());
+	//		try
+	//		{
+	//			ImageIO.write(image, "png", file);
+	//		}
+	//		catch (IOException e)
+	//		{
+	//			JOptionPane.showMessageDialog(cFrame, "Unable to save image file:\n  " + e.getMessage(), "Error!", JOptionPane.ERROR_MESSAGE);
+	//		}
+	//		cParams.setLastDirectory(file.getParent());
+	//	}
+	//}
 	
 	/**
 	 * This does the hard work of taking a screenshot. Given a certain media layer
@@ -693,6 +695,7 @@ public class Comets implements CometsConstants,
 	 * to that
 	 * @return
 	 */
+	/*
 	public BufferedImage takeScreenshot(int displayToggle, boolean colorRelative, double colorValue)
 	{	
 		int numMedia = world.getNumMedia();
@@ -705,11 +708,7 @@ public class Comets implements CometsConstants,
 		BufferedImage image = new BufferedImage(widthPixels, heightPixels, BufferedImage.TYPE_INT_RGB);
 		double[] m = new double[3];
 
-		/* relative color mode - scales the color saturation (e.g. brightness) to the
-		 * spot with the densest concentration of whatever we're looking at: biomass or media.
-		 * this block basically sets the color scale array m[] before applying it
-		 * to all spaces on the grid.
-		 */
+		
 		if (colorRelative)
 		{
 			if (displayToggle >= numMedia) // get the maximum value for the biomass grid
@@ -745,11 +744,7 @@ public class Comets implements CometsConstants,
 		{
 			for (int y=0; y<cParams.getNumRows(); y++)
 			{
-				// I hate myself for doing this, but here it is.
-				// I'm copying and pasting the currentWorldColor() function
-				// just to hack something together this afternoon.
-				//
-				// I'll come back later and do it right.
+				
 
 				int col = cParams.getBackgroundColor();
 				if (world.isBarrier(x, y))
@@ -811,12 +806,13 @@ public class Comets implements CometsConstants,
 		}
 		return image;
 	}
-	
+	*/
 	/**
 	 * Shows an introductory <code>JDialog</code> with a welcome message and a
 	 * prompt for the user to load initial data: either a layout file, something
 	 * from the database, or a model file for manipulation in the layout editor.
 	 */
+	/*
 	public void showIntroDialog()
 	{
 		final IntroDialog dialog = new IntroDialog(cFrame);
@@ -850,11 +846,12 @@ public class Comets implements CometsConstants,
 		
 		dialog.setVisible(true);
 	}
-
+*/
 	/**
 	 * Prompts the user to choose a model file for loading into memory.
 	 * Uses the current CometsLoader for parsing the file.
 	 */
+/*	
 	public void loadModelFile()
 	{
 		if (mode == SIMULATION_MODE)
@@ -881,11 +878,7 @@ public class Comets implements CometsConstants,
 			Model model = loader.loadModelFromFile(this, chooser.getSelectedFile().getPath());
 			cParams.setLastDirectory(chooser.getSelectedFile().getParent());
 
-			/*
-			 * Add the model to the array (make a new array, etc.)
-			 * Update the World (make one if there is no world)
-			 * Update all Cells (or don't do anything)
-			 */
+		
 			Model[] newModels = new Model[models.length+1];
 			if (models.length > 0) // if the old array had at least a model, copy them over into the same location
 			{
@@ -919,7 +912,7 @@ public class Comets implements CometsConstants,
 			}
 
 			// Otherwise, update the old one and all cells that may (or may not) exist
-/*			else
+			else
 			{
 				world.changeModelsInWorld(models, newModels);
 				if (cellList.size() > 0)
@@ -932,7 +925,7 @@ public class Comets implements CometsConstants,
 					}
 				}
 			}
-*/
+
 			
 			models = newModels;
 			world.updateWorld();
@@ -951,21 +944,23 @@ public class Comets implements CometsConstants,
 			fireLoadEvent(new CometsLoadEvent(this, CometsLoadEvent.Type.MODEL));
 		}
 	}
-	
+*/	
 	/**
 	 * Loads a model from the P-KOMETS database.
 	 * // TODO - make the P-KOMETS database...
 	 */
+/*
 	public void loadModelDB()
 	{
 		JOptionPane.showMessageDialog(cFrame, "Can't load from DB yet!");
 	}
-	
+*/
 	/**
 	 * Returns the names of all loaded models.
 	 * 
 	 * @return a String array of model names.
 	 */
+
 	public String[] getModelNames()
 	{
 		String[] modelNames = new String[models.length];
@@ -975,27 +970,29 @@ public class Comets implements CometsConstants,
 		}
 		return modelNames;
 	}
-	
+
 	/**
 	 * Returns the names of all media components in the current world.
 	 * 
 	 * @return a String array of nutrient names
 	 */
+
 	public String[] getMediaNames()
 	{
 		return world.getMediaNames();
 	}
-	
+
 	/**
 	 * Returns the JFrame that composes this class.
 	 * 
 	 * @return	the master JFrame for the program 
 	 */
+/*
 	public JFrame getFrame()
 	{
 		return cFrame;
 	}
-
+*/
 	/**
 	 * Returns the set of cells being used in the program.
 	 * 
@@ -1065,21 +1062,22 @@ public class Comets implements CometsConstants,
 	 * simulation pane (<code>CometsRunPane</code>) in the main area of the 
 	 * frame. 
 	 */
+
 	public void startSimulation()
 	{
 		if (models == null || models.length == 0)
 		{
-			JOptionPane.showMessageDialog(cFrame, "No models loaded!");
+			//JOptionPane.showMessageDialog(cFrame, "No models loaded!");
 			return;
 		}
 		else if (cellList.size() == 0)
 		{
-			JOptionPane.showMessageDialog(cFrame, "No cells initialized!");
+			//JOptionPane.showMessageDialog(cFrame, "No cells initialized!");
 			return;
 		}
 		else if (world == null && world3D == null)
 		{
-			JOptionPane.showMessageDialog(cFrame, "World not initialized!");
+			//JOptionPane.showMessageDialog(cFrame, "World not initialized!");
 			return;
 		}
 
@@ -1098,6 +1096,7 @@ public class Comets implements CometsConstants,
 	 * Sets the program back in setup mode, hiding the run toolbar
 	 * and showing the setup toolbar.
 	 */
+
 	public void endSimulation()
 	{
 		if (runner != null && !runner.isFinished())
@@ -1123,20 +1122,20 @@ public class Comets implements CometsConstants,
 			catch(InterruptedException e) {	}
 		}
 		mode = SETUP_MODE;
-		if (!cParams.isCommandLineOnly() && cParams.getNumLayers()==1)
-		{
-			backupState(true);
-			cMenuBar.setMode(mode);
-			cMenuBar.canUndo(worldUndoDeque.size() > 1);
-			setupPane.clear();
-			setupPane.setMode(mode);
-		}
-		else if(!cParams.isCommandLineOnly() && cParams.getNumLayers()>1)
-		{
-			cMenuBar.setMode(mode);
-			setupPane.clear();
-			setupPane.setMode(mode);
-		}
+		//if (!cParams.isCommandLineOnly() && cParams.getNumLayers()==1)
+		//{
+		//	backupState(true);
+		//	cMenuBar.setMode(mode);
+		//	cMenuBar.canUndo(worldUndoDeque.size() > 1);
+		//	setupPane.clear();
+		//	setupPane.setMode(mode);
+		//}
+		//else if(!cParams.isCommandLineOnly() && cParams.getNumLayers()>1)
+		//{
+		//	cMenuBar.setMode(mode);
+		//	setupPane.clear();
+		//	setupPane.setMode(mode);
+		//}
 		runner = null;
 		cParams.pause(true);
 	}
@@ -1147,6 +1146,7 @@ public class Comets implements CometsConstants,
 	 * 
 	 * This should have an immediate effect on the <code>World2D</code> object.
 	 */
+/*
 	public void setWorldSizeDialog()
 	{
 		IntField rowField = new IntField(cParams.getNumRows(), 3, false);
@@ -1193,12 +1193,13 @@ public class Comets implements CometsConstants,
 			setupPane.revalidate();
 		}
 	}
-	
+*/
 	/**
 	 * Spawns a dialog box with parameter options specific to the currently
 	 * loaded COMETS extension package. Right now, the only one is FBAComets, 
 	 * so that's that.
 	 */
+/*
 	public void editPackageParametersDialog()
 	{
 		if (loader == null)
@@ -1219,13 +1220,14 @@ public class Comets implements CometsConstants,
 //			pParams.resetParametersPanel();
 
 	}
-	
+*/	
 	/**
 	 * Spawns a dialog owned by Comets' frame.
 	 * <p>
 	 * This dialog has options for setting a bunch of parameters specific 
 	 * to each type of <code>Model</code>.
 	 */
+/*
 	public void editModelParametersDialog()
 	{
 		if (world == null && world3D == null)
@@ -1261,12 +1263,13 @@ public class Comets implements CometsConstants,
 			}
 		}
 	}
-	
+*/	
 	/**
 	 * Spawns a dialog owned by Comets' frame with options for setting a whole bunch of
 	 * parameters for the simulator. These only apply to the current run - loading 
 	 * a new layout file or from the database may nullify any changes.
 	 */
+/*
 	public void editParametersDialog()
 	{
 		if (cParamsPanel == null)
@@ -1296,24 +1299,26 @@ public class Comets implements CometsConstants,
 		if (world != null)
 			world.updateWorld();
 	}
-
+*/
 	/**
 	 * Prompts the user to load a simulation layout from the public P-KOMETS 
 	 * database. This is done through a series of menus and loading screens,
 	 * but calling this method starts the process.
 	 */
+/*
 	public void loadLayoutDB()
 	{
 		//TODO
 		JOptionPane.showMessageDialog(cFrame, "Can't load from DB yet!");
 	}
-	
+*/	
 	/**
 	 * Saves the current layout state to a layout file.
 	 * @param saveAs	If <code>false</code>, automatically overwrite the
 	 * 					currently loaded file. If <code>true</code>, prompt
 	 * 					the user for a new filename.
 	 */
+/*
 	public void saveLayoutFile(boolean saveAs)
 	{
 		
@@ -1335,7 +1340,7 @@ public class Comets implements CometsConstants,
 			// TODO stuff.
 		}
 	}
-
+*/
 	/**
 	 * Happens when a state change is fired.
 	 * This adds the current state to the undoWorldDeque and undoCellDeques, and
@@ -1343,6 +1348,7 @@ public class Comets implements CometsConstants,
 	 * Like a good queue, this adds to the back, and removes from the front when it
 	 * overflows. Like a good deque, redoing REMOVES from the back.
 	 */
+/*
 	public void backupState(boolean clearRedo)
 	{
 		if (cParams.isCommandLineOnly())
@@ -1384,12 +1390,13 @@ public class Comets implements CometsConstants,
 		}
 //		System.out.println("undo = " + worldUndoDeque.size() + " redo = " + worldRedoStack.size());
 	}
-	
+*/	
 	/**
 	 * If there's more than one state in the undoDeques, then it pops off the top one and
 	 * puts those in the redoDeques. We then set the last-most state in the deque to be the 
 	 * currently active one.
 	 */
+/*
 	public void undo()
 	{
 		if (worldUndoDeque.size() > 1)
@@ -1408,12 +1415,13 @@ public class Comets implements CometsConstants,
 			cMenuBar.canUndo(false);
 		fireLoadEvent(new CometsLoadEvent(this, CometsLoadEvent.Type.UNDO));
 	}
-
+*/
 	/**
 	 * If there's at least one state in the redoDeques, then pop it off the end, and put
 	 * that back on top of the undoDeques. Again, set the state on top of the undoDeques to
 	 * be the active one.
 	 */
+/*
 	public void redo()
 	{
 		if (!worldRedoStack.isEmpty())
@@ -1432,12 +1440,13 @@ public class Comets implements CometsConstants,
 			cMenuBar.canRedo(false);
 		fireLoadEvent(new CometsLoadEvent(this, CometsLoadEvent.Type.REDO));
 	}
-	
+*/	
 	/**
 	 * Resets the simulation to the last undo save point.
 	 * This removes all the currently loaded data and replaces it with the top of
 	 * the undo stack.
 	 */
+/*
 	private void resetSimulationToLastUndo()
 	{
 		world = worldUndoDeque.removeLast();
@@ -1473,10 +1482,11 @@ public class Comets implements CometsConstants,
 		}
 		fireLoadEvent(new CometsLoadEvent(this, CometsLoadEvent.Type.RESET));
 	}
-	
+*/	
 	/**
 	 * Saves the current simulation state. Overwrites the previously saved one.
 	 */
+/*
 	public void saveSimulationState()
 	{
 		if (world != null) // if there's no world, then don't bother backing anything up!
@@ -1493,7 +1503,7 @@ public class Comets implements CometsConstants,
 			}
 		}
 	}
-	
+*/	
 	/**
 	 * Writes the biomass level of each species to a file with a given name.
 	 * Format can be either Matlab matrix (CometsConstants.MATLAB_FORMAT) or
@@ -1517,6 +1527,7 @@ public class Comets implements CometsConstants,
 	 * On each line:
 	 * <x-coord> <y-coord> <biomass1> <biomass2> ... <biomass n>
 	 */
+/*
 	public void saveBiomassSnapshot()
 	{
 		if (world == null)
@@ -1584,22 +1595,24 @@ public class Comets implements CometsConstants,
 			cParams.setLastDirectory(chooser.getSelectedFile().getParent());
 		}
 	}
-	
+*/
 	/**
 	 * Sets what expansion package to use. Currently, there's only FBA, but
 	 * we should leave in code-stubs for other packages based on the API.
 	 */
+/*
 	public void setExpansionPackage()
 	{
 		JOptionPane.showMessageDialog(cFrame, "Stuck with FBA for a while!");
 	}
-	
+*/	
 	/**
 	 * Prompts the user to load a layout file from the disk by spawning
 	 * a file chooser. If a layout is already loaded, and a simulation is 
 	 * running, the simulation is stopped and the layout information is 
 	 * cleared.
 	 */
+/*
 	public void loadLayoutFile()
 	{
 		if (mode == SIMULATION_MODE)
@@ -1648,7 +1661,7 @@ public class Comets implements CometsConstants,
 			//setupPane.repaint();
 		}
 	}
-	
+*/	
 	/**
 	 * Loads a layout file. This invokes the loader of the currently loaded package, which
 	 * does the heavy lifting of creating and populating an initial World2D, List of Cells, 
@@ -1680,36 +1693,36 @@ public class Comets implements CometsConstants,
 				initWorld3D = null;
 			}
 			
-			if(!cParams.isCommandLineOnly())
-			{
-				//add the 2D or 3D display 
-				if(cParams.getNumLayers()==1)
-				{
-					setupPane.removeGraphicSetupPanel();
-					setupPane.addGraphicsSetupPanel(DIMENSIONALITY_2D);
-				}
-				else if(cParams.getNumLayers()>1)
-				{
-					setupPane.removeGraphicSetupPanel();
-					setupPane.addGraphicsSetupPanel(DIMENSIONALITY_3D);
-				}
-			}
+			//if(!cParams.isCommandLineOnly())
+			//{
+			//	//add the 2D or 3D display 
+			//	if(cParams.getNumLayers()==1)
+			//	{
+			//		setupPane.removeGraphicSetupPanel();
+			//		setupPane.addGraphicsSetupPanel(DIMENSIONALITY_2D);
+			//	}
+			//	else if(cParams.getNumLayers()>1)
+			//	{
+			//		setupPane.removeGraphicSetupPanel();
+			//		setupPane.addGraphicsSetupPanel(DIMENSIONALITY_3D);
+			//	}
+			//}
 			// Fetch the relevant data from the layout file
 			
 			if (cParams.getNumLayers()==1)
 			{
 				world = loader.getWorld();
-				if(!cParams.isCommandLineOnly())
-					this.showLayoutToolbar(true);
+				//if(!cParams.isCommandLineOnly())
+				//	this.showLayoutToolbar(true);
 			}
 			else if(cParams.getNumLayers()>1)
 			{
 				world3D = loader.getWorld3D();
-				if(!cParams.isCommandLineOnly())
-					this.showLayoutToolbar(false);
+				//if(!cParams.isCommandLineOnly())
+				//	this.showLayoutToolbar(false);
 			}
-			if(!cParams.isCommandLineOnly())
-				this.cMenuBar.setMode(SETUP_MODE);
+			//if(!cParams.isCommandLineOnly())
+			//	this.cMenuBar.setMode(SETUP_MODE);
 			models = loader.getModels();
 			cellList = loader.getCells();
 			if (cParams.getNumLayers()==1)
@@ -1732,11 +1745,11 @@ public class Comets implements CometsConstants,
 				cellRedoStack.clear();
 				modelUndoDeque.clear();
 				modelRedoStack.clear();
-				if (!cParams.isCommandLineOnly())
-				{	
-					backupState(true);
-					cMenuBar.canUndo(false);
-				}
+				//if (!cParams.isCommandLineOnly())
+				//{	
+				//	backupState(true);
+				//	cMenuBar.canUndo(false);
+				//}
 			}
 		}
 		catch(IOException e)
@@ -1749,6 +1762,7 @@ public class Comets implements CometsConstants,
 	 * Resets the currently running simulation to the initial state it was loaded in, 
 	 * or the most recently saved layout.
 	 */
+/*
 	public void resetSimulationToSavedState()
 	{
 		if (world != null)
@@ -1765,11 +1779,7 @@ public class Comets implements CometsConstants,
 				world.destroy();
 				
 				world = initWorld;
-				// here's a disconnect... the old world might have a different
-				// size than the new world, but the main place where we keep
-				// track of world sizes is in the CometsParameters.
-				//
-				// so... crap. guess I have to throw in a hack to set that.
+				
 				cParams.setNumCols(world.getNumCols());
 				cParams.setNumRows(world.getNumRows());
 				cellList = initCellList;
@@ -1799,10 +1809,11 @@ public class Comets implements CometsConstants,
 			return;
 		}
 	}
-
+*/
 	/**
 	 * Makes a modal "About COMETS" dialog.
 	 */
+/*
 	public void aboutDialog()
 	{
 		JLabel headerLabel = new JLabel("<html><h3>COMETS: Computation Of Microbial Ecosystems in Time and Space</h3></html>", JLabel.LEFT);
@@ -1852,10 +1863,11 @@ public class Comets implements CometsConstants,
 									  "About COMETS", 
 									  JOptionPane.PLAIN_MESSAGE);
 	}
-
+*/
 	/**
 	 * Makes a modal "Manual and Tutorials" dialog.
 	 */
+/*
 	public void manualDialog()
 	{
 		JLabel headerLabel = new JLabel("<html><h3>Manual and Tutorials</h3></html>", JLabel.LEFT);
@@ -1888,7 +1900,7 @@ public class Comets implements CometsConstants,
 									  "Manual and Tutorials", 
 									  JOptionPane.PLAIN_MESSAGE);
 	}
-	
+*/	
 	/**
 	 * If the desktop mechanism is supported, then this opens the given URL in
 	 * the operating system's default web browser
@@ -1935,16 +1947,18 @@ public class Comets implements CometsConstants,
 	 * Shows or hides the toolbar containing layout tools.
 	 * @param b - if true, show the toolbar, otherwise hide it
 	 */
+/*
 	public void showLayoutToolbar(boolean b)
 	{
 		setupPane.showLayoutToolbar(b);
 	}
-
+*/
 	/**
 	 * Shows or hides a frame with information on the loaded models, as 
 	 * provided by the <code>Model</code> objects. 
 	 * @param b - if true, show the frame, otherwise hide it
 	 */
+/*
 	public void showModelInfoFrame(boolean b)
 	{
 		if (miFrame == null)
@@ -1971,12 +1985,13 @@ public class Comets implements CometsConstants,
 		miFrame.setVisible(b);
 		
 	}
-
+*/
 	/**
 	 * Shows or hides a JFrame containing information on a given space 
 	 * (grid square), as provided by the World2D object.
 	 * @param b - If true, show the frame, otherwise hide it.
 	 */
+/*
 	public void showSpaceInfoFrame(boolean b)
 	{
 		if (siFrame == null)
@@ -1996,7 +2011,7 @@ public class Comets implements CometsConstants,
 		}
 		siFrame.setVisible(b);
 	}
-
+*/
 	/**
 	 * Returns the set of parameters from the currently loaded Package.
 	 * @return
@@ -2032,12 +2047,14 @@ public class Comets implements CometsConstants,
 	/**
 	 * If there's a GUI being used, force it to update.
 	 */
+	/*
 	public void updateOnCycle()
 	{
 		if (!cParams.isCommandLineOnly())
 			setupPane.repaint();
 	}
-	
+	*/
+	/*
 	public void addMediaNoiseDialog()
 	{
 		DoubleField noiseField = new DoubleField(0.1, 3, false);
@@ -2095,13 +2112,14 @@ public class Comets implements CometsConstants,
 			setupPane.repaint();
 		}				
 	}
+	*/
 	@Override
 	public void cometsChangePerformed(CometsChangeEvent e)
 	{
 		// TODO Auto-generated method stub
 		
 	}
-
+/*
 	@Override
 	public void cometsLoadPerformed(CometsLoadEvent e)
 	{
@@ -2111,7 +2129,8 @@ public class Comets implements CometsConstants,
 		if (world != null)
 			world.updateWorld();		
 	}
-
+*/
+/*
 	public void loadParametersFile()
 	{
 		try
@@ -2128,7 +2147,7 @@ public class Comets implements CometsConstants,
 			System.out.println("Error occurred while loading parameter file:\n" + e.getMessage());
 		}
 	}
-	
+*/
 	public void loadParametersFile(String filename)
 	{
 		try
@@ -2146,7 +2165,7 @@ public class Comets implements CometsConstants,
 		}
 		
 	}
-
+/*
 	public void saveParametersFile()
 	{
 		try
@@ -2158,7 +2177,7 @@ public class Comets implements CometsConstants,
 			System.out.println("Error occurred while saving parameter file:\n" + e.getMessage());
 		}
 	}
-	
+*/	
 	/**
 	 * The standard main function. Running this will initialize the main
 	 * COMETS frame and associated components.
