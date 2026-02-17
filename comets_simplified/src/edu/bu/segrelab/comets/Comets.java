@@ -1084,9 +1084,9 @@ public class Comets implements CometsConstants,
 		// from built in data (FBAWorld and such), spawn a runtime object. and make it go!
 		mode = SIMULATION_MODE;
 
-		cMenuBar.setMode(mode);
-		setupPane.setMode(mode);
-		cScrollPane.validate();
+		//cMenuBar.setMode(mode);
+		//setupPane.setMode(mode);
+		//cScrollPane.validate();
 
 		runner = new CometsSimRunner(this);
 		runner.start();

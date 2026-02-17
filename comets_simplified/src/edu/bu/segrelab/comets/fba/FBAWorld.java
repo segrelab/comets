@@ -1610,6 +1610,15 @@ public class FBAWorld extends World2D
 		if (model < 0 || model > numModels - 1)
 			return PARAMS_ERROR;
 		int[] mediaList = (int[]) modelExchList.get(model);
+	
+		if (mediaDelta == null) {
+	        return PARAMS_ERROR;
+	    }
+
+	    if (mediaList == null) {
+	        return PARAMS_ERROR;
+	    }
+
 		if (mediaList.length != mediaDelta.length)
 			return PARAMS_ERROR;
 		if (cParams.isToroidalGrid())
