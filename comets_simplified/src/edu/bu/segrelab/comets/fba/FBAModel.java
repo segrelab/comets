@@ -2364,7 +2364,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					exchKm = new double[numExch];
 					for (int i=0; i<numExch; i++)
 					{
-						exchKm[i] = -1;
+						exchKm[i] = defaultKm;
 					}
 					String kmLine = null;
 					blockOpen = true;
@@ -2433,7 +2433,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 
 					exchVmax = new double[numExch];
 					for (int i=0; i<numExch; i++)
-						exchVmax[i] = -1;
+						exchVmax[i] = defaultVmax;
 						
 					String vMaxLine = null;
 					blockOpen = true;
@@ -2501,7 +2501,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					exchHillCoeff = new double[numExch];
 					for (int i=0; i<numExch; i++)
 					{
-						exchHillCoeff[i] = -1;
+						exchHillCoeff[i] = defaultHill;
 					}
 					String hillLine = null;
 					blockOpen = true;
