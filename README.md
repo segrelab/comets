@@ -27,10 +27,7 @@ We have developed both a Matlab and a python toolbox to interface the Comets sof
 # Cite us
 If you use COMETS in you scientific work, please cite:
 
-Ilija Dukovski, Lauren Golden, Jing Zhang, Melisa Osborne, Daniel Segrè, Kirill S. Korolev,
-Biophysical metabolic modeling of complex bacterial colony morphology, Cell Systems, Volume 16, Issue 8, 2025,
-101352, ISSN 2405-4712, https://doi.org/10.1016/j.cels.2025.101352.
-(https://www.sciencedirect.com/science/article/pii/S2405471225001851)
+>Ilija Dukovski, Lauren Golden, Jing Zhang, Melisa Osborne, Daniel Segrè, Kirill S. Korolev, Biophysical metabolic modeling of complex bacterial colony morphology, Cell Systems, Volume 16, Issue 8, 2025, 101352, ISSN 2405-4712, https://doi.org/10.1016/j.cels.2025.101352. (https://www.sciencedirect.com/science/article/pii/S2405471225001851)
 
 or/and 
 
