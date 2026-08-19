@@ -1,6 +1,6 @@
 package edu.bu.segrelab.comets.fba;
 
-import com.gurobi.gurobi.*;
+import gurobi.*;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Collections;

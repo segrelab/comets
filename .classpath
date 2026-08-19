@@ -84,7 +84,7 @@
 	<classpathentry kind="lib" path="C:/Users/ilija/Documents/Work/Projects/COMETS_Debug/comets_windows/comets_windows/comets_windows/comets_2.12.4/lib/or-tools/9.3.1049/ortools-win32-x86-64-9.3.10497.jar"/>
 	<classpathentry kind="lib" path="C:/Users/ilija/Documents/Work/Projects/COMETS_Debug/comets_windows/comets_windows/comets_windows/comets_2.12.4/lib/or-tools/9.3.1049/ortools-win32-x86-64-9.3.10497-sources.jar"/>
 	<classpathentry kind="lib" path="C:/Users/ilija/Documents/Work/Projects/COMETS_Debug/comets_windows/comets_windows/comets_windows/comets_2.12.4/lib/or-tools/9.3.1049/protobuf-java-2.5.0.jar"/>
-	<classpathentry kind="lib" path="C:/gurobi1302/win64/lib/gurobi.jar"/>
-	<classpathentry kind="lib" path="C:/gurobi1302/win64/lib/gurobi-javadoc.jar"/>
+	<classpathentry kind="lib" path="C:/gurobi1001/win64/lib/gurobi.jar"/>
+	<classpathentry kind="lib" path="C:/gurobi1001/win64/lib/gurobi-javadoc.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -234,7 +234,8 @@ implements edu.bu.segrelab.comets.CometsConstants
 		case FBAModel.MAX_OBJECTIVE_MIN_TOTAL:
 			objective.setMaximization();
 			resultStatus = solver.solve();
-			
+			System.out.print(resultStatus);
+			System.out.print("1\n");
 			for(int i=0;i<numRxns;i++)fluxes[i]=rxnFluxes[i].solutionValue();
 			
 			if (resultStatus == MPSolver.ResultStatus.OPTIMAL)
@@ -242,7 +243,11 @@ implements edu.bu.segrelab.comets.CometsConstants
 				biomassConstraintExpressionsMinSumAbs.setBounds(rxnFluxes[objIndex-1].solutionValue(),rxnFluxes[objIndex-1].solutionValue());
 				objectiveMinSumAbs.setMinimization();
 				resultStatus = solverMinSumAbs.solve();
-				if (resultStatus == MPSolver.ResultStatus.OPTIMAL)for(int i=0;i<numRxns;i++)fluxes[i]=rxnFluxesMinSumAbs[i].solutionValue();
+				//System.out.print(resultStatus);
+				//System.out.print("2\n");
+				//Here we will ignore pFBA if it is infeasible. 
+				if (resultStatus == MPSolver.ResultStatus.OPTIMAL) {for(int i=0;i<numRxns;i++)fluxes[i]=rxnFluxesMinSumAbs[i].solutionValue();}
+				else resultStatus = MPSolver.ResultStatus.OPTIMAL; 
 			}
 			break;
 		default:
