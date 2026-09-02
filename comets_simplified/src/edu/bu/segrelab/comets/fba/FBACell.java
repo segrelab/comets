@@ -1194,7 +1194,7 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 						int[] modelMediaIndexes = world.getModelMediaIndexes(x, y, l);
 						int kIndexInModel = ArrayUtils.indexOf(modelMediaIndexes, k);
 						//System.out.println(kIndexInModel);
-						if(kIndexInModel>-1)
+						if (kIndexInModel > -1 && kIndexInModel < deltaMedia[l].length)
 						{
 							totUptake += deltaMedia[l][kIndexInModel];
 							if (deltaMedia[l][kIndexInModel] < 0)
@@ -1214,16 +1214,23 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				        {		        	
 				        	// Calculate new uptake by multiplying it by the fraction of the total
 	//			        	double newUptake = thisCellMedia[k] * (uptakeMat[l][k]/totUptake);
-				        	double newUptake = thisCellMedia[k] * (deltaMedia[l][k]/totUptake);			        	
-				        	// Figure out the index of the metabolite in the lb vector
+				        	// Translate the community-wide media index k into this model's own
+				        	// local exchange index. Community members can have different numbers
+				        	// of exchange reactions, so k must never be used to index a per-model
+				        	// array (deltaMedia[l], lb[l]) directly.
 				        	int[] modelMediaIndexes = world.getModelMediaIndexes(x, y, l);
-							int kIndexInModel = ArrayUtils.indexOf(modelMediaIndexes, k);
+				        	int kIndexInModel = ArrayUtils.indexOf(modelMediaIndexes, k);
 
-							// SAFETY CHECK: skip if this metabolite is not mapped for this model
-							// or if the index is inconsistent with the LB array size
-							if (kIndexInModel < 0 || kIndexInModel >= lb[l].length) {
-    							continue;
+							// SAFETY CHECK: skip if this metabolite is not one of this model's
+							// exchange reactions, or if the local index would fall outside this
+							// model's own arrays
+							if (kIndexInModel < 0 || kIndexInModel >= lb[l].length
+									|| kIndexInModel >= deltaMedia[l].length) {
+								continue;
 							}
+
+				        	// Calculate new uptake by multiplying it by the fraction of the total
+				        	double newUptake = thisCellMedia[k] * (deltaMedia[l][kIndexInModel]/totUptake);
 		
 							// update the lb 
 							lb[l][kIndexInModel] = -1*newUptake / (old_biomass[l] * cParams.getTimeStep());
