@@ -1168,7 +1168,8 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 			double[] thisCellMedia = world.getMediaAt(x, y); // all media in cell
 			double[] totalUptakes = new double[thisCellMedia.length];
 			
-			//reOptimizeFlag = false;
+			//deactivate reoptimization for now
+			reOptimizeFlag = false;
 			//System.out.println("Debug1");
 			while(reOptimizeFlag)
 			{
