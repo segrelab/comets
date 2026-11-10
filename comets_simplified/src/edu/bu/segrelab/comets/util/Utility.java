@@ -1001,15 +1001,15 @@ public class Utility implements CometsConstants
 						{
 							if(i==j)
 							{
-								matrixCoeffs[k][i][j]-=modelsFriction[i];
+								matrixCoeffs[k][i][i]-=modelsFriction[i];
 								for(int l=0;l<numModels;l++)
 								{
-									if(l!=i)matrixCoeffs[k][i][l]-=biomassOfModelsInCell[l][x][y]*interModelPairsFriction[i][l];
+									if(l!=i)matrixCoeffs[k][i][i]-=biomassOfModelsInCell[l][x][y]*interModelPairsFriction[i][l];
 								}
 							}
 							else
 							{
-								matrixCoeffs[k][i][j]=biomassOfModelsInCell[i][x][y]*interModelPairsFriction[i][j];
+								matrixCoeffs[k][i][j]=biomassOfModelsInCell[j][x][y]*interModelPairsFriction[i][j];
 							}
 						}
 						constants[k][i]=pressureGradient[x][y][k];
