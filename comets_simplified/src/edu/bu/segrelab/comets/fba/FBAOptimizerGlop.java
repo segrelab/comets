@@ -226,7 +226,7 @@ implements edu.bu.segrelab.comets.CometsConstants
 		case FBAModel.MAXIMIZE_OBJECTIVE_FLUX:
 			objective.setMaximization();
 			resultStatus = solver.solve();
-			for(int i=0;i<numRxns;i++)fluxes[i]=rxnFluxes[i].solutionValue();
+			readFluxes(rxnFluxes);
 			//System.out.println("Biomass flux 1 "+rxnFluxes[objIndex-1].solutionValue());
 			//System.out.println("Glucose flux MaxObj glop "+fluxes[27]);
 			break;
@@ -234,9 +234,9 @@ implements edu.bu.segrelab.comets.CometsConstants
 		case FBAModel.MAX_OBJECTIVE_MIN_TOTAL:
 			objective.setMaximization();
 			resultStatus = solver.solve();
-			System.out.print(resultStatus);
-			System.out.print("1\n");
-			for(int i=0;i<numRxns;i++)fluxes[i]=rxnFluxes[i].solutionValue();
+			//System.out.print(resultStatus);
+			//System.out.print("1\n");
+			readFluxes(rxnFluxes);
 			
 			if (resultStatus == MPSolver.ResultStatus.OPTIMAL)
 			{
@@ -270,6 +270,19 @@ implements edu.bu.segrelab.comets.CometsConstants
 		//}
 
 		return status;
+	}
+
+	/**
+	 * Copies the solver's variable values into <code>fluxes</code>. If the last solve
+	 * produced no solution (e.g. INFEASIBLE), sets the fluxes to 0 without calling
+	 * solutionValue(). Calling it with no solution makes the OR-Tools native library log
+	 * "No solution exists. MPSolverInterface::result_status_ = ..." and return 0.
+	 */
+	private void readFluxes(MPVariable[] vars)
+	{
+		boolean hasSolution = resultStatus == MPSolver.ResultStatus.OPTIMAL
+				|| resultStatus == MPSolver.ResultStatus.FEASIBLE;
+		for(int i=0;i<numRxns;i++) fluxes[i] = hasSolution ? vars[i].solutionValue() : 0.0;
 	}
 
 	/**

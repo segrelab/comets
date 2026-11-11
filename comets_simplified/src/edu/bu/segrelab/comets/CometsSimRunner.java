@@ -8,8 +8,7 @@ import edu.bu.segrelab.comets.fba.FBAWorld;
 
 /**
  * The CometsSimRunner is an independent thread that runs all of the logic of doing
- * a simulation, independent of the GUI. This prevents the GUI from seizing up
- * while heavy modeling calculations are going on.
+ * a simulation.
  * 
  * @author Bill Riehl briehl@bu.edu
  */
@@ -83,12 +82,6 @@ public class CometsSimRunner extends Thread
 					System.out.println("Cycle " + curCycle);
 				}
 				
-				// Take a slideshow snapshot, if we're at the right time.
-				//if (curCycle % c.getParameters().getSlideshowRate() == 0 && c.getParameters().saveSlideshow())
-				//{
-				//	c.takeSlideshowScreenshot((int)curCycle);
-				//}
-	
 				// Test quit conditions, end simulation if required.
 				if (checkCompletion())
 				{
@@ -135,21 +128,6 @@ public class CometsSimRunner extends Thread
 				if (c.getParameters().showCycleTime())
 					System.out.println("Cycle complete in " + (System.currentTimeMillis() - start)/1000.0 + "s");
 				totalTime += System.currentTimeMillis() - start;
-				//c.updateOnCycle();
-			}
-			else
-			{
-				if (!c.getParameters().isCommandLineOnly())
-				{
-					try
-					{
-						c.getRunBarrier().await();
-					}
-					catch (Exception e)
-					{
-						System.out.println(e);
-					}
-				}
 			}
 		}
 		c.fireSimulationStateChangeEvent(new SimulationStateChangeEvent(SimulationStateChangeEvent.State.END));

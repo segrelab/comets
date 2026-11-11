@@ -30,8 +30,6 @@ import java.util.Set;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import javax.swing.JFileChooser;
-import javax.swing.JOptionPane;
 
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
@@ -49,7 +47,6 @@ import edu.bu.segrelab.comets.World3D;
 import edu.bu.segrelab.comets.exception.LayoutFileException;
 import edu.bu.segrelab.comets.exception.ModelFileException;
 import edu.bu.segrelab.comets.exception.ParameterFileException;
-//import edu.bu.segrelab.comets.fba.ui.LayoutSavePanel;
 import edu.bu.segrelab.comets.reaction.ReactionModel;
 import edu.bu.segrelab.comets.util.Circle;
 import edu.bu.segrelab.comets.util.Utility;
@@ -87,8 +84,6 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 	private String mediaFileName;
 	private String[] initialMediaNames;
 	protected FBAParameters pParams;   // 'pParams' keeps inline with PackageParameters
-	//private LayoutSavePanel layoutSavePanel = null;
-	private boolean useGui;
 	private Comets c;
 	private int lineCount;
 	private boolean substrate = false;
@@ -208,13 +203,12 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 	 * @param filename a String representing the pathway to the layout file.
 	 * @param c the Comets object that will be loading this world layout
 	 */
-	public int loadLayoutFile(String filename, Comets c, boolean useGui) throws IOException
+	public int loadLayoutFile(String filename, Comets c) throws IOException
 	{
 		world = null;
 		world3D = null;
 		cellList = null;
 		models = null;
-		this.useGui = useGui;
 		this.c = c;
 		lineCount = 0;
 		periodicMedia = new FBAPeriodicMedia();
@@ -1056,37 +1050,24 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		}
 		catch(IOException e)
 		{
-		//	showGuiLoadError("Unable to load layout file!\nFile error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
-		//			"File Error!");
 			throw new IOException("File error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(NumberFormatException e)
 		{
-		//	showGuiLoadError("Unable to load layout file!\nNumber format error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
-		//			"Numerical Error!");
 			throw new IOException("Number format error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(ModelFileException e)
 		{
-		//	showGuiLoadError("Unable to load layout file!\nModel file error: " + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, 
-		//			"Model File Loading Error!");
 			throw new IOException("Model file error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(LayoutFileException e)
 		{
-		//	showGuiLoadError("Error with layout file:\n" + e.getMessage() + "\nIn layout file: " + filename + "\nLine: " + lineCount, "Layout file error!");
 			throw new IOException("Layout file error: " + e.getMessage() + " in layout file: " + filename + " line " + lineCount);
 		}
 		catch(ParameterFileException e)
 		{
-		//	showGuiLoadError("Error loading parameter block:\n" + e.getMessage() + "\nIn layout file: " + filename, "Layout file error!");
 			throw new IOException("Layout file error: " + e.getMessage() + " in layout file: " + filename);
 		}
-		// at the very end, set the display layer to biomass, since now we know how many layers there are.
-		if(c.getParameters().getNumLayers()==1)
-			c.getParameters().setDisplayLayer(world.getNumMedia());
-		else if(c.getParameters().getNumLayers()>1)
-			c.getParameters().setDisplayLayer(world3D.getNumMedia());
 		return PARAMS_OK;
 		
 	}
@@ -1135,13 +1116,6 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		return LoaderState.OK;
 	}
 
-/*
-	private void showGuiLoadError(String error, String title)
-	{
-		if (useGui)
-			JOptionPane.showMessageDialog(c.getFrame(), error, title, JOptionPane.ERROR_MESSAGE);
-	}
-*/
 	private List<String> collectLayoutFileBlock(BufferedReader reader) throws IOException
 	{
 		List<String> lines = new ArrayList<String>();
@@ -1181,34 +1155,10 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 				System.out.println("Unable to initialize manifest file. \nContinuing without writing manifest file.");
 			}		
 
-			// if STILL not found, prompt the user
+			// if STILL not found, give up
 			while (!f.isFile())
 			{
-				//if (useGui)
-				//{
-				//	int opt = JOptionPane.showConfirmDialog(c.getFrame(), "Unable to find model file '" + tokens[i+1] + "'\nPlease locate or cancel", "Invalid model file!", JOptionPane.OK_CANCEL_OPTION);
-				//	if (opt == JOptionPane.OK_OPTION)
-				//	{
-						// make a JFileChooser, set response to parsed[i+1], update f
-						// or return if canceled
-				//		JFileChooser chooser = new JFileChooser(path);
-						// add filters later, maybe.
-				//		int returnVal = chooser.showOpenDialog(c.getFrame());
-				//		if (returnVal == JFileChooser.APPROVE_OPTION)
-				//		{
-				//			modelFileName = chooser.getSelectedFile().getPath();
-				//			f = new File(modelFileName);
-				//		}
-				//		else
-				//			return LoaderState.CANCELED;
-				//	}
-				//	else
-				//		return LoaderState.CANCELED;
-				//}
-				//else
-				//{
-					throw new LayoutFileException("Unable to load model file '" + tokens[i+1] + "' -- canceling layout file load.", 0);
-				//}
+				throw new LayoutFileException("Unable to load model file '" + tokens[i+1] + "' -- canceling layout file load.", 0);
 			}
 
 			//Redundant code. Should always load through this.loadModelFromFile
@@ -1262,34 +1212,10 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 				mediaFileName = path + File.separatorChar + tokens[1];
 				f = new File(mediaFileName);
 			}
-			// if STILL not found, prompt the user
+			// if STILL not found, give up
 			while (!f.isFile())
 			{
-				//if (useGui)
-				//{
-				//	int opt = JOptionPane.showConfirmDialog(c.getFrame(), "Unable to find nutrient file '" + tokens[1] + "'\nPlease locate or cancel", "Invalid nutrient file!", JOptionPane.OK_CANCEL_OPTION);
-				//	if (opt == JOptionPane.OK_OPTION)
-				//	{
-						// make a JFileChooser, set response to parsed[i+1], update f
-						// or return if canceled
-				//		JFileChooser chooser = new JFileChooser(path);
-						// add filters later, maybe.
-				//		int returnVal = chooser.showOpenDialog(c.getFrame());
-				//		if (returnVal == JFileChooser.APPROVE_OPTION)
-				//		{
-				//			mediaFileName = chooser.getSelectedFile().getPath();
-				//			f = new File(mediaFileName);
-				//		}
-				//		else
-				//			return LoaderState.CANCELED;
-				//	}
-				//	else
-				//		return LoaderState.CANCELED;
-				//}
-				//else
-				//{
-					throw new LayoutFileException("Unable to find nutrient file '" + tokens[1] + "' -- canceling layout file load.", 0);
-				//}
+				throw new LayoutFileException("Unable to find nutrient file '" + tokens[1] + "' -- canceling layout file load.", 0);
 			}
 
 			// load model world, and lots of stuff enclosed in here.
@@ -2978,80 +2904,7 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 		pw.println("\t//");
 
 		/*************************** initial_pop block *******************************/
-		// We have lots of options, based on the layoutSavePanel. So ask it what we should do.
-/*
-		LayoutSavePanel.BiomassStyle style = layoutSavePanel.getBiomassStyle();
-		double[] biomass;
-		int[] spaces;
-		Rectangle rect;
-		switch(style)
-		{
-		case FILLED:
-			pw.print("\tinitial_pop\tfilled");
-			biomass = layoutSavePanel.getBiomassQuantity();
-			for (int i=0; i<biomass.length; i++)
-			{
-				pw.print("\t" + biomass[i]);
-			}
-			break;
-
-		case FILLED_BOX:
-			pw.print("\tinitial_pop\tfilled_rect\t");
-			biomass = layoutSavePanel.getBiomassQuantity();
-			rect = layoutSavePanel.getBiomassRegion();
-			pw.print("\t" + rect.getX() + "\t" + rect.getY() + "\t" + rect.getWidth() + "\t" + rect.getHeight());
-			for (int i=0; i<biomass.length; i++)
-			{
-				pw.print("\t" + biomass[i]);
-			}
-			break;
-
-		case RANDOM:
-			pw.print("\tinitial_pop\trandom");
-			spaces = layoutSavePanel.getNumSpaces();
-			biomass = layoutSavePanel.getBiomassQuantity();
-			for (int i=0; i<biomass.length; i++)
-			{
-				pw.print("\t" + spaces[i] + "\t" + biomass[i]);
-			}
-			break;
-
-		case RANDOM_BOX:
-			pw.print("\tinitial_pop\trandom_rect");
-			rect = layoutSavePanel.getBiomassRegion();
-			spaces = layoutSavePanel.getNumSpaces();
-			biomass = layoutSavePanel.getBiomassQuantity();
-			pw.print("\t" + rect.getX() + "\t" + rect.getY() + "\t" + rect.getWidth() + "\t" + rect.getHeight());
-			for (int i=0; i<biomass.length; i++)
-			{
-				pw.print("\t" + spaces[i] + "\t" + biomass[i]);
-			}				
-			break;
-
-		case SQUARE:
-			pw.print("\tinitial_pop\tsquare");
-			spaces = layoutSavePanel.getNumSpaces();
-			biomass = layoutSavePanel.getBiomassQuantity();
-			for (int i=0; i<biomass.length; i++)
-			{
-				pw.print("\t" + spaces[i] + "\t" + biomass[i]);
-			}				
-			break;
-
-		default: // save as-is
-			pw.print("\tinitial_pop");
-			for (Cell cell : cellList)
-			{
-				biomass = cell.getBiomass();
-				pw.print("\n\t\t" + cell.getX() + "\t" + cell.getY());
-				for (int i=0; i<biomass.length; i++)
-				{
-					pw.print("\t" + biomass[i]);
-				}
-			}
-			break;
-		}
-*/
+		// (The initial_pop writer depended on the removed LayoutSavePanel UI and is not written.)
 		pw.println("\n\t//");
 		// --- aaaaaand DONE! ---
 
@@ -3170,31 +3023,6 @@ public class FBACometsLoader implements CometsLoader, CometsConstants
 
 		return new FBAWorld(c, names, concs, fbaModels);
 	}
-/*
-	public void saveLayoutFile(Comets c) throws IOException
-	{
-		// User hits "save"
-		// Prompt for how to save biomass (and media, later)
-		// Saves everything!
-		// So, we need:
-		//   - a widget to deal with how to save biomass
-		//   - a widget to pick a filename
-		//   - a way to communicate all that with the FBACometsLoader
-		if (layoutSavePanel == null)
-			layoutSavePanel = new LayoutSavePanel(c);
-
-		else
-			layoutSavePanel.init();
-
-		JFileChooser chooser = new JFileChooser();
-		chooser.setAccessory(layoutSavePanel);
-		int returnVal = chooser.showSaveDialog(c.getFrame());
-		if (returnVal == JFileChooser.APPROVE_OPTION)
-		{
-			saveLayoutFile(chooser.getSelectedFile().getPath(), c.getWorld(), c.getModels(), c.getCells(), CometsLoader.DO_NOT_SAVE, c.getParameters());
-		}
-	}
-*/
 	@Override
 	public PackageParameterBatch getParameterBatch(Comets c)
 	{

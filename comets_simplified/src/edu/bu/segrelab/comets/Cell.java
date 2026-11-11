@@ -33,11 +33,6 @@ public abstract class Cell implements CometsConstants
 	public abstract int getID();
 
 	/**
-	 * @return the color of the <code>Cell</code>, packed into a single integer.
-	 */
-	public abstract int getColor();
-
-	/**
 	 * Generates a <code>String</code> containing the attributes of the <code>Cell</code>.
 	 * These may include its growth rate, movement rate, reproduction rate, etc.
 	 * @return an attributes <code>String</code>.

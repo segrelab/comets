@@ -46,14 +46,12 @@ public interface CometsLoader
 	 * file constraints set up by the extending package.
 	 * @param filename a <code>String</code> for the file to be loaded.
 	 * @param c the <code>Comets</code> that will be linked to this package
-	 * @param gui if <code>true</code> allow gui widgets to be used for prompting
-	 * the user, etc.
 	 * @return <code>CometsConstants.PARAMS_OK</code> if the loading worked,
 	 * <code>CometsConstants.PARAMS_ERROR</code> if there was an error,
 	 * <code>CometsConstants.LOAD_CANCELED</code> if the loading was canceled,
 	 * or any other appropriate integer value. 
 	 */
-	public int loadLayoutFile(String filename, Comets c, boolean gui) throws IOException;
+	public int loadLayoutFile(String filename, Comets c) throws IOException;
 	
 	/**
 	 * Retrieves the world loaded by this <code>CometsLoader</code> or <code>null</code>

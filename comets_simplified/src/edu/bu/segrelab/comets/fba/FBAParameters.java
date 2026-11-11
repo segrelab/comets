@@ -8,11 +8,6 @@ import java.util.HashMap;
 import edu.bu.segrelab.comets.Comets;
 import edu.bu.segrelab.comets.Model;
 import edu.bu.segrelab.comets.PackageParameters;
-//import edu.bu.segrelab.comets.fba.ui.DiffusionParametersPanel;
-//import edu.bu.segrelab.comets.fba.ui.ExchangeParametersPanel;
-//import edu.bu.segrelab.comets.fba.ui.LogParametersPanel;
-//import edu.bu.segrelab.comets.fba.ui.ThreadParametersPanel;
-//import edu.bu.segrelab.comets.ui.ParametersPanel;
 import edu.bu.segrelab.comets.util.ParameterState;
 import edu.bu.segrelab.comets.ParameterType;
 
@@ -206,7 +201,6 @@ public class FBAParameters implements PackageParameters
 	private double[] defaultVelocityVector={0.0,0.0,0.0};
 
 
-	//private Map<String, ParametersPanel> parametersPanels;
 
 	private Map<String, Object> paramValues;
 	private Map<String, ParameterType> paramTypes;
@@ -245,15 +239,6 @@ public class FBAParameters implements PackageParameters
 
 		saveParameterState();
 
-		//parametersPanels = new HashMap<String, ParametersPanel>();
-		//DiffusionParametersPanel dpp = new DiffusionParametersPanel(this);
-		//ExchangeParametersPanel epp = new ExchangeParametersPanel(this);
-		//LogParametersPanel lpp = new LogParametersPanel(this);
-		//ThreadParametersPanel tpp = new ThreadParametersPanel(this);
-		//parametersPanels.put(dpp.getName(), dpp);
-		//parametersPanels.put(epp.getName(), epp);
-		//parametersPanels.put(lpp.getName(), lpp);
-		//parametersPanels.put(tpp.getName(), tpp);
 	}
 
 	public void saveParameterState()
@@ -1509,16 +1494,6 @@ public class FBAParameters implements PackageParameters
 	}
 
 	
-	public String getLastDirectory()
-	{
-		return c.getParameters().getLastDirectory();
-	}
-
-	public void setLastDirectory(String path)
-	{
-		c.getParameters().setLastDirectory(path);
-	}
-
 	/** Lowest concentration allowed by calculations performed by a 
 	 * ReactionModel before it gets rounded down to 0
 	 * 
@@ -1531,11 +1506,6 @@ public class FBAParameters implements PackageParameters
 	public static void setMinConcentration(double min) {
 		minConcentration = min;
 	}
-
-//	public Map<String, ParametersPanel> getParametersPanels()
-//	{
-//		return parametersPanels;
-//	}
 
 	public void dumpToFile(PrintWriter writer)
 	{

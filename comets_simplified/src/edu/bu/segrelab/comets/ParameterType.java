@@ -7,6 +7,5 @@ public enum ParameterType
 	FLOAT,
 	STRING,
 	BOOLEAN,
-	COLOR,
 	LONG
 }

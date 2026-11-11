@@ -48,7 +48,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	private FBAWorld3D world3D;
 	
 	private final int id;
-	private int cellColor;
 	private double[] biomass;
 	private double[] old_biomass;
 	private double[] convectionRHS1;
@@ -139,10 +138,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.convectionMultiRHS1=new double[biomass.length];
 		this.convectionMultiRHS2=new double[biomass.length];
 
-		if (cParams.showGraphics())
-			cellColor = calculateColor();
-		else
-			cellColor = 0;
 		fluxes = new double[fbaModels.length][];
 		convModelFluxes=new double[fbaModels.length][2];
 		
@@ -205,10 +200,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		this.convectionMultiRHS1=new double[biomass.length];
 		this.convectionMultiRHS2=new double[biomass.length];
 		
-		if (cParams.showGraphics())
-			cellColor = calculateColor();
-		else
-			cellColor = 0;
 		fluxes = new double[fbaModels.length][];
 		world3D.putCellAt(x, y, z, this);		
 		updateDiffusibility3D();
@@ -383,11 +374,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		}
 		if (numLost == biomass.length)
 			return die();
-		if (cParams.showGraphics())
-		{
-			cellColor = calculateColor();
-			// cellWorld.updateSpace(x, y);
-		}
 		updateDiffusibility();
 		return CELL_OK;
 	}
@@ -425,11 +411,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		}
 		if (numLost == biomass.length)
 			return die();
-		if (cParams.showGraphics())
-		{
-			cellColor = calculateColor();
-			// cellWorld.updateSpace(x, y);
-		}
 		updateDiffusibility3D();
 		return CELL_OK;
 	}
@@ -512,24 +493,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		return "temp attributes string";
 	}
 
-	/**
-	 * Calculates and the color of this cell, based on how much biomass of each species is
-	 * present. Currently only deals with up to 3 concurrent species in the cell.
-	 * 
-	 * //TODO Extend this to N species...
-	 * 
-	 * @return an unsigned int representing the color 
-	 * @see Utility.pColor()
-	 */
-	private int calculateColor()
-	{
-		if (biomass.length == 2)
-			return Utility.pColor((int)biomass[1]*(255/10), (int)biomass[0]*255/10, 55);
-		if (biomass.length == 3)
-			return Utility.pColor((int)biomass[1]*(255/10), (int)biomass[0]*255/10, 55 + (int)biomass[2]*255/10);
-		return Utility.pColor(0, (int)biomass[0]*(255/10), 55);
-    }
-	
 	/* (non-Javadoc)
 	 * @see edu.bu.segrelab.comets.Cell#cellType()
 	 */
@@ -546,20 +509,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 	public int die()
 	{
 		return CELL_DEAD;
-	}
-
-	/* (non-Javadoc)
-	 * @see edu.bu.segrelab.comets.Cell#getColor()
-	 */
-	@Override
-	/**
-	 * Returns the current color of the <code>FBACell</code> as an integer
-	 * @return an int representing the cell color
-	 * @see Utility.pColor()
-	 */
-	public int getColor()
-	{
-		return cellColor;
 	}
 
 	/**
@@ -1142,9 +1091,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 					System.err.println("Error in model "+i+": Demographic noise is applies only if the death rate for the model is zero. Noise will not be applied.");
 				}
 							
-				//if (cParams.showGraphics())
-				//	cellColor = calculateColor();
-				
 				/***************** REPORT IF THERE IS AN INFEASIBLE SOLUTION ****************/
 				
 			}
@@ -1432,9 +1378,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 		
 
 		
-		if (cParams.showGraphics())
-			cellColor = calculateColor();
-		
 		return updateCellData(deltaBiomass, fluxes, allModelsGrowthRates);
 	}
 	
@@ -1662,9 +1605,6 @@ public class FBACell extends edu.bu.segrelab.comets.Cell
 				numDead++;
 		}
 		
-		
-		if (cParams.showGraphics())
-			cellColor = calculateColor();
 		
 		if (numDead == biomass.length)
 			return die();

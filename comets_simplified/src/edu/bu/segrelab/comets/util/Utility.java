@@ -9,7 +9,7 @@ import java.util.Set;
 import edu.bu.segrelab.comets.CometsConstants;
 import edu.bu.segrelab.comets.CometsParameters;
 
-//import org.apache.commons.math3.linear.*;
+import org.apache.commons.math3.linear.*;
 import java.lang.Math;
 
 /**
@@ -259,38 +259,6 @@ public class Utility implements CometsConstants
 		return val;
 	}
 	
-	/**
-	 * Generates a Processing-style 32 bit int version of a color by
-	 * bit-shifting the rgb values together. If any channel color is out of the
-	 * [0,255] bounds, it is automatically adjusted to fit.
-	 * 
-	 * @param r the value of the red channel, between 0 and 255
-	 * @param g the value of the green channel, between 0 and 255
-	 * @param b the value of the blue channel, between 0 and 255
-	 * @return packed 32-bit int version of a color
-	 * Note that Processing, and the associated <code>CometsRunPane</code>
-	 * is no longer used.
-	 */
-	public static int pColor(int r, int g, int b)
-	{
-		if (r > 255)
-			r = 255;
-		else if (r < 0)
-			r = 0;
-		
-		if (g > 255)
-			g = 255;
-		else if (g < 0)
-			g = 0;
-		
-		if (b > 255)
-			b = 255;
-		else if (b < 0)
-			b = 0;
-
-		return 0xff000000 | (r << 16) | (g << 8) | b;
-	}
-
 	/**
 	 * Searches for a nonzero value in the given array. Returns true if it finds one.
 	 * @param arr - an array of numbers

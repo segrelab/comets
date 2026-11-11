@@ -31,8 +31,6 @@ public interface CometsConstants
 	public static final int RANDOM_RECTANGLE_LAYOUT = 16;
 	public static final int FILLED_RECTANGLE_LAYOUT = 17;
 	
-	public static final int COLOR_RELATIVE = 10;
-	public static final int COLOR_ABSOLUTE = 11;
 	
 	// No longer used, since solving Fick's diffusion
 	public static final double PERCENT_DIFFUSE_APPROX = 0.2;

@@ -5,7 +5,6 @@ package edu.bu.segrelab.comets;
 
 
 
-import javax.swing.JComponent;
 /**
  * The abstract base class for a model to be used in COMETS simulations. Any package
  * used with COMETS must extend this class and provide implementations for the 
@@ -46,29 +45,6 @@ public abstract class Model
 	public abstract String getModelName();
 	
 	/**
-	 * Each model should provide some kind of informational panel that the COMETS
-	 * program can use to show the user:<br/>
-	 * 1. What state the model may be in<br/>
-	 * 2. What parameters the model has<br/>
-	 * 3. Anything else of note.
-	 * @return a <code>JComponent</code> with model information
-	 */
-	public abstract JComponent getInfoPanel();
-	
-	/**
-	 * Each model should provide a <code>JComponent</code> that provides a set of
-	 * external parameters that can be set by the user. Any changes to this panel
-	 * should be stored by the <code>Model</code> and applied on request.
-	 * @return a <code>JComponent</code> with modifiable parameters.
-	 */
-	public abstract JComponent getParametersPanel();
-
-	/**
-	 * Applies the parameter changes from the parameters panel.
-	 */
-	public abstract void applyParameters();
-	
-	/**
 	 * A debugging tool. Don't worry about this too much.
 	 * @return - returns the memory footprint of the model in KB.
 	 */
@@ -86,8 +62,4 @@ public abstract class Model
 		this.filename = filename;
 	}
 	
-//	public void setColor(Color color)
-//	{
-//		this.color = color;
-//	}
 }

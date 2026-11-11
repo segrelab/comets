@@ -1,13 +1,14 @@
 package edu.bu.segrelab.comets;
 
-import java.awt.Color;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import edu.bu.segrelab.comets.ParameterType;
 import edu.bu.segrelab.comets.util.ParameterState;
-import edu.bu.segrelab.comets.util.Utility;
 
 /**
  * This implements a set of global parameters used throughout the COMETS program.
@@ -67,7 +68,6 @@ public class CometsParameters implements CometsConstants
 				   maxSpaceBiomass = 10,		// grams
 				   minSpaceBiomass = 1e-10,		// grams
 				   spaceWidth = 0.1,			// cm
-				   slideshowColorValue = 10,
 				   spaceVolume = 0.001,			// ml (1 mL = 1 cm^3)
 				   cellSize = 4.3e-13,			// grams DW
 				   dilFactor = 1e-2,
@@ -76,40 +76,35 @@ public class CometsParameters implements CometsConstants
 				   addRate = 1e-9,				// per genome and cycle	
 				   metaboliteDilutionRate = 0.0;// fraction per hour
 	
-	private boolean isCommandLine = false,
-					showGraphics = true,
-					allowCellOverlap = false,
+	private boolean allowCellOverlap = false,
 					toroidalWorld = false,
 					showCycleTime = true,
 					showCycleCount = true,
 					pause = true,
 					pauseOnStep = true,
-					saveSlideshow = false,
-					showText = true,
-					colorRelative = true,
-					slideshowColorRelative = true,
 					simulateActivation = false,
 					batchDilution = false,
 					evolution = false;
 
-	private int displayLayer = 0,
-				pixelScale = 4,
-				gridRows = 100,
+	private int gridRows = 100,
 				gridCols = 100,
 				gridLayers = 1,
 				maxCycles = UNLIMITED_CYCLES,
 				diffusionsPerStep = 1,			//not used
-				mediaRespawnRate = 1,			//not used (CHECK)
-				slideshowRate = 1,
-				slideshowLayer = 0,
-				barrierColor = 0xff7D7D7D,
-				backgroundColor = 0xff000000;
+				mediaRespawnRate = 1;			//not used (CHECK)
 	
 	//private long seed=0; /*Random class (in utils) seed */
 	
-	private String slideshowExt = "png",
-				   slideshowName = "slideshow",
-				   lastDirectory = ".";
+	/**
+	 * Display settings from the removed graphical interface. Parameter files (including
+	 * the ones written by the COMETS toolboxes) may still contain them, so they are
+	 * accepted and ignored instead of causing an "Unknown parameter" error.
+	 */
+	private static final Set<String> IGNORED_DISPLAY_PARAMETERS = new HashSet<String>(Arrays.asList(
+			"iscommandline", "showgraphics", "showtext", "pixelscale", "displaylayer",
+			"colorrelative", "barriercolor", "backgroundcolor", "lastdirectory",
+			"saveslideshow", "slideshowrate", "slideshowname", "slideshowext",
+			"slideshowlayer", "slideshowcolorvalue", "slideshowcolorrelative"));
 
 	private Map<String, Object> paramValues;
 	private Map<String, ParameterType> paramTypes;
@@ -171,39 +166,25 @@ public class CometsParameters implements CometsConstants
 		setAddRate(((Double)paramValues.get("addrate")).doubleValue());
 		setMetaboliteDilutionRate(((Double)paramValues.get("metabolitedilutionrate")).doubleValue());
 
-		setCommandLineOnly(((Boolean)paramValues.get("iscommandline")).booleanValue());
-		showGraphics(((Boolean)paramValues.get("showgraphics")).booleanValue());
 		allowCellOverlap(((Boolean)paramValues.get("allowcelloverlap")).booleanValue());
 		setToroidalGrid(((Boolean)paramValues.get("toroidalworld")).booleanValue()); 
 		showCycleTime(((Boolean)paramValues.get("showcycletime")).booleanValue());
 		showCycleCount(((Boolean)paramValues.get("showcyclecount")).booleanValue());
 		pause(((Boolean)paramValues.get("pause")).booleanValue());
 		pauseOnStep(((Boolean)paramValues.get("pauseonstep")).booleanValue());
-		saveSlideshow(((Boolean)paramValues.get("saveslideshow")).booleanValue());
-		showText(((Boolean)paramValues.get("showtext")).booleanValue());
-		setColorRelative(((Boolean)paramValues.get("colorrelative")).booleanValue());
 		setSimulateActivation(((Boolean)paramValues.get("simulateactivation")).booleanValue());
 		setBatchDilution(((Boolean)paramValues.get("batchdilution")).booleanValue());
 		setEvolution(((Boolean)paramValues.get("evolution")).booleanValue());
 		
-		setPixelScale(((Integer)paramValues.get("pixelscale")).intValue());
 		setNumRows(((Integer)paramValues.get("gridrows")).intValue());
 		setNumCols(((Integer)paramValues.get("gridcols")).intValue());
 		setNumLayers(((Integer)paramValues.get("gridlayers")).intValue());
 		setMaxCycles(((Integer)paramValues.get("maxcycles")).intValue());
 		setDiffusionsPerStep(((Integer)paramValues.get("diffusionsperstep")).intValue());
 		setMediaRespawnRate(((Integer)paramValues.get("mediarespawnrate")).intValue());
-		setSlideshowRate(((Integer)paramValues.get("slideshowrate")).intValue());
-		setBarrierColor(((Integer)paramValues.get("barriercolor")).intValue());
-		setBackgroundColor(((Integer)paramValues.get("backgroundcolor")).intValue());
-		setDisplayLayer(((Integer)paramValues.get("displaylayer")).intValue());
-		setSlideshowLayer(((Integer)paramValues.get("slideshowlayer")).intValue());	
 		
 		//setSeed(((Long)paramValues.get("seed")).longValue());
 
-		setSlideshowExt(((String)paramValues.get("slideshowext")));
-		setSlideshowName(((String)paramValues.get("slideshowname")));
-		setLastDirectory(((String)paramValues.get("lastdirectory")));
 		setDilutionFactor(((Double)paramValues.get("dilfactor")).doubleValue());
 		setDilutionTime(((Double)paramValues.get("diltime")).doubleValue());
 		setCellSize(((Double)paramValues.get("cellsize")).doubleValue());
@@ -226,11 +207,7 @@ public class CometsParameters implements CometsConstants
 		paramValues.put("spacewidth", new Double(spaceWidth));
 		paramTypes.put("spacewidth", ParameterType.DOUBLE);
 				
-		paramValues.put("iscommandline", new Boolean(isCommandLine));
-		paramTypes.put("iscommandline", ParameterType.BOOLEAN);
 		
-		paramValues.put("showgraphics", new Boolean(showGraphics));
-		paramTypes.put("showgraphics", ParameterType.BOOLEAN);
 		
 		paramValues.put("toroidalworld", new Boolean(toroidalWorld));
 		paramTypes.put("toroidalworld", ParameterType.BOOLEAN);
@@ -250,14 +227,8 @@ public class CometsParameters implements CometsConstants
 		paramValues.put("pauseonstep", new Boolean(pauseOnStep));
 		paramTypes.put("pauseonstep", ParameterType.BOOLEAN);
 		
-		paramValues.put("saveslideshow", new Boolean(saveSlideshow));
-		paramTypes.put("saveslideshow", ParameterType.BOOLEAN);
 		
-		paramValues.put("showtext", new Boolean(showText));
-		paramTypes.put("showtext", ParameterType.BOOLEAN);
 		
-		paramValues.put("pixelscale", new Integer(pixelScale));
-		paramTypes.put("pixelscale", ParameterType.INT);
 		
 		paramValues.put("gridrows", new Integer(gridRows));
 		paramTypes.put("gridrows", ParameterType.INT);
@@ -277,38 +248,16 @@ public class CometsParameters implements CometsConstants
 		paramValues.put("mediarespawnrate", new Integer(mediaRespawnRate));
 		paramTypes.put("mediarespawnrate", ParameterType.INT);
 		
-		paramValues.put("slideshowrate", new Integer(slideshowRate));
-		paramTypes.put("slideshowrate", ParameterType.INT);
 		
-		paramValues.put("barriercolor", new Integer(barrierColor));
-		paramTypes.put("barriercolor", ParameterType.COLOR);
 		
-		paramValues.put("backgroundcolor", new Integer(backgroundColor));
-		paramTypes.put("backgroundcolor", ParameterType.COLOR);
 				
-		paramValues.put("slideshowext", slideshowExt);
-		paramTypes.put("slideshowext", ParameterType.STRING);
 		
-		paramValues.put("slideshowname", slideshowName);
-		paramTypes.put("slideshowname", ParameterType.STRING);
 		
-		paramValues.put("colorrelative", new Boolean(colorRelative));
-		paramTypes.put("colorrelative", ParameterType.BOOLEAN);
 		
-		paramValues.put("displaylayer", new Integer(displayLayer));
-		paramTypes.put("displaylayer", ParameterType.INT);
 		
-		paramValues.put("slideshowlayer", new Integer(slideshowLayer));
-		paramTypes.put("slideshowlayer", ParameterType.INT);
 		
-		paramValues.put("slideshowcolorvalue", new Double(slideshowColorValue));
-		paramTypes.put("slideshowcolorvalue", ParameterType.DOUBLE);
 		
-		paramValues.put("slideshowcolorrelative", new Boolean(slideshowColorRelative));
-		paramTypes.put("slideshowcolorrelative", ParameterType.BOOLEAN);
 		
-		paramValues.put("lastdirectory", new String(lastDirectory));
-		paramTypes.put("lastdirectory", ParameterType.STRING);
 		
 		paramValues.put("activaterate", new Double(activateRate));
 		paramTypes.put("activaterate", ParameterType.DOUBLE);
@@ -348,7 +297,7 @@ public class CometsParameters implements CometsConstants
 	{
 		ParameterType t = paramTypes.get(p);
 		if (t == null)
-			return ParameterState.NOT_FOUND;
+			return IGNORED_DISPLAY_PARAMETERS.contains(p) ? ParameterState.OK : ParameterState.NOT_FOUND;
 		
 		switch(t)
 		{
@@ -356,18 +305,6 @@ public class CometsParameters implements CometsConstants
 				if (!v.equalsIgnoreCase("false") && !v.equalsIgnoreCase("true"))
 					return ParameterState.WRONG_TYPE;
 				paramValues.put(p, new Boolean(Boolean.parseBoolean(v)));
-				break;
-			case COLOR :
-				// broken. don't wanna fix it right now. TODO
-//				try
-//				{
-//					int newValue = Integer.parseInt(v, 32);
-//					paramValues.put(p, new Integer(newValue));
-//				}
-//				catch (NumberFormatException e)
-//				{
-//					return ParameterState.WRONG_TYPE;
-//				}
 				break;
 			case DOUBLE :
 				try
@@ -613,44 +550,6 @@ public class CometsParameters implements CometsConstants
 		return spaceVolume;
 	}
 	
-	public void setLastDirectory(String dir)
-	{
-		lastDirectory = dir;
-	}
-	
-	public String getLastDirectory()
-	{
-		return lastDirectory;
-	}
-	
-	public boolean getColorRelative()
-	{
-		return colorRelative;
-	}
-	
-	public void setColorRelative(boolean b)
-	{
-		colorRelative = b;
-	}
-	
-	public int getDisplayLayer()
-	{
-		return displayLayer;
-	}
-	
-	/**
-	 * The user should do their own upper-bound error checking here, since CometsParameters
-	 * doesn't know how many layers there should be.  
-	 * @param layer
-	 */
-	public void setDisplayLayer(int layer)
-	{
-		if (layer < 0)
-			layer = 0;
-//		System.out.println("setting display layer to " + layer);
-		displayLayer = layer;
-	}
-	
 	/**
 	 * @return the width of each grid space. Since we're modeling square
 	 * spaces, this is also the height. Future versions may model non-square
@@ -724,102 +623,6 @@ public class CometsParameters implements CometsConstants
 	}
 	
 	/**
-	 * Fetches the current background color of the world as a packed 32 bit integer. Ignoring
-	 * the alpha channel, the red channel is the second pair of bytes, the green is the
-	 * third pair, and the blue is the last pair.
-	 * <p>
-	 * These can be unraveled by doing something like:
-	 * <br>
-	 * <code>r = bgcolor | bgcolor >> 16<br>
-	 * g = bgcolor >> 8 & 0xFF;<br>
-	 * b = bgcolor & 0xFF;<br>
-	 * </code>
-	 * This returns an int value used in the Processing implementation of the
-	 * <code>CometsRunPanel</code>.
-	 * @return an integer used for representing a color
-	 */
-	public int getBackgroundColor() 
-	{ 
-		return backgroundColor; 
-	}
-	
-	/**
-	 * Sets the background color to be a combination of three rgb channels. Each
-	 * value is expected to be in the range of 0-255, and will be adjusted up or down
-	 * as needed
-	 * @param r the value of the red channel
-	 * @param g the value of the green channel
-	 * @param b the value of the blue channel
-	 */
-	public void setBackgroundColor(int r, int g, int b)
-	{
-		backgroundColor = Utility.pColor(r, g, b);
-	}
-
-	/**
-	 * Sets the background color to the three rgb channels packaged as a 32 bit integer.
-	 * This is intended for use with the Processing package, so the first 2 bytes are the 
-	 * alpha channel (not used for background color), followed by the red, green, and blue
-	 * channels, e.g. <code> rgb = 0x00000000 | r << 16 | g << 8 | b; </code> 
-	 * @param rgb the integer value of the three rgb color channels
-	 */
-	public void setBackgroundColor(int rgb)
-	{
-		backgroundColor = rgb;
-	}
-	
-	/**
-	 * Sets the background color to a standard Java <code>Color</code>. 
-	 * @param c the color to set
-	 */
-	public void setBackgroundColor(Color c)
-	{
-		setBackgroundColor(c.getRGB());
-	}
-	
-	/**
-	 * Returns the barrier color as a packaged 32 bit integer.
-	 * @see #getBackgroundColor()
-	 * @return an integer used for representing the barrier color
-	 */
-	public int getBarrierColor() 
-	{ 
-		return barrierColor; 
-	}
-	
-	/**
-	 * Sets the barrier color using red, blue, and green channels, with values expected
-	 * to be in the range of 0-255
-	 * @see #setBackgroundColor(int, int, int)
-	 * @param r the value of the red channel
-	 * @param g the value of the green channel
-	 * @param b the value of the blue channel
-	 */
-	public void setBarrierColor(int r, int g, int b)
-	{
-		barrierColor = Utility.pColor(r, g, b);
-	}
-	
-	/**
-	 * Sets the barrier color to the three rgb channels packed into a 32-bit integer.
-	 * @see #setBackgroundColor(int)
-	 * @param rgb the integer value of the three packaged channels
-	 */
-	public void setBarrierColor(int rgb)
-	{
-		barrierColor = rgb;
-	}
-	
-	/**
-	 * Sets the barrier color to a standard Java <code>Color</code> object.
-	 * @param c the color to use for barriers
-	 */
-	public void setBarrierColor(Color c)
-	{
-		setBarrierColor(c.getRGB());
-	}
-	
-	/**
 	 * @return the death rate for all modeled cell types, as a decimal value between 0 and 1.
 	 * @see #setDeathRate(double)
 	 */
@@ -843,108 +646,6 @@ public class CometsParameters implements CometsConstants
 			rate = 1;
 		deathRate = rate;
 	}
-	
-	/**
-	 * Returns the root name of the slideshow series. 
-	 * @see #setSlideshowName(String) 
-	 * @see #saveSlideshow(boolean)
-	 * @return a <code>String</code> for the name of a slideshow
-	 */
-	public String getSlideshowName() 
-	{ 
-		return slideshowName; 
-	}
-
-	/**
-	 * Sets the root name of the slideshow that comes from running a Comets simulation.
-	 * This string is the prefix of every image file made, followed by a number for each
-	 * frame of the slideshow
-	 * @param name a <code>String</code> representing the root name of the slideshow
-	 */
-	public void setSlideshowName(String name) 
-	{ 
-		slideshowName = name; 
-	}
-	
-	/**
-	 * Returns the extension (image type) of the slideshow.
-	 * @return a <code>String</code> containing the extension name of each slideshow image file. 
-	 */
-	public String getSlideshowExt() 
-	{ 
-		return slideshowExt; 
-	}
-	
-	/**
-	 * Sets the extension (e.g. image type) of each slideshow image file to be saved.
-	 * If it is an invalid format, this will automatically reset to saving .png files.
-	 * @see #saveSlideshow(boolean)
-	 * @param ext an image file extension.
-	 */
-	public void setSlideshowExt(String ext)
-	{
-		//TODO: code to make sure it's a correct filetype.
-		slideshowExt = ext;
-	}
-	
-	/**
-	 * Returns the rate (in number of frames) at which a slideshow frame is captured
-	 * using the given name and image format.
-	 * @see #setSlideshowName(String)
-	 * @see #setSlideshowExt(String)
-	 * @see #saveSlideshow(boolean)
-	 * @return an integer rate for saving the slideshow
-	 */
-	public int getSlideshowRate() 
-	{ 
-		return slideshowRate; 
-	}
-	
-	/**
-	 * Sets the rate (in number of frames) at which a slideshow frame is captured
-	 * using the given name and image format. This value is expected to be at least
-	 * 1 - if less than one, it will be adjusted up to 1.
-	 * @see #setSlideshowName(String)
-	 * @see #setSlideshowExt(String)
-	 * @see #saveSlideshow(boolean)
-	 * @param rate an integer rate for saving the slideshow
-	 */
-	public void setSlideshowRate(int rate)
-	{
-		if (rate < 1)
-			rate = 1;
-		slideshowRate = rate;
-	}
-
-	public void setSlideshowColorRelative(boolean b)
-	{
-		slideshowColorRelative = b;
-	}
-	public boolean getSlideshowColorRelative()
-	{
-		return slideshowColorRelative;
-	}
-
-	public void setSlideshowLayer(int layer)
-	{
-		slideshowLayer = layer;
-	}
-	
-	public int getSlideshowLayer()
-	{
-		return slideshowLayer;
-	}
-
-	public void setSlideshowColorValue(double val)
-	{
-		if (slideshowColorValue > 0)
-			slideshowColorValue = val;
-	}
-	public double getSlideshowColorValue()
-	{
-		return slideshowColorValue;
-	}
-	
 	
 	/**
 	 * Returns the rate at which the media is respawned as number of cycles. This value
@@ -1049,47 +750,6 @@ public class CometsParameters implements CometsConstants
 	}
 
 	/**
-	 * A flag for whether or not to show text on the <code>CometsRunPanel</code> when
-	 * different events occur.
-	 * @return true if text is to be shown on various events.
-	 */
-	public boolean showText() 
-	{ 
-		return showText; 
-	}
-
-	/**
-	 * Sets a boolean flag for showing text on the <code>CometsRunPanel</code> when various
-	 * events occur. These include pausing/unpausing the simulation, toggling through viewing
-	 * different metabolites or biomass, and adjusting the color scheme. 
-	 * @param b
-	 */
-	public void showText(boolean b) { showText = b; }
-	
-
-
-	/**
-	 * @return true if a slideshow will be saved.
-	 * @see #saveSlideshow(boolean) 
-	 */
-	public boolean saveSlideshow() { return saveSlideshow; }
-	
-	/**
-	 * Tells COMETS whether or not to save a slideshow. A slideshow is a series of images
-	 * representing the changes that occur to biomass over the course of a simulation. If this
-	 * is set to true, it is best for the user to set both the root name of the slideshow
-	 * and the image type.
-	 * <p>
-	 * Image files will be named with the root name first, followed by the number of the 
-	 * screenshot taken, then the extension.
-	 * @see #setSlideshowName(String)
-	 * @see #setSlideshowExt(String)
-	 * @see #setSlideshowRate(int)
-	 * @param b if true, a slideshow will be saved.
-	 */
-	public void saveSlideshow(boolean b) { saveSlideshow = b; }
-
-	/**
 	 * @return true if the simulation pauses after each cycle.
 	 */
 	public boolean pauseOnStep() { return pauseOnStep; }
@@ -1112,15 +772,14 @@ public class CometsParameters implements CometsConstants
 	public void pause(boolean b) { pause = b; }
 	
 	/**
-	 * @return true if the simulation outputs the number of each cycle to the output
-	 * panel at the end of each cycle.
+	 * @return true if the simulation outputs the number of each cycle to <code>STDOUT</code>
+	 * at the end of each cycle.
 	 */
 	public boolean showCycleCount() { return showCycleCount; }
 	
 	/**
 	 * If this flag is set to true, then after each cycle is complete, the number of the
-	 * cycle completed is output to the console (a panel in the <code>COMETS</code> GUI
-	 * or <code>STDOUT</code> if running the command line version)
+	 * cycle completed is output to <code>STDOUT</code>
 	 * @param b
 	 */
 	public void showCycleCount(boolean b) { showCycleCount = b; }
@@ -1133,8 +792,7 @@ public class CometsParameters implements CometsConstants
 	
 	/**
 	 * If this flag is set to true, then after each cycle is complete, the time required
-	 * to finish the cycle is outputted to the console (a panel in the <code>COMETS</code>
-	 * GUI or <code>STDOUT</code> in the command line version).
+	 * to finish the cycle is outputted to <code>STDOUT</code>.
 	 * @param b
 	 */
 	public void showCycleTime(boolean b) { showCycleTime = b; }
@@ -1213,26 +871,6 @@ public class CometsParameters implements CometsConstants
 	}
 	
 	/**
-	 * @return the number of pixels on each side of a single grid space
-	 */
-	public int getPixelScale() 
-	{
-		return pixelScale;	
-	}
-	
-	/**
-	 * Sets the scale of each grid space in pixels. This is expected to be at least 1, and
-	 * will be adjusted up to 1 if less.
-	 * @param pixelScale
-	 */
-	public void setPixelScale(int pixelScale) 
-	{	
-		if (pixelScale < 1)
-			pixelScale = 1;
-		this.pixelScale = pixelScale; 
-	}
-
-	/**
 	 * Sets the seed of the random number generator.
 	 * @param seed
 	 */
@@ -1273,17 +911,6 @@ public class CometsParameters implements CometsConstants
 	}
 
 	/**
-	 * @return true if graphics are shown in the <code>CometsRunPanel</code>
-	 */
-	public boolean showGraphics() { return showGraphics; }
-
-	/**
-	 * Sets a flag for updating graphics in the <code>CometsRunPanel</code>.
-	 * @param b if true, graphics will be updated.
-	 */
-	public void showGraphics(boolean b) { showGraphics = b; }
-
-	/**
 	 * @return true if multiple cell types (e.g. biomass from different <code>Models</code>)
 	 * are allowed to occupy the same space.
 	 */
@@ -1313,24 +940,6 @@ public class CometsParameters implements CometsConstants
 //		numRunThreads = n;
 //	}
 	
-	/**
-	 * @return true if this is the command-line-only version of COMETS
-	 */
-	public boolean isCommandLineOnly()
-	{
-		return isCommandLine;
-	}
-
-	/**
-	 * Set COMETS to run only as a command line, or to include a GUI. See the COMETS
-	 * documentation for the benefits of each.
-	 * @param b if true, then only a command line is running
-	 */
-	public void setCommandLineOnly(boolean b)
-	{
-		isCommandLine = b;
-	}
-	
 	public String toString()
 	{
 		String s = "";
@@ -1342,8 +951,6 @@ public class CometsParameters implements CometsConstants
 //		s += "numRunThreads = " + numRunThreads + "\n";
 		s += "metaboliteDilutionRate = " + metaboliteDilutionRate + "\n";
 
-		s += "isCommandLine = " + isCommandLine + "\n";
-		s += "showGraphics = " + showGraphics + "\n";
 		s += "allowCellOverlap = " + allowCellOverlap + "\n";
 		s += "toroidalWorld = " + toroidalWorld + "\n";
 		s += "showCycleTime = " + showCycleTime + "\n";
@@ -1351,14 +958,8 @@ public class CometsParameters implements CometsConstants
 		s += "pause = " + pause + "\n";
 		s += "pauseOnStep = " + pauseOnStep + "\n";
 
-		s += "saveSlideshow = " + saveSlideshow + "\n";
-		s += "slideshowRate = " + slideshowRate + "\n";
-		s += "slideshowName = " + slideshowName + "\n";
-		s += "slideshowExt = " + slideshowExt + "\n";
 
-		s += "showText = " + showText + "\n";
 		
-		s += "pixelScale = " + pixelScale + "\n"; 
 		s += "gridRows = " + gridRows + "\n";
 		s += "gridCols = " + gridCols + "\n";
 		s += "maxCycles = " + maxCycles + "\n";
@@ -1366,8 +967,6 @@ public class CometsParameters implements CometsConstants
 		s += "diffusionsPerStep = " + diffusionsPerStep + "\n";
 		s += "mediaRespawnRate = " + mediaRespawnRate + "\n";
 		
-		s += "barrierColor = " + barrierColor + "\n";
-		s += "backgroundColor = " + backgroundColor + "\n";
 
 		return s;
 	}

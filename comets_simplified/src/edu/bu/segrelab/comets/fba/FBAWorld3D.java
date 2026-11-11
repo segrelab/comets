@@ -1,9 +1,5 @@
 package edu.bu.segrelab.comets.fba;
 
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.Point;
 import java.io.IOException;
 import java.io.File;
@@ -23,11 +19,6 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.Stack;
 
-import javax.swing.BorderFactory;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 
 import edu.bu.segrelab.comets.Cell;
 import edu.bu.segrelab.comets.Comets;
@@ -83,8 +74,6 @@ implements CometsConstants
 	private FBAModel[] models;					// FBA models in this system
 
 	private List<int[]> modelExchList;			// indices of the exchange reactions for each model
-	//private SpaceInfoPanel infoPanel;			// the info panel for the spaces in the world
-	// see the SpaceInfoPanel inner class below
 
 	private FBARunThread3D[] runThreads;			// array of run threads
 	private ThreadGroup threadGroup;			// thread group that they all belong to
@@ -1212,11 +1201,6 @@ implements CometsConstants
 			diffuseMediaIn = newDiffuseMediaIn;
 			diffuseMediaOut = newDiffuseMediaOut;
 		}
-		//		if (infoPanel != null)
-		//		{
-		//			infoPanel.rebuildInfoPanel(c.getModelNames(), mediaNames, this);
-		//			updateInfoPanel();
-		//		}
 		return PARAMS_OK;
 	}
 
@@ -2129,7 +2113,6 @@ implements CometsConstants
 	 * <li>Diffuse media and biomass //TODO Amrita's new biomass methods insert here.
 	 * <li>Update any media that's supposed to be static
 	 * <li>Refresh any media that's supposed to be
-	 * <li>Update the InfoPanel if one's made
 	 * <li>(DEBUG) print the total biomass 
 	 * <li>Write to logs, where appropriate
 	 * <li>Return a status value
@@ -3069,307 +3052,6 @@ implements CometsConstants
 			}
 		}
 	}
-
-
-	/**
-	 * Returns the info panel associated with this FBAWorld, showing information at 
-	 * point (x, y).
-	 */
-	//public JComponent getInfoPanel(int x, int y, int z)
-	//{
-	//	updateInfoPanel(x, y, z);
-	//	return infoPanel;
-	//}
-
-	/**
-	 * Update the info panel to show information at space (x, y)
-	 */
-	//public void updateInfoPanel(int x, int y, int z)
-	//{
-	//	x = adjustX(x);
-	//	y = adjustY(y);
-	//	z = adjustZ(z);
-	//	if (infoPanel == null)
-	//		infoPanel = new SpaceInfoPanel(x, y, z, c.getModelNames(),
-	//				mediaNames, this);
-	//	else
-	//		infoPanel.updateInfoPanel(x, y, z);
-	//}
-
-	/**
-	 * Updates the info panel to display any newly changed information. If there is no
-	 * info panel owned by this <code>FBAWorld</code>, one is created.
-	 */
-	//public void updateInfoPanel()
-	//{
-	//	if (infoPanel == null)
-	//		updateInfoPanel(0, 0, 0);
-	//	else
-	//		infoPanel.updateInfoPanel();
-	//}
-
-
-	/**
-	 * This inner class defines a <code>JPanel</code> that contains various information about
-	 * a given space in the world. This includes whether or not there is a barrier, 
-	 * how much biomass of each species is present, and how much of each medium component
-	 * is present. 
-	 * @author Bill Riehl briehl@bu.edu
-	 */
-	//private class SpaceInfoPanel extends JPanel
-	//{
-	/**
-	 * 
-	 */
-	//	private static final long serialVersionUID = 9037512261938143370L;
-	//	private int x, 
-	//	            y;
-	//	private JLabel spaceLabel, 
-	//				   biomassBarrierLabel, 
-	//				   mediaBarrierLabel,
-	//				   mediaNameLabel,
-	//				   mediaConcLabel,
-	//				   mediaStaticLabel,
-	//				   mediaRefreshLabel;
-	//	private JLabel[] modelNameLabels, 
-	//	                 biomassLabels, 
-	//	                 mediaNameLabels,
-	//	                 mediaValueLabels,
-	//	                 staticMediaLabels,
-	//	                 mediaRefreshLabels;
-	//	private FBAWorld3D world;
-	//	private DecimalFormat numFormat;
-
-	/**
-	 * The main constructor for the SpaceInfoPanel, it fetches information from
-	 * the FBAWorld at space (x, y) and makes a pretty interface so one can see what's
-	 * going on there.
-	 * @param x
-	 * @param y
-	 * @param modelNames
-	 * @param mediaNames
-	 * @param world
-	 */
-	//	public SpaceInfoPanel(int x, int y, String[] modelNames,
-	//			String[] mediaNames, FBAWorld3D world)
-	//	{
-	//		this.x = x;
-	//		this.y = y;
-	//		rebuildInfoPanel(modelNames, mediaNames, world);
-	//	}
-
-	/**
-	 * Makes a new SpaceInfoPanel pointing to space (0, 0).
-	 * @param modelNames
-	 * @param mediaNames
-	 * @param world
-	 */
-	//	@SuppressWarnings("unused")
-	//	public SpaceInfoPanel(String[] modelNames, String[] mediaNames,	FBAWorld3D world)
-	//	{
-	//		this(0, 0, modelNames, mediaNames, world);
-	//	}
-
-	/**
-	 * Rebuilds the SpaceInfoPanel whenever something major changes, such as the addition
-	 * or removal of a model. This is also analogous to the heavy-lifting done by the
-	 * constructor, as it initializes any internal Swing components it needs.
-	 * @param modelNames names of all models
-	 * @param mediaNames names of all media species
-	 * @param world the FBAWorld this applies to
-	 */
-	//	public void rebuildInfoPanel(String[] modelNames, String[] mediaNames, FBAWorld3D world)
-	//	{
-	//		this.world = world;
-	//		
-	//		removeAll();
-	//		boolean barrier = world.isBarrier(x, y);
-	//		spaceLabel = new JLabel("Space: (" + x + ", " + y + ")",
-	//				JLabel.LEFT);
-	//		biomassBarrierLabel = new JLabel("Barrier space: no biomass",
-	//				JLabel.LEFT);
-	//		mediaBarrierLabel = new JLabel("Barrier space: no media",
-	//				JLabel.LEFT);
-	//		mediaNameLabel = new JLabel("Name", JLabel.CENTER);
-	//		mediaConcLabel = new JLabel("Quantity (mmol)", JLabel.CENTER);
-	//		mediaStaticLabel = new JLabel("Static", JLabel.CENTER);
-	//		mediaRefreshLabel = new JLabel("Refresh (mmol)", JLabel.CENTER);
-	//		
-	//		numFormat = new DecimalFormat();
-	//		numFormat.setMaximumFractionDigits(4);
-	//		numFormat.setMinimumFractionDigits(1);
-	//
-	//		modelNameLabels = new JLabel[modelNames.length];
-	//		biomassLabels = new JLabel[modelNames.length];
-	//		double[] biomass = new double[modelNames.length];
-	//		if (world.isOccupied(x, y))
-	//			biomass = world.getCellAt(x, y).getBiomass();
-	//		for (int i = 0; i < modelNames.length; i++)
-	//		{
-	//			if (modelNames[i] == null || modelNames[i].length() == 0)
-	//				modelNames[i] = "Model " + (i + 1);
-	//			modelNameLabels[i] = new JLabel(modelNames[i], JLabel.LEFT);
-	//			biomassLabels[i] = new JLabel(numFormat.format(biomass[i]),
-	//					JLabel.RIGHT);
-	//		}
-	//
-	//		mediaNameLabels = new JLabel[mediaNames.length];
-	//		mediaValueLabels = new JLabel[mediaNames.length];
-	//		double[] media = world.getMediaAt(x, y);
-	//		staticMediaLabels = new JLabel[mediaNames.length];
-	//		boolean[] staticSet = world.getStaticMediaSet(x, y);
-	//		mediaRefreshLabels = new JLabel[mediaNames.length];
-	//		double[] mediaRefresh = world.getMediaRefreshAmount(x, y);
-	//		for (int i = 0; i < mediaNames.length; i++)
-	//		{
-	//			mediaNameLabels[i] = new JLabel(mediaNames[i], JLabel.LEFT);
-	//			mediaValueLabels[i] = new JLabel(numFormat.format(media[i]),
-	//					JLabel.RIGHT);
-	//			String s = "";
-	//			if (staticSet[i])
-	//				s = "X";
-	//			staticMediaLabels[i] = new JLabel(s, JLabel.CENTER);
-	//			mediaRefreshLabels[i] = new JLabel(numFormat.format(mediaRefresh[i]), JLabel.RIGHT);
-	//		}
-	//		
-	//
-	//		GridBagConstraints gbc = new GridBagConstraints();
-	//		gbc.fill = GridBagConstraints.BOTH;
-	//		gbc.insets = new Insets(0, 5, 0, 5);
-	//		gbc.gridx = 0;
-	//		gbc.gridy = 0;
-	//
-	//		JPanel biomassPanel = new JPanel(new GridBagLayout());
-	//		biomassPanel.add(biomassBarrierLabel, gbc);
-	//		biomassBarrierLabel.setVisible(barrier);
-	//
-	//		for (int i = 0; i < modelNameLabels.length; i++)
-	//		{
-	//			gbc.gridy = i;
-	//			gbc.gridx = 0;
-	//			biomassPanel.add(modelNameLabels[i], gbc);
-	//			gbc.gridx = 1;
-	//			biomassPanel.add(biomassLabels[i], gbc);
-	//			modelNameLabels[i].setVisible(!barrier);
-	//			biomassLabels[i].setVisible(!barrier);
-	//		}
-	//		biomassPanel.setBorder(BorderFactory.createTitledBorder("Biomass"));
-	//
-	//		JPanel mediaPanel = new JPanel(new GridBagLayout());
-	//
-	//		gbc.gridx = 0;
-	//		gbc.gridy = 0;
-	//		mediaPanel.add(mediaBarrierLabel, gbc);
-	//		mediaBarrierLabel.setVisible(barrier);
-	//		mediaPanel.add(mediaNameLabel, gbc);
-	//		gbc.gridx = 1;
-	//		mediaPanel.add(mediaConcLabel, gbc);
-	//		gbc.gridx = 2;
-	//		mediaPanel.add(mediaStaticLabel, gbc);
-	//		gbc.gridx = 3;
-	//		mediaPanel.add(mediaRefreshLabel, gbc);
-	//		
-	//		mediaNameLabel.setVisible(!barrier);
-	//		mediaConcLabel.setVisible(!barrier);
-	//		mediaStaticLabel.setVisible(!barrier);
-	//		mediaRefreshLabel.setVisible(!barrier);
-	//		for (int i = 0; i < mediaNameLabels.length; i++)
-	//		{
-	//			gbc.gridy = i+1;
-	//			gbc.gridx = 0;
-	//			mediaPanel.add(mediaNameLabels[i], gbc);
-	//			gbc.gridx = 1;
-	//			mediaPanel.add(mediaValueLabels[i], gbc);
-	//			gbc.gridx = 2;
-	//			mediaPanel.add(staticMediaLabels[i], gbc);
-	//			gbc.gridx = 3;
-	//			mediaPanel.add(mediaRefreshLabels[i], gbc);
-	//			mediaNameLabels[i].setVisible(!barrier);
-	//			mediaValueLabels[i].setVisible(!barrier);
-	//			staticMediaLabels[i].setVisible(!barrier);
-	//			mediaRefreshLabels[i].setVisible(!barrier);
-	//		}
-	//		// mediaPanel.setBorder(BorderFactory.createTitledBorder("Media"));
-	//
-	//		JScrollPane mediaScrollPane = new JScrollPane(mediaPanel);
-	//		mediaScrollPane
-	//				.setBorder(BorderFactory.createTitledBorder("Media"));
-	//		if (mediaNameLabels.length > 8)
-	//			mediaScrollPane.setMinimumSize(new Dimension(500, 400));
-	//
-	//		setLayout(new GridBagLayout());
-	//		gbc.gridx = 0;
-	//		gbc.gridy = 0;
-	//		add(spaceLabel, gbc);
-	//		gbc.gridy = 1;
-	//		add(biomassPanel, gbc);
-	//		gbc.gridy = 2;
-	//		add(mediaScrollPane, gbc);
-	//		revalidate();
-	//	}
-	//	
-	/**
-	 * Updates the SpaceInfoPanel to fetch information from space (x, y)
-	 * @param x
-	 * @param y
-	 */
-	//	public void updateInfoPanel(int x, int y)
-	//	{
-	//		this.x = x;
-	//		this.y = y;
-	//
-	//		updateInfoPanel();
-	//	}
-
-	/**
-	 * Updates the info panel to fetch any new data that might be present.
-	 */
-	//	public void updateInfoPanel()
-	//	{
-	//		spaceLabel.setText("Space: (" + x + ", " + y + ")");
-	//
-	//		boolean barrier = world.isBarrier(x, y);
-	//		biomassBarrierLabel.setVisible(barrier);
-	//		mediaBarrierLabel.setVisible(barrier);
-	//
-	//		double[] biomass = new double[biomassLabels.length];
-	//		if (world.isOccupied(x, y))
-	//			biomass = world.getCellAt(x, y).getBiomass();
-	//		for (int i = 0; i < biomassLabels.length; i++)
-	//		{
-	//			biomassLabels[i].setText(numFormat.format(biomass[i]));
-	//			biomassLabels[i].setVisible(!barrier);
-	//			modelNameLabels[i].setVisible(!barrier);
-	//		}
-	//
-	//		double[] media = world.getMediaAt(x, y);
-	//		boolean[] staticSet = world.getStaticMediaSet(x, y);
-	//		double[] mediaRefresh = world.getMediaRefreshAmount(x, y);
-	//		for (int i = 0; i < mediaValueLabels.length; i++)
-	//		{
-	//			mediaValueLabels[i].setText(numFormat.format(media[i]));
-	//			String s = "";
-	//			if (staticSet[i])
-	//				s = "X";
-	//			staticMediaLabels[i].setText(s);
-	//			mediaRefreshLabels[i].setText(numFormat.format(mediaRefresh[i]));
-	//			mediaValueLabels[i].setVisible(!barrier);
-	//			mediaNameLabels[i].setVisible(!barrier);
-	//			staticMediaLabels[i].setVisible(!barrier);
-	//			mediaRefreshLabels[i].setVisible(!barrier);
-	//		}
-	//		mediaNameLabel.setVisible(!barrier);
-	//		mediaConcLabel.setVisible(!barrier);
-	//		mediaStaticLabel.setVisible(!barrier);
-	//		mediaRefreshLabel.setVisible(!barrier);
-	//		repaint();
-	//	}
-	//
-	//	public Dimension getPreferredSize()
-	//	{
-	//		return new Dimension(600, 600);
-	//	}
-	//}
 
 
 	//public void setCircles(Set<Circle> circleSet)

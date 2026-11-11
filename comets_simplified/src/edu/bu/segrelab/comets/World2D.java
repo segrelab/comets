@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.swing.JComponent;
 
 import cern.jet.random.engine.*;
 import cern.jet.random.*;
@@ -606,34 +605,6 @@ public abstract class World2D implements CometsConstants, IWorld
 			return null;
 	}
 
-	/**
-	 * Gets a <code>JComponent</code> with information about the world at point (x, y).
-	 * Note that this component is stored internally, too. Instead of making multiple calls
-	 * to getInfoPanel(int, int), it is best to make a single call, then multiple calls to
-	 * updateInfoPanel(int, int) or updateInfoPanel().
-	 * @param x
-	 * @param y
-	 * @return a <code>JComponent</code> with information of the space at (x, y).
-	 * @see #updateInfoPanel()
-	 * @see #updateInfoPanel(int, int)
-	 */
-	public abstract JComponent getInfoPanel(int x, int y);
-	
-	/**
-	 * Updates the internal information panel to show information at (x, y). Note that
-	 * because the actual object is owned by this <code>World2D</code>, any pointer to that
-	 * panel (e.g., fetched through getInfoPanel(int, int)) will also be updated. 
-	 * @param x
-	 * @param y
-	 */
-	public abstract void updateInfoPanel(int x, int y);
-	
-	/**
-	 * Updates the internal information panel to refresh the information shown at the current
-	 * point. This should also update any pointers to the information panel.
-	 */
-	public abstract void updateInfoPanel();
-	
 	/**
 	 * Destroys the current <code>World2D</code> by removing any package-specific necessities.
 	 * For example, the <code>FBAWorld.destory()</code> kills all running <code>FBARunThreads</code>.

@@ -3,7 +3,6 @@ package edu.bu.segrelab.comets;
 import java.io.PrintWriter;
 import java.util.Map;
 
-//import edu.bu.segrelab.comets.ui.ParametersPanel;
 import edu.bu.segrelab.comets.util.ParameterState;
 
 /**
@@ -11,18 +10,12 @@ import edu.bu.segrelab.comets.util.ParameterState;
  * the parameters in a given Comets-extending package (e.g. FBAComets).
  * 
  * Since the parameters themselves (and their accessory methods) will be package-
- * dependent, this only details what kind of GUI methods are necessary.
+ * dependent, this only details the methods needed to set, load, and save them.
  * @author Bill Riehl briehl@bu.edu
  *
  */
 public interface PackageParameters
 {
-	/**
-	 * Gets a set of ParametersPanels from the package. While these implement ParametersPanel, they should also
-	 * be a JComponent of some sort.
-	 * @return
-	 */
-	//public Map<String, ParametersPanel> getParametersPanels();
 	
 	public ParameterState setParameter(String name, String value);
 	

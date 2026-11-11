@@ -3,7 +3,6 @@ package edu.bu.segrelab.comets.reaction;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.swing.JComponent;
 
 import org.apache.commons.math3.ode.FirstOrderDifferentialEquations;
 import org.apache.commons.math3.ode.FirstOrderIntegrator;
@@ -77,24 +76,6 @@ public class ReactionModel extends Model implements CometsConstants {
 	@Override
 	public String getModelName() {
 		return "ExtracellularReactionModel";
-	}
-
-	@Override
-	public JComponent getInfoPanel() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public JComponent getParametersPanel() {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public void applyParameters() {
-		// TODO Auto-generated method stub
-
 	}
 
 	public int getNrxns() {

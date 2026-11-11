@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
 
 import edu.bu.segrelab.comets.exception.ParameterFileException;
 import edu.bu.segrelab.comets.util.ParameterState;
@@ -101,24 +99,4 @@ public class ParametersFileHandler
 		writer.close();
 	}
 	
-	public static void loadParametersFile(JFrame owner, CometsParameters cParams, PackageParameters pParams) throws IOException,
-																													ParameterFileException
-	{
-		JFileChooser chooser = new JFileChooser();
-		int returnVal = chooser.showOpenDialog(owner);
-		if (returnVal == JFileChooser.APPROVE_OPTION)
-		{
-			loadParametersFile(chooser.getSelectedFile().getPath(), cParams, pParams);
-		}
-	}
-	
-	public static void saveParametersFile(JFrame owner, CometsParameters cParams, PackageParameters pParams) throws IOException
-	{
-		JFileChooser chooser = new JFileChooser();
-		int returnVal = chooser.showSaveDialog(owner);
-		if (returnVal == JFileChooser.APPROVE_OPTION)
-		{
-			saveParametersFile(chooser.getSelectedFile().getPath(), cParams, pParams);
-		}
-	}
 }
