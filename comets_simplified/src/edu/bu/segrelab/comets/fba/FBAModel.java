@@ -1,7 +1,5 @@
 package edu.bu.segrelab.comets.fba;
 
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -16,18 +14,9 @@ import java.util.Set;
 import java.util.Random;
 import java.lang.Double;
 
-import javax.swing.Box;
-import javax.swing.ButtonGroup;
-import javax.swing.JComboBox;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JRadioButton;
-
 import org.apache.commons.lang3.ArrayUtils;
 
 import edu.bu.segrelab.comets.exception.ModelFileException;
-import edu.bu.segrelab.comets.ui.DoubleField;
 import edu.bu.segrelab.comets.fba.Signal;
 
 // import org.apache.commons.math3.distribution.*;
@@ -48,13 +37,6 @@ import edu.bu.segrelab.comets.fba.Signal;
  *    getStatus(), getObjectiveSolution()
  * </ol>
  * <p>
- * This also implements a couple of GUI widgets - a ModelInfoPanel() and ModelParametersPanel(),
- * both of which are required for use in COMETS.
- * <p>
- * Note that this class depends on the availability of the GLPK-java package, which must be
- * accessible either through the classpath or the library path. Be sure to add glpk-java.jar
- * to the classpath and, if on a POSIX-based system (Mac or Linux), add the path to the 
- * 
  * @author Bill Riehl briehl@bu.edu; Ilija Dukovski ilija.dukovski@gmail.com
  * created 3 Mar 2010, modified 11 Mar 2014
  */
@@ -170,10 +152,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	
 	public static final int GUROBI =0;
 	public static final int GLOP   =1;
-	public static final int GLPK   =2;
-	
-	
-	private ModelParametersPanel paramsPanel;
 	
 	
 	private double neutralDriftSigma=0.01;
@@ -227,7 +205,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		//System.out.println("here "+optim);
 		//System.out.println("here1 "+GUROBI);
 		//System.out.println("here2 "+GLOP);
-		//System.out.println("here3 "+GLPK);
 		
 		switch(optim){
 		case GUROBI:
@@ -235,9 +212,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			break;
 		case GLOP:
 			fbaOptimizer=new FBAOptimizerGlop(m, l, u, objs, objsMax);
-			break;
-		case GLPK:
-			fbaOptimizer=new FBAOptimizerGLPK(m,l,u,objs);
 			break;
 		default:
 			break;
@@ -1675,7 +1649,10 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 					else if(tokens[1].equalsIgnoreCase("GLOP"))
 						optim= GLOP;
 					else if(tokens[1].equalsIgnoreCase("GLPK"))
-						optim= GLPK;
+					{
+						System.out.println("Warning: the GLPK optimizer is no longer supported (model file line " + lineNum + "). Using GUROBI instead.");
+						optim= GUROBI;
+					}
 				}
 				
 				/**************************************************************
@@ -3188,20 +3165,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		return res;
 	}
 
-	
-	/**
-	 * Returns the info panel for this <code>FBAModel</code> (as required by 
-	 * the <code>Model</code> class
-	 * 
-	 * //TODO - do this
-	 */
-	public JComponent getInfoPanel()
-	{
-		JPanel panel = new JPanel();
-		panel.add(new JLabel("Model info goes here."));
-		return panel;
-	}
-	
 
 	private void setNums(int numMetabs, int numRxns, int numExch)
 	{
@@ -3261,282 +3224,6 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 		return modelCopy;
 	}
 
-	/**
-	 * @return the parameters panel for this <code>FBAModel<code>
-	 */
-	public JComponent getParametersPanel()
-	{
-		paramsPanel = new ModelParametersPanel(this);
-		return paramsPanel;
-	}
-	
-	/**
-	 * Applies any parameter change from teh parameters panel to the <code>FBAModel</code> 
-	 */
-	public void applyParameters()
-	{
-		if (paramsPanel == null)
-			return;
-		paramsPanel.updateModelParameters();
-	}
-	
-	/**
-	 * //TODO make this...
-	 * Sooner or later this will host a set of information about the model that the
-	 * user can see at a glance. Things like species name, number and names of 
-	 * metabolites, number and names of reactions, formulae, etc. should be here.
-	 * <p>
-	 * Right now, it's not done.
-	 * 
-	 * @author Bill Riehl briehl@bu.edu
-	 *
-	 */
-	@SuppressWarnings("unused")
-	private class ModelInfoPanel extends JPanel
-	{
-
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = -5975621566079865933L;
-		
-	}
-
-	/**
-	 * A specialized inner class that displays parameters for a user to manipulate. 
-	 * @author Bill Riehl briehl@bu.edu
-	 */
-	private class ModelParametersPanel extends JPanel
-	{
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = -6609420365194597487L;
-		/**
-		 * 
-		 */
-		private int objRxnIndex,
-				    objStyle;
-		private JComboBox rxnNamesBox;
-		private ButtonGroup fbaObjGroup;
-		private FBAModel model;
-		private JRadioButton maxObjButton, 
-							 minObjButton,
-							 maxFluxButton,
-							 minFluxButton,
-							 maxObjMinFluxButton,
-							 minObjMinFluxButton,
-							 maxObjMaxFluxButton,
-							 minObjMaxFluxButton;
-		private DoubleField flowConstField,
-							growthConstField,
-							elasticModulusField,
-							frictionConstField,
-		                    convDiffConstField,
-		                    packedDensityField,
-		                    noiseVarianceField;
-		//private JComboBox   optimizerBox;
-		
-		public ModelParametersPanel(FBAModel model)
-		{
-			super();
-			this.model = model;
-			
-			/* Parameters to make.
-			 * 1. objective reaction to use
-			 * 2. objective type to use
-			 * 3.... others to come. let's just make this work tonight.
-			 */
-			
-			objRxnIndex = model.getObjectiveIndex();
-			String[] rxns = model.getReactionNames();
-			rxnNamesBox = new JComboBox(rxns);
-			rxnNamesBox.setSelectedIndex(objRxnIndex-1);
-			
-			objStyle = model.getObjectiveStyle();
-			
-			fbaObjGroup = new ButtonGroup();
-			maxObjButton = new JRadioButton("Maximize objective reaction");
-			minObjButton = new JRadioButton("Minimize objective reaction");
-			maxFluxButton = new JRadioButton("Maximize total flux");
-			minFluxButton = new JRadioButton("Minimize total flux");
-			maxObjMinFluxButton = new JRadioButton("Max objective / Min flux");
-			minObjMinFluxButton = new JRadioButton("Min objective / Min flux");
-			maxObjMaxFluxButton = new JRadioButton("Max objective / Max flux");
-			minObjMaxFluxButton = new JRadioButton("Min objective / Max flux");
-			
-			maxObjMaxFluxButton.setEnabled(false);
-			minObjMaxFluxButton.setEnabled(false);
-			
-			JLabel flowConstLabel = new JLabel("Flow diffusion constant (cm^2/s): ", JLabel.LEFT); 
-			flowConstField = new DoubleField(model.getFlowDiffusionConstant(), 6, false);
-			JLabel growthConstLabel = new JLabel("Growth diffusion constant (cm^2/s): ", JLabel.LEFT);
-			growthConstField = new DoubleField(model.getGrowthDiffusionConstant(), 6, false);
-			JLabel elasticModulusLabel = new JLabel("Elastic modulus constant (Pa): ", JLabel.LEFT);
-			elasticModulusField = new DoubleField(model.getElasticModulusConstant(), 6, false);
-			JLabel frictionConstLabel = new JLabel("Friction constant (cm^2/s): ", JLabel.LEFT);
-			frictionConstField = new DoubleField(model.getFrictionConstant(), 6, false);
-			JLabel convDiffConstLabel = new JLabel("Conv. model diffusion constant (cm^2/s): ", JLabel.LEFT);
-			convDiffConstField = new DoubleField(model.getConvDiffConstant(), 6, false);
-			JLabel packedDensityLabel = new JLabel("Packed Density (g/cm^2) or (g/cm^3): ", JLabel.LEFT);
-			packedDensityField = new DoubleField(model.getPackedDensity(), 6, false);
-			JLabel noiseVarianceLabel = new JLabel("Noise variance: ", JLabel.LEFT);
-			noiseVarianceField = new DoubleField(model.getNoiseVariance(), 6, false);
-
-			
-			fbaObjGroup.add(maxObjButton);
-			fbaObjGroup.add(minObjButton);
-			fbaObjGroup.add(maxFluxButton);
-			fbaObjGroup.add(minFluxButton);
-			fbaObjGroup.add(maxObjMinFluxButton);
-			fbaObjGroup.add(minObjMinFluxButton);
-			fbaObjGroup.add(maxObjMaxFluxButton);
-			fbaObjGroup.add(minObjMaxFluxButton);
-			
-			setSelectedObjectiveButton(objStyle);
-			
-			GridBagConstraints gbc = new GridBagConstraints();
-			setLayout(new GridBagLayout());
-			
-			gbc.gridx = 0;
-			gbc.gridy = 0;
-			gbc.gridwidth = 2;
-			gbc.anchor = GridBagConstraints.LINE_START;
-			add(new JLabel("Objective Reaction"), gbc);
-			gbc.gridy++;
-			add(rxnNamesBox, gbc);
-			gbc.gridy++;
-			add(Box.createVerticalStrut(10), gbc);
-			gbc.gridy++;
-			add(maxObjButton, gbc);
-			gbc.gridy++;
-			add(minObjButton, gbc);
-			gbc.gridy++;
-			add(maxFluxButton, gbc);
-			gbc.gridy++;
-			add(minFluxButton, gbc);
-			gbc.gridy++;
-			add(maxObjMinFluxButton, gbc);
-			gbc.gridy++;
-			add(minObjMinFluxButton, gbc);
-			gbc.gridy++;
-//			add(maxObjMaxFluxButton, gbc);
-//			gbc.gridy++;
-//			add(minObjMaxFluxButton, gbc);
-//			gbc.gridy++;
-			
-			
-			gbc.gridy++;
-			gbc.gridwidth = 1;
-			add(flowConstLabel, gbc);
-			gbc.gridx = 1;
-			add(flowConstField, gbc);
-			
-			gbc.gridy++;
-			gbc.gridx = 0;
-			add(growthConstLabel, gbc);
-			gbc.gridx = 1;
-			add(growthConstField, gbc);
-			
-			gbc.gridy++;
-			gbc.gridx = 0;
-			add(elasticModulusLabel, gbc);
-			gbc.gridx = 1;
-			add(elasticModulusField, gbc);
-			
-			gbc.gridy++;
-			gbc.gridx = 0;
-			add(frictionConstLabel, gbc);
-			gbc.gridx = 1;
-			add(frictionConstField, gbc);
-			
-			gbc.gridy++;
-			gbc.gridx = 0;
-			add(convDiffConstLabel, gbc);
-			gbc.gridx = 1;
-			add(convDiffConstField, gbc);
-			
-			gbc.gridy++;
-			gbc.gridx = 0;
-			add(packedDensityLabel, gbc);
-			gbc.gridx = 1;
-			add(packedDensityField, gbc);
-			
-			gbc.gridy++;
-			gbc.gridx = 0;
-			add(noiseVarianceLabel, gbc);
-			gbc.gridx = 1;
-			add(noiseVarianceField, gbc);
-		}
-		
-		public void updateModelParameters()
-		{
-			model.setObjectiveReaction(rxnNamesBox.getSelectedIndex()+1);
-			model.setObjectiveStyle(getSelectedObjectiveStyle());
-			model.setGrowthDiffusionConstant(growthConstField.getDoubleValue());
-			model.setFlowDiffusionConstant(flowConstField.getDoubleValue());
-			model.setElasticModulusConstant(elasticModulusField.getDoubleValue());
-			model.setFrictionConstant(frictionConstField.getDoubleValue());
-			model.setConvDiffConstant(convDiffConstField.getDoubleValue());
-			model.setPackedDensity(packedDensityField.getDoubleValue());
-			model.setNoiseVariance(noiseVarianceField.getDoubleValue());
-		}
-		
-		private void setSelectedObjectiveButton(int objStyle)
-		{
-			fbaObjGroup.clearSelection();
-			switch (objStyle)
-			{
-				case FBAModel.MAXIMIZE_OBJECTIVE_FLUX:
-					maxObjButton.setSelected(true);
-					break;
-				case FBAModel.MINIMIZE_OBJECTIVE_FLUX:
-					minObjButton.setSelected(true);
-					break;
-				case FBAModel.MAXIMIZE_TOTAL_FLUX:
-					maxFluxButton.setSelected(true);
-					break;
-				case FBAModel.MINIMIZE_TOTAL_FLUX:
-					minFluxButton.setSelected(true);
-					break;
-				case FBAModel.MAX_OBJECTIVE_MIN_TOTAL:
-					maxObjMinFluxButton.setSelected(true);
-					break;
-				case FBAModel.MIN_OBJECTIVE_MIN_TOTAL:
-					minObjMinFluxButton.setSelected(true);
-					break;
-				case FBAModel.MAX_OBJECTIVE_MAX_TOTAL:
-					maxObjMaxFluxButton.setSelected(true);
-					break;
-				case FBAModel.MIN_OBJECTIVE_MAX_TOTAL:
-					minObjMaxFluxButton.setSelected(true);
-					break;
-			}
-		}
-		
-		private int getSelectedObjectiveStyle()
-		{
-			if (maxObjButton.isSelected())
-				return FBAModel.MAXIMIZE_OBJECTIVE_FLUX;
-			else if (minObjButton.isSelected())
-				return FBAModel.MINIMIZE_OBJECTIVE_FLUX;
-			else if (maxFluxButton.isSelected())
-				return FBAModel.MAXIMIZE_TOTAL_FLUX;
-			else if (minFluxButton.isSelected())
-				return FBAModel.MINIMIZE_TOTAL_FLUX;
-			else if (maxObjMinFluxButton.isSelected())
-				return FBAModel.MAX_OBJECTIVE_MIN_TOTAL;
-			else if (minObjMinFluxButton.isSelected())
-				return FBAModel.MIN_OBJECTIVE_MIN_TOTAL;
-			else if (maxObjMaxFluxButton.isSelected())
-				return FBAModel.MAX_OBJECTIVE_MAX_TOTAL;
-			else if (minObjMaxFluxButton.isSelected())
-				return FBAModel.MIN_OBJECTIVE_MAX_TOTAL;
-			else
-				return FBAModel.MAXIMIZE_OBJECTIVE_FLUX;
-		}
-	}
-	
 	/** Set the active parameter to true (activate the model) with 
 	 * an exponential probability with given activation probability rate.
 	 * @param activationRate is the activation probability rate. 
