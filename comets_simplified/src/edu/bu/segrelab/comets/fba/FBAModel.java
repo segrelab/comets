@@ -152,6 +152,7 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	
 	public static final int GUROBI =0;
 	public static final int GLOP   =1;
+	public static final int MANYLP =2;
 	
 	
 	private double neutralDriftSigma=0.01;
@@ -212,6 +213,9 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			break;
 		case GLOP:
 			fbaOptimizer=new FBAOptimizerGlop(m, l, u, objs, objsMax);
+			break;
+		case MANYLP:
+			fbaOptimizer=new FBAOptimizerManyLP(m, l, u, objs, objsMax);
 			break;
 		default:
 			break;
@@ -1648,6 +1652,8 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						optim= GUROBI;
 					else if(tokens[1].equalsIgnoreCase("GLOP"))
 						optim= GLOP;
+					else if(tokens[1].equalsIgnoreCase("MANYLP"))
+						optim= MANYLP;
 					else if(tokens[1].equalsIgnoreCase("GLPK"))
 					{
 						System.out.println("Warning: the GLPK optimizer is no longer supported (model file line " + lineNum + "). Using GUROBI instead.");

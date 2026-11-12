@@ -52,7 +52,7 @@ public class Comets implements CometsConstants,
 
 
 
-	private String versionString = "2.12.9 8 September 2026";
+	private String versionString = "2.12.10 12 November 2026";
 
 
 
