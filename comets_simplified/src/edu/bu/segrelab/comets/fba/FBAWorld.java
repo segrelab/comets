@@ -3223,8 +3223,529 @@ public class FBAWorld extends World2D
 		}
 	}
 	
+	/* ====================================================================
+	 * Two-fluid biomass propagation model (BiomassMotionStyle TWO_FLUID_2D)
+	 * ==================================================================== */
+
+	/** Fluid partial pressure P^f from the previous Poisson solve, used as the CG warm start. */
+	private double[][] twoFluidPf = null;
+	/** CG iterations used during the current time step (diagnostic output only). */
+	private int twoFluidCgIterations = 0;
+	private boolean twoFluidParamsWarned = false;
+	/** Each RK4 substep h satisfies h * (largest advective + diffusive rate of a grid box) <= TWO_FLUID_CFL. */
+	private static final double TWO_FLUID_CFL = 0.5;
+	private static final double TWO_FLUID_CG_TOL = 1e-8;
+	private static final int TWO_FLUID_CG_MAX_ITER = 20000;
+	private static final int TWO_FLUID_MAX_SUBSTEPS = 100000;
+
 	/**
-	 * Biomass transport similar to convNonlinDiff2DBiomass, 
+	 * Two-fluid model of biomass propagation (Brezin, Dukovski, Korolev, "Two fluid
+	 * model of cell growth", April 21, 2026). Cells (density n^c) and the fluid
+	 * they are embedded in (n^f = 1 - Omega^c n^c) obey overdamped force balance
+	 * with friction against the substrate (xi^c, xi^f) and against each other (xi^cf):
+	 * <pre>
+	 *   -xi^c v^c - n^f xi^cf (v^c - v^f) = grad P^c
+	 *   -xi^f v^f - n^c xi^cf (v^f - v^c) = grad P^f
+	 *   grad P^c = grad n^c / chi
+	 * </pre>
+	 * Two signs differ from the PDF: the fluid friction uses xi^fc = +xi^cf, so
+	 * cell-fluid friction conserves momentum and
+	 * Delta = xi^c xi^f + xi^cf (n^c xi^c + n^f xi^f) > 0; and pressure increases with
+	 * density (chi > 0), which makes the colony spread instead of aggregate.
+	 * Re-deriving eqs. (16)-(20) with these signs gives
+	 * <pre>
+	 *   A = -n^c (xi^cf + Omega^c xi^f),   B = n^f (xi^c + xi^cf)
+	 *   div(B/Delta grad P^f) = div(A/Delta grad P^c)
+	 *   v^c = [ -(xi^f + n^c xi^cf) grad P^c - n^f xi^cf grad P^f ] / Delta
+	 * </pre>
+	 * Growth (r^c n^c) has already been applied by the FBA step, so this method
+	 * only integrates the transport part, dn^c/dt = -div(n^c v^c), over one COMETS
+	 * time step with classical RK4, and every RK4 stage does one Poisson solve.
+	 * The step is split into substeps when needed. Because v^c is proportional to
+	 * grad n^c, the substep is limited by a diffusive stability rate
+	 * (~ n^c |v coefficient| / (chi dX^2)) as well as by the advective CFL
+	 * condition (eq. 25).
+	 * <p>
+	 * Discretization: cell-centered grid. v^c is evaluated on the box faces from
+	 * face-averaged coefficients (eq. 22), the same ones used in the P^f Poisson
+	 * operator (eq. 23), and n is taken upwind (eq. 24). Barriers are no-flux
+	 * (Neumann) boundaries. The world edges are no-flux too, or periodic as in the
+	 * PDF when toroidalWorld = true. The singular
+	 * Poisson system is solved with matrix-free Jacobi-preconditioned conjugate
+	 * gradients, and the mean of P^f is fixed to 0 instead of pinning one node.
+	 * That stays valid when barriers split the world into disconnected regions.
+	 * <p>
+	 * Units: n^c = biomass / spaceVolume [g/cm^3], Omega^c [cm^3/g], dX = spaceWidth
+	 * [cm], time in seconds. With several models, n^c is the sum of their densities.
+	 * All models move with the same v^c, using the two-fluid parameters of the
+	 * first model.
+	 */
+	private void twoFluid2DBiomass()
+	{
+		double dT = cParams.getTimeStep() * 3600; // time step is in hours, transport is in seconds
+		double dX = cParams.getSpaceWidth();
+		double boxVolume = cParams.getSpaceVolume();
+
+		FBAModel m0 = (FBAModel)models[0];
+		double xiC = m0.getTwoFluidXiC();
+		double xiF = m0.getTwoFluidXiF();
+		double xiCF = m0.getTwoFluidXiCF();
+		double omegaC = m0.getTwoFluidOmegaC();
+		double chi = m0.getTwoFluidChi();
+		if (!twoFluidParamsWarned)
+		{
+			for (int k = 1; k < numModels; k++)
+			{
+				FBAModel mk = (FBAModel)models[k];
+				if (mk.getTwoFluidXiC() != xiC || mk.getTwoFluidXiF() != xiF || mk.getTwoFluidXiCF() != xiCF
+						|| mk.getTwoFluidOmegaC() != omegaC || mk.getTwoFluidChi() != chi)
+				{
+					System.out.println("Warning: TwoFluid 2D uses the two-fluid parameters of model "
+							+ m0.getModelID() + "; the different values of model " + mk.getModelID() + " are ignored.");
+				}
+			}
+			twoFluidParamsWarned = true;
+		}
+
+		// capture the current biomass state as densities
+		double[][][] n = new double[numModels][numCols][numRows];
+		double[][][] deltaBiomass = new double[numModels][numCols][numRows];
+		Iterator<Cell> it = c.getCells().iterator();
+		while (it.hasNext())
+		{
+			FBACell cell = (FBACell)it.next();
+			double[] biomass = cell.getBiomass();
+			double[] dB = cell.getDeltaBiomass(); // biomass produced this step, used for noise
+			int x = cell.getX();
+			int y = cell.getY();
+			for (int k = 0; k < numModels; k++)
+			{
+				n[k][x][y] = biomass[k] / boxVolume;
+				deltaBiomass[k][x][y] = dB[k];
+			}
+		}
+
+		if (twoFluidPf == null || twoFluidPf.length != numCols || twoFluidPf[0].length != numRows)
+			twoFluidPf = new double[numCols][numRows];
+		twoFluidCgIterations = 0;
+
+		// RK4 with CFL-limited substeps
+		double[][][] k1 = new double[numModels][numCols][numRows];
+		double[][][] k2 = new double[numModels][numCols][numRows];
+		double[][][] k3 = new double[numModels][numCols][numRows];
+		double[][][] k4 = new double[numModels][numCols][numRows];
+		double[][][] stage = new double[numModels][numCols][numRows];
+		double t = 0.0;
+		int substeps = 0;
+		int numClipped = 0;
+		double clippedMass = 0.0;
+		while (t < dT)
+		{
+			double maxRate = twoFluidRHS(n, k1, xiC, xiF, xiCF, omegaC, chi, dX);
+			double h = dT - t;
+			boolean lastStep = true;
+			if (maxRate * h > TWO_FLUID_CFL)
+			{
+				h = TWO_FLUID_CFL / maxRate;
+				lastStep = false;
+			}
+			twoFluidAxpy(stage, n, 0.5 * h, k1);
+			twoFluidRHS(stage, k2, xiC, xiF, xiCF, omegaC, chi, dX);
+			twoFluidAxpy(stage, n, 0.5 * h, k2);
+			twoFluidRHS(stage, k3, xiC, xiF, xiCF, omegaC, chi, dX);
+			twoFluidAxpy(stage, n, h, k3);
+			twoFluidRHS(stage, k4, xiC, xiF, xiCF, omegaC, chi, dX);
+			for (int k = 0; k < numModels; k++)
+			{
+				for (int i = 0; i < numCols; i++)
+				{
+					for (int j = 0; j < numRows; j++)
+					{
+						n[k][i][j] += h / 6.0 * (k1[k][i][j] + 2.0 * k2[k][i][j] + 2.0 * k3[k][i][j] + k4[k][i][j]);
+						if (n[k][i][j] < 0.0)
+						{
+							clippedMass -= n[k][i][j] * boxVolume;
+							numClipped++;
+							n[k][i][j] = 0.0;
+						}
+					}
+				}
+			}
+			t = lastStep ? dT : t + h;
+			substeps++;
+			if (substeps >= TWO_FLUID_MAX_SUBSTEPS && t < dT)
+			{
+				System.out.println("Warning: TwoFluid 2D stopped after " + substeps + " substeps at t = " + t
+						+ " s of " + dT + " s. The velocities are too large for this time step and space width.");
+				break;
+			}
+		}
+		System.out.println("TwoFluid 2D: " + substeps + " RK4 substep(s), " + twoFluidCgIterations + " CG iterations.");
+		if (numClipped > 0)
+			System.out.println("Warning: TwoFluid 2D clipped negative biomass in " + numClipped
+					+ " box(es), total " + clippedMass + " g added.");
+
+		int numOverPacked = 0;
+		for (int i = 0; i < numCols; i++)
+		{
+			for (int j = 0; j < numRows; j++)
+			{
+				double nc = 0.0;
+				for (int k = 0; k < numModels; k++) nc += n[k][i][j];
+				if (omegaC * nc > 1.0) numOverPacked++;
+			}
+		}
+		if (numOverPacked > 0)
+			System.out.println("Warning: TwoFluid 2D: " + numOverPacked
+					+ " box(es) are over-packed (Omega^c n^c > 1). The fluid fraction there is set to 0.");
+
+		// update the world with the results
+		for (int j = 0; j < numRows; j++)
+		{
+			for (int i = 0; i < numCols; i++)
+			{
+				if (barrier[i][j])
+					continue;
+				double[] newBiomass = new double[numModels];
+				for (int k = 0; k < numModels; k++)
+				{
+					double b = n[k][i][j] * boxVolume;
+					double noiseVariance = ((FBAModel)models[k]).getNoiseVariance();
+					if (noiseVariance > 0.0)
+						b += deltaBiomass[k][i][j] * Utility.gaussianNoise(noiseVariance, pParams.getRandomSeed());
+					newBiomass[k] = Math.max(b, 0.0);
+				}
+				if (isOccupied(i, j))
+				{
+					Cell cell = (Cell)getCellAt(i, j);
+					cell.setBiomass(newBiomass);
+				}
+				else if (Utility.hasNonzeroValue(newBiomass))
+				{
+					Cell cell = new FBACell(i, j, newBiomass, this, (FBAModel[])models, cParams, pParams);
+					c.getCells().add(cell);
+				}
+			}
+		}
+	}
+
+	/** out = x + a * y, element-wise. */
+	private void twoFluidAxpy(double[][][] out, double[][][] x, double a, double[][][] y)
+	{
+		for (int k = 0; k < out.length; k++)
+			for (int i = 0; i < numCols; i++)
+				for (int j = 0; j < numRows; j++)
+					out[k][i][j] = x[k][i][j] + a * y[k][i][j];
+	}
+
+	/**
+	 * Returns the index of the next box in the +x (dir = 0) or +y (dir = 1) direction,
+	 * or -1 if the face to it is closed. A face is closed at the world edge (unless the
+	 * world is toroidal, where it wraps around) and next to a barrier.
+	 */
+	private int twoFluidNeighbor(int i, int j, int dir)
+	{
+		int size = (dir == 0) ? numCols : numRows;
+		int next = ((dir == 0) ? i : j) + 1;
+		if (next >= size)
+		{
+			if (!cParams.isToroidalGrid() || size < 2)
+				return -1;
+			next = 0;
+		}
+		boolean blocked = (dir == 0) ? (barrier[i][j] || barrier[next][j]) : (barrier[i][j] || barrier[i][next]);
+		return blocked ? -1 : next;
+	}
+
+	/**
+	 * Computes rhs[k] = -div(n_k v^c) for every model k (functions ELLIPTIC and RHS of
+	 * Algorithm 1, without the growth term). Solves the P^f Poisson equation,
+	 * updating twoFluidPf.
+	 * @return the largest stability rate of any box [1/s]: the sum over its faces of the upwind
+	 * outflow rate max(v_out, 0) / dX plus the diffusive rate (see twoFluidDiffusiveRate)
+	 */
+	private double twoFluidRHS(double[][][] n, double[][][] rhs, double xiC, double xiF, double xiCF,
+			double omegaC, double chi, double dX)
+	{
+		// 1. Pointwise coefficients. G and H give v^c = G grad P^c - H grad P^f; D = B/Delta; E = A/Delta.
+		double[][] nc = new double[numCols][numRows];
+		double[][] G = new double[numCols][numRows];
+		double[][] H = new double[numCols][numRows];
+		double[][] D = new double[numCols][numRows];
+		double[][] E = new double[numCols][numRows];
+		for (int i = 0; i < numCols; i++)
+		{
+			for (int j = 0; j < numRows; j++)
+			{
+				if (barrier[i][j])
+					continue;
+				double ncij = 0.0;
+				for (int k = 0; k < numModels; k++) ncij += n[k][i][j];
+				ncij = Math.max(ncij, 0.0);
+				double nf = Math.max(1.0 - omegaC * ncij, 0.0);
+				// s = Omega^c n^c + n^f = 1, unless the box is over-packed and n^f was set to 0
+				double s = omegaC * ncij + nf;
+				double delta = xiC * xiF + xiCF * (ncij * xiC + nf * xiF);
+				nc[i][j] = ncij;
+				G[i][j] = -(xiF + ncij * xiCF) / delta;
+				H[i][j] = nf * xiCF / delta;
+				D[i][j] = nf * (xiC + xiCF * s) / delta;
+				E[i][j] = -ncij * (omegaC * xiF + xiCF * s) / delta;
+			}
+		}
+
+		// 2. Face coefficients (arithmetic mean, eq. 22) and the Poisson system K P^f = b,
+		//    with K = -dX^2 L_D (positive semi-definite) and b = -dX^2 div(A/Delta grad P^c).
+		//    Dx[i][j] is the face between (i,j) and its +x neighbor, Dy[i][j] between (i,j) and
+		//    its +y neighbor (see twoFluidNeighbor); both are 0 on closed faces.
+		double[][] Dx = new double[numCols][numRows];
+		double[][] Dy = new double[numCols][numRows];
+		double[][] diag = new double[numCols][numRows];
+		double[][] b = new double[numCols][numRows];
+		for (int i = 0; i < numCols; i++)
+		{
+			for (int j = 0; j < numRows; j++)
+			{
+				int ip = twoFluidNeighbor(i, j, 0);
+				if (ip >= 0)
+				{
+					double d = 0.5 * (D[i][j] + D[ip][j]);
+					Dx[i][j] = d;
+					diag[i][j] += d;
+					diag[ip][j] += d;
+					double flux = 0.5 * (E[i][j] + E[ip][j]) * (nc[ip][j] - nc[i][j]) / chi;
+					b[i][j] -= flux;
+					b[ip][j] += flux;
+				}
+				int jp = twoFluidNeighbor(i, j, 1);
+				if (jp >= 0)
+				{
+					double d = 0.5 * (D[i][j] + D[i][jp]);
+					Dy[i][j] = d;
+					diag[i][j] += d;
+					diag[i][jp] += d;
+					double flux = 0.5 * (E[i][j] + E[i][jp]) * (nc[i][jp] - nc[i][j]) / chi;
+					b[i][j] -= flux;
+					b[i][jp] += flux;
+				}
+			}
+		}
+
+		// 3. Solve for P^f.
+		twoFluidCgIterations += twoFluidSolvePoisson(twoFluidPf, b, Dx, Dy, diag);
+		double[][] Pf = twoFluidPf;
+
+		// 4. v^c on the faces and upwind flux divergence (eq. 24).
+		double[][] stabilityRate = new double[numCols][numRows];
+		for (int k = 0; k < numModels; k++)
+			for (int i = 0; i < numCols; i++)
+				Arrays.fill(rhs[k][i], 0.0);
+		for (int i = 0; i < numCols; i++)
+		{
+			for (int j = 0; j < numRows; j++)
+			{
+				int ip = twoFluidNeighbor(i, j, 0);
+				if (ip >= 0)
+				{
+					double gradPc = (nc[ip][j] - nc[i][j]) / (chi * dX);
+					double gradPf = (Pf[ip][j] - Pf[i][j]) / dX;
+					double gF = 0.5 * (G[i][j] + G[ip][j]);
+					double hF = 0.5 * (H[i][j] + H[ip][j]);
+					double v = gF * gradPc - hF * gradPf;
+					twoFluidUpwindFlux(n, rhs, stabilityRate, v, i, j, ip, j, dX);
+					double dRate = twoFluidDiffusiveRate(gF, hF, 0.5 * (E[i][j] + E[ip][j]), Dx[i][j],
+							Math.max(nc[i][j], nc[ip][j]), chi, dX);
+					stabilityRate[i][j] += dRate;
+					stabilityRate[ip][j] += dRate;
+				}
+				int jp = twoFluidNeighbor(i, j, 1);
+				if (jp >= 0)
+				{
+					double gradPc = (nc[i][jp] - nc[i][j]) / (chi * dX);
+					double gradPf = (Pf[i][jp] - Pf[i][j]) / dX;
+					double gF = 0.5 * (G[i][j] + G[i][jp]);
+					double hF = 0.5 * (H[i][j] + H[i][jp]);
+					double v = gF * gradPc - hF * gradPf;
+					twoFluidUpwindFlux(n, rhs, stabilityRate, v, i, j, i, jp, dX);
+					double dRate = twoFluidDiffusiveRate(gF, hF, 0.5 * (E[i][j] + E[i][jp]), Dy[i][j],
+							Math.max(nc[i][j], nc[i][jp]), chi, dX);
+					stabilityRate[i][j] += dRate;
+					stabilityRate[i][jp] += dRate;
+				}
+			}
+		}
+		double maxRate = 0.0;
+		for (int i = 0; i < numCols; i++)
+			for (int j = 0; j < numRows; j++)
+				maxRate = Math.max(maxRate, stabilityRate[i][j]);
+		return maxRate;
+	}
+
+	/**
+	 * Diffusive stability rate of one face [1/s]. Because v^c is proportional to grad n^c,
+	 * the transport behaves like nonlinear diffusion of n^c with effective diffusivity
+	 * n^c (|G| + |H A/B|) / chi: the grad P^c term, plus the grad P^f term, since
+	 * grad P^f ~ (A/B) grad P^c. Explicit RK4 then needs dt ~ dX^2 / D_eff, which the
+	 * advective CFL condition (eq. 25) alone does not enforce.
+	 */
+	private static double twoFluidDiffusiveRate(double gF, double hF, double eF, double dF, double nMax,
+			double chi, double dX)
+	{
+		double gEff = Math.abs(gF) + (dF > 0.0 ? Math.abs(hF * eF / dF) : 0.0);
+		return nMax * gEff / (chi * dX * dX);
+	}
+
+	/**
+	 * Adds the upwind flux through the face from box (i,j) to box (i2,j2), where v is
+	 * the face velocity in the (i,j) -> (i2,j2) direction.
+	 */
+	private void twoFluidUpwindFlux(double[][][] n, double[][][] rhs, double[][] stabilityRate, double v,
+			int i, int j, int i2, int j2, double dX)
+	{
+		boolean forward = v >= 0.0;
+		if (forward)
+			stabilityRate[i][j] += v / dX;
+		else
+			stabilityRate[i2][j2] -= v / dX;
+		for (int k = 0; k < numModels; k++)
+		{
+			double flux = v * (forward ? n[k][i][j] : n[k][i2][j2]) / dX;
+			rhs[k][i][j] -= flux;
+			rhs[k][i2][j2] += flux;
+		}
+	}
+
+	/** out = K u, where K u = sum over open faces of D_face (u_here - u_neighbor). */
+	private void twoFluidApplyK(double[][] u, double[][] Dx, double[][] Dy, double[][] out)
+	{
+		for (int i = 0; i < numCols; i++)
+			Arrays.fill(out[i], 0.0);
+		for (int i = 0; i < numCols; i++)
+		{
+			for (int j = 0; j < numRows; j++)
+			{
+				// a nonzero face coefficient implies an open face, whose neighbor is the
+				// next index, wrapping around in a toroidal world
+				if (Dx[i][j] != 0.0)
+				{
+					int ip = (i + 1) % numCols;
+					double f = Dx[i][j] * (u[i][j] - u[ip][j]);
+					out[i][j] += f;
+					out[ip][j] -= f;
+				}
+				if (Dy[i][j] != 0.0)
+				{
+					int jp = (j + 1) % numRows;
+					double f = Dy[i][j] * (u[i][j] - u[i][jp]);
+					out[i][j] += f;
+					out[i][jp] -= f;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Solves the singular but consistent system K x = b with Jacobi-preconditioned
+	 * conjugate gradients, starting from the given x (warm start). Boxes with no
+	 * conducting face (diag = 0) are left unchanged. Afterwards the mean of x over the
+	 * active boxes is shifted to 0.
+	 * @return the number of CG iterations
+	 */
+	private int twoFluidSolvePoisson(double[][] x, double[][] b, double[][] Dx, double[][] Dy, double[][] diag)
+	{
+		double[][] r = new double[numCols][numRows];
+		double[][] z = new double[numCols][numRows];
+		double[][] p = new double[numCols][numRows];
+		double[][] Ap = new double[numCols][numRows];
+
+		double bNorm = 0.0;
+		for (int i = 0; i < numCols; i++)
+			for (int j = 0; j < numRows; j++)
+				bNorm += b[i][j] * b[i][j];
+		bNorm = Math.sqrt(bNorm);
+		if (bNorm == 0.0)
+		{
+			// no driving term: P^f is constant
+			for (int i = 0; i < numCols; i++)
+				Arrays.fill(x[i], 0.0);
+			return 0;
+		}
+
+		twoFluidApplyK(x, Dx, Dy, Ap);
+		double rz = 0.0;
+		double rNorm = 0.0;
+		for (int i = 0; i < numCols; i++)
+		{
+			for (int j = 0; j < numRows; j++)
+			{
+				r[i][j] = diag[i][j] > 0.0 ? b[i][j] - Ap[i][j] : 0.0;
+				z[i][j] = diag[i][j] > 0.0 ? r[i][j] / diag[i][j] : 0.0;
+				p[i][j] = z[i][j];
+				rz += r[i][j] * z[i][j];
+				rNorm += r[i][j] * r[i][j];
+			}
+		}
+
+		int iter = 0;
+		boolean converged = Math.sqrt(rNorm) <= TWO_FLUID_CG_TOL * bNorm;
+		while (!converged && iter < TWO_FLUID_CG_MAX_ITER)
+		{
+			iter++;
+			twoFluidApplyK(p, Dx, Dy, Ap);
+			double pAp = 0.0;
+			for (int i = 0; i < numCols; i++)
+				for (int j = 0; j < numRows; j++)
+					pAp += p[i][j] * Ap[i][j];
+			if (pAp <= 0.0)
+				break;
+			double alpha = rz / pAp;
+			double rzNew = 0.0;
+			rNorm = 0.0;
+			for (int i = 0; i < numCols; i++)
+			{
+				for (int j = 0; j < numRows; j++)
+				{
+					x[i][j] += alpha * p[i][j];
+					r[i][j] -= alpha * Ap[i][j];
+					z[i][j] = diag[i][j] > 0.0 ? r[i][j] / diag[i][j] : 0.0;
+					rzNew += r[i][j] * z[i][j];
+					rNorm += r[i][j] * r[i][j];
+				}
+			}
+			converged = Math.sqrt(rNorm) <= TWO_FLUID_CG_TOL * bNorm;
+			double beta = rzNew / rz;
+			rz = rzNew;
+			for (int i = 0; i < numCols; i++)
+				for (int j = 0; j < numRows; j++)
+					p[i][j] = z[i][j] + beta * p[i][j];
+		}
+		if (!converged)
+			System.out.println("Warning: TwoFluid 2D pressure solve did not converge after " + iter
+					+ " CG iterations (relative residual " + Math.sqrt(rNorm) / bNorm + ").");
+
+		// fix the free additive constant: zero mean over the active boxes
+		double sum = 0.0;
+		int count = 0;
+		for (int i = 0; i < numCols; i++)
+			for (int j = 0; j < numRows; j++)
+				if (diag[i][j] > 0.0)
+				{
+					sum += x[i][j];
+					count++;
+				}
+		if (count > 0)
+		{
+			double mean = sum / count;
+			for (int i = 0; i < numCols; i++)
+				for (int j = 0; j < numRows; j++)
+					if (diag[i][j] > 0.0)
+						x[i][j] -= mean;
+		}
+		return iter;
+	}
+
+	/**
+	 * Biomass transport similar to convNonlinDiff2DBiomass,
 	 * except that the diffusion constant of a species is nutrient dependent.
 	 * The nutrient needs to be specified in the layout input file, similar to 
 	 * the way it is done in Chemotaxis. 
@@ -4156,7 +4677,10 @@ public class FBAWorld extends World2D
 					break; 
 				case NUTR_DEPEND_DIFF_2D :
 					nutrDependDiff2DBiomass();
-					break; 
+					break;
+				case TWO_FLUID_2D :
+					twoFluid2DBiomass();
+					break;
 				default :
 					System.out.println("No biomass diffusion! Set the diffusion parameter to 'Diffusion 2D(Crank-Nicolson)', 'Diffusion 2D(Eight Point)' or 'Convection 2D'");
 					break;

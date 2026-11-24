@@ -58,7 +58,8 @@ public class FBAParameters implements PackageParameters
 		CONVECTION_3D("Convection 3D"),
 		CONV_NONLINDIFF_2D("ConvNonlin Diffusion 2D"),
 		CONV_MULTIMODELS_2D("Convection MultipleModels 2D"),
-		NUTR_DEPEND_DIFF_2D("NutrientDependent Diffusion 2D");
+		NUTR_DEPEND_DIFF_2D("NutrientDependent Diffusion 2D"),
+		TWO_FLUID_2D("TwoFluid 2D");
 		//LEVEL_SET("Level Set Relaxation");
 
 		private String name;

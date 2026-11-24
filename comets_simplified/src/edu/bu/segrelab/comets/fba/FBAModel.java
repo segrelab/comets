@@ -120,6 +120,12 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	private double pressureExponent;
 	private double packBiomass;
 	private double maxPressure;
+	// Two-fluid (cells + fluid) biomass propagation model parameters (TWO_FLUID_2D)
+	private double twoFluidXiC;     // xi^c,  cell-substrate friction
+	private double twoFluidXiF;     // xi^f,  fluid-substrate friction
+	private double twoFluidXiCF;    // xi^cf, cell-fluid friction
+	private double twoFluidOmegaC;  // Omega^c, specific volume of biomass [cm^3/g]
+	private double twoFluidChi;     // chi, cell compressibility, grad P^c = grad n^c / chi
 	private double noiseVariance;
 	private int[] objReactions; //index of reactions, in order of priority
 	private boolean[] objMaximize; //is corresponding objective maximized? If not, it's minimized
@@ -1313,7 +1319,12 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 				   pressureKappa=1.0,
 				   pressureExponent=1.0,
 				   packBiomass=0.0,
-				   maxPressure=1000.0;
+				   maxPressure=1000.0,
+				   twoFluidXiC=1.0,
+				   twoFluidXiF=1.0,
+				   twoFluidXiCF=1.0,
+				   twoFluidOmegaC=1.0,
+				   twoFluidChi=1.0;
 			
 			boolean blockOpen = false;
 
@@ -1962,7 +1973,38 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 						reader.close();
 						throw new ModelFileException("The pressureExponent value given at line " + lineNum + "should be => 0");
 					}
-					
+
+				}
+
+				/**************************************************************
+				 *******LOAD Two-fluid model parameters (TWO_FLUID_2D)*********
+				 * twoFluidXiC, twoFluidXiF, twoFluidOmegaC, twoFluidChi > 0
+				 * twoFluidXiCF >= 0
+				 **************************************************************/
+				else if (tokens[0].equalsIgnoreCase("twoFluidXiC")
+						|| tokens[0].equalsIgnoreCase("twoFluidXiF")
+						|| tokens[0].equalsIgnoreCase("twoFluidXiCF")
+						|| tokens[0].equalsIgnoreCase("twoFluidOmegaC")
+						|| tokens[0].equalsIgnoreCase("twoFluidChi"))
+				{
+					if (tokens.length != 2)
+					{
+						reader.close();
+						throw new ModelFileException("The " + tokens[0] + " should be followed only by its value at line " + lineNum);
+					}
+					double val = Double.parseDouble(tokens[1]);
+					boolean zeroAllowed = tokens[0].equalsIgnoreCase("twoFluidXiCF");
+					if (val < 0 || (val == 0 && !zeroAllowed))
+					{
+						reader.close();
+						throw new ModelFileException("The " + tokens[0] + " value given at line " + lineNum
+								+ " should be " + (zeroAllowed ? ">= 0" : "> 0"));
+					}
+					if (tokens[0].equalsIgnoreCase("twoFluidXiC")) twoFluidXiC = val;
+					else if (tokens[0].equalsIgnoreCase("twoFluidXiF")) twoFluidXiF = val;
+					else if (tokens[0].equalsIgnoreCase("twoFluidXiCF")) twoFluidXiCF = val;
+					else if (tokens[0].equalsIgnoreCase("twoFluidOmegaC")) twoFluidOmegaC = val;
+					else twoFluidChi = val;
 				}
 				
 				
@@ -2780,7 +2822,12 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 			model.setPressureExponent(pressureExponent);
 			model.setPackBiomass(packBiomass);
 			model.setMaxPressure(maxPressure);
-			
+			model.setTwoFluidXiC(twoFluidXiC);
+			model.setTwoFluidXiF(twoFluidXiF);
+			model.setTwoFluidXiCF(twoFluidXiCF);
+			model.setTwoFluidOmegaC(twoFluidOmegaC);
+			model.setTwoFluidChi(twoFluidChi);
+
 			model.setFileName(filename);
 			return model;
 			
@@ -3033,6 +3080,26 @@ public class FBAModel extends edu.bu.segrelab.comets.Model
 	{
 		packBiomass=val;
 	}
+
+	/** Two-fluid model: cell-substrate friction coefficient xi^c. */
+	public double getTwoFluidXiC() { return twoFluidXiC; }
+	public void setTwoFluidXiC(double val) { twoFluidXiC = val; }
+
+	/** Two-fluid model: fluid-substrate friction coefficient xi^f. */
+	public double getTwoFluidXiF() { return twoFluidXiF; }
+	public void setTwoFluidXiF(double val) { twoFluidXiF = val; }
+
+	/** Two-fluid model: cell-fluid friction coefficient xi^cf. */
+	public double getTwoFluidXiCF() { return twoFluidXiCF; }
+	public void setTwoFluidXiCF(double val) { twoFluidXiCF = val; }
+
+	/** Two-fluid model: specific volume of biomass Omega^c [cm^3/g]; 1/Omega^c is the fully packed density. */
+	public double getTwoFluidOmegaC() { return twoFluidOmegaC; }
+	public void setTwoFluidOmegaC(double val) { twoFluidOmegaC = val; }
+
+	/** Two-fluid model: cell compressibility chi, with grad P^c = grad n^c / chi. */
+	public double getTwoFluidChi() { return twoFluidChi; }
+	public void setTwoFluidChi(double val) { twoFluidChi = val; }
 	
 	public double getNoiseVariance()
 	{
